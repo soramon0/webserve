@@ -371,4 +371,4 @@ curl -v http://127.0.0.1:8080/cgi-bin/hello.py
 - [Introduction to event-based programming](https://aiven.io/blog/introduction-to-event-based-programming)
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/html/split-wide/index.html)
 - [Self-Pipe Trick](https://www.sitepoint.com/the-self-pipe-trick-explained/)
-- Hands-On Network Programming in C - Book
+- [Hands-On Network Programming in C](https://www.packtpub.com/en-us/product/hands-on-network-programming-with-c-9781789349863)
