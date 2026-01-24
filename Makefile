@@ -28,10 +28,9 @@ DEPS := $(OBJS:.o=.d)
 
 .PHONY: all clean fclean re run release
 
-all: $(BUILD_DIR)/$(NAME)
+all: $(NAME)
 
-release:
-	@$(MAKE) all release=1
+$(NAME): $(BUILD_DIR)/$(NAME)
 
 # Linking
 $(BUILD_DIR)/$(NAME): $(OBJS)
@@ -42,6 +41,9 @@ $(BUILD_DIR)/$(NAME): $(OBJS)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+release:
+	@$(MAKE) all release=1
 
 run: all
 	./$(BUILD_DIR)/$(NAME) $(ARGS)
