@@ -1,5 +1,5 @@
 CXX       := g++
-TARGET    := webserve
+NAME      := webserve
 ARGS      ?=
 CXXFLAGS  := -Wall -Wextra -Werror -std=c++98
 
@@ -28,13 +28,13 @@ DEPS := $(OBJS:.o=.d)
 
 .PHONY: all clean fclean re run release
 
-all: $(BUILD_DIR)/$(TARGET)
+all: $(BUILD_DIR)/$(NAME)
 
 release:
 	@$(MAKE) all release=1
 
 # Linking
-$(BUILD_DIR)/$(TARGET): $(OBJS)
+$(BUILD_DIR)/$(NAME): $(OBJS)
 	@mkdir -p $(dir $@)
 	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
 
@@ -44,7 +44,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 run: all
-	./$(BUILD_DIR)/$(TARGET) $(ARGS)
+	./$(BUILD_DIR)/$(NAME) $(ARGS)
 
 clean:
 	rm -rf $(OBJ_ROOT)
