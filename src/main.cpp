@@ -1,6 +1,7 @@
+#include "main.hpp"
 #include <iostream>
 
 int main() {
-  std::cout << "Webserv" << std::endl;
+  std::cout << "Source code for " << APP_NAME << std::endl;
   return 0;
 }

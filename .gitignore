@@ -1,4 +1,2 @@
-bin/*
-!bin/.gitkeep
-obj/*
-!obj/.gitkeep
+bin/
+obj/
