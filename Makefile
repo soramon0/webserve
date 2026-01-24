@@ -1,14 +1,24 @@
-CXX      := g++
-TARGET   := webserve
+CXX       := g++
+TARGET    := webserve
+ARGS      ?=
+CXXFLAGS  := -Wall -Wextra -Werror -std=c++98
 
-BUILD_DIR := bin
-SRC_DIR   := src
-OBJ_DIR   := obj
+ifdef release
+    BUILD_TYPE := release
+    CXXFLAGS   += -O3 -DNDEBUG
+else
+    BUILD_TYPE := debug
+    CXXFLAGS   += -g3 -O0 -DDEBUG
+endif
+
+SRC_DIR    := src
+OBJ_ROOT   := obj
+OBJ_DIR    := $(OBJ_ROOT)/$(BUILD_TYPE)
+BUILD_ROOT := build
+BUILD_DIR  := $(BUILD_ROOT)/$(BUILD_TYPE)
 
 # Pre-processor
 CPPFLAGS := -I$(SRC_DIR) -MMD -MP
-# Compiler
-CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 # Linker flags. Currently empty, but ready for use
 LDFLAGS  :=
 
@@ -16,12 +26,16 @@ SRCS := $(shell find $(SRC_DIR) -name '*.cpp')
 OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-.PHONY: all clean fclean re run
+.PHONY: all clean fclean re run release
 
 all: $(BUILD_DIR)/$(TARGET)
 
+release:
+	@$(MAKE) all release=1
+
 # Linking
-$(BUILD_DIR)/$(TARGET): $(OBJS) | $(BUILD_DIR)
+$(BUILD_DIR)/$(TARGET): $(OBJS)
+	@mkdir -p $(dir $@)
 	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
 
 # Compiling
@@ -29,17 +43,14 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-$(BUILD_DIR) $(OBJ_DIR):
-	mkdir -p $@
-
 run: all
-	./$(BUILD_DIR)/$(TARGET)
+	./$(BUILD_DIR)/$(TARGET) $(ARGS)
 
 clean:
-	rm -f $(OBJS) $(DEPS)
+	rm -rf $(OBJ_ROOT)
 
-fclean:
-	rm -rf $(BUILD_DIR) $(OBJ_DIR)
+fclean: clean
+	rm -rf $(BUILD_ROOT)
 
 re: fclean all
 
