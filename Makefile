@@ -1,20 +1,33 @@
-CC = g++
-BUILD_DIR = bin
-SRC_DIR = src
-OBJ_DIR = obj
-FLAGS = -Wall -Wextra -Werror -std=c++98 -I$(SRC_DIR) -MMD -MP
-SRCS = $(wildcard $(SRC_DIR)/*.cpp)
-OBJS = $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
-DEPS = $(OBJS:.o=.d)
-TARGET = webserve
+CXX      := g++
+TARGET   := webserve
+
+BUILD_DIR := bin
+SRC_DIR   := src
+OBJ_DIR   := obj
+
+# Pre-processor
+CPPFLAGS := -I$(SRC_DIR) -MMD -MP
+# Compiler
+CXXFLAGS := -Wall -Wextra -Werror -std=c++98
+# Linker flags. Currently empty, but ready for use
+LDFLAGS  :=
+
+SRCS := $(shell find $(SRC_DIR) -name '*.cpp')
+OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+DEPS := $(OBJS:.o=.d)
+
+.PHONY: all clean fclean re run
 
 all: $(BUILD_DIR)/$(TARGET)
 
+# Linking
 $(BUILD_DIR)/$(TARGET): $(OBJS) | $(BUILD_DIR)
-	$(CC) $(FLAGS) -o $@ $(OBJS)
+	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
-	$(CC) $(FLAGS) -c $< -o $@ -MT $@
+# Compiling
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR) $(OBJ_DIR):
 	mkdir -p $@
@@ -29,7 +42,5 @@ fclean:
 	rm -rf $(BUILD_DIR) $(OBJ_DIR)
 
 re: fclean all
-
-.PHONY: all clean fclean re run
 
 -include $(DEPS)
