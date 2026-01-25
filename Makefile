@@ -33,10 +33,8 @@ endif
 
 # Directories
 SRC_DIR    := src
-OBJ_ROOT   := obj
-OBJ_DIR    := $(OBJ_ROOT)/$(BUILD_TYPE)
-BUILD_ROOT := build
-BUILD_DIR  := $(BUILD_ROOT)/$(BUILD_TYPE)
+OBJ_DIR    := obj/$(BUILD_TYPE)
+BUILD_DIR  := build/$(BUILD_TYPE)
 
 # Pre-processor
 CPPFLAGS := -I$(SRC_DIR) -MMD -MP
@@ -78,11 +76,11 @@ run: $(NAME)
 
 clean:
 	@printf "$(YELLOW)Cleaning objects...$(RESET)\n"
-	$(Q)rm -rf $(OBJ_ROOT)
+	$(Q)rm -rf $(firstword $(subst /, ,$(OBJ_DIR)))
 
 fclean: clean
 	@printf "$(YELLOW)Removing executables...$(RESET)\n"
-	$(Q)rm -rf $(BUILD_ROOT)
+	$(Q)rm -rf $(firstword $(subst /, ,$(BUILD_DIR)))
 
 re: fclean all
 
