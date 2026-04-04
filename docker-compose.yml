@@ -1,0 +1,10 @@
+services:
+  web:
+    image: nginx:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8081:9999"
+    volumes:
+      - ./html:/usr/share/nginx/web:ro
+      - ./config/nginx.conf:/etc/nginx/conf.d/web.conf:ro
