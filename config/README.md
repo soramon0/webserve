@@ -14,7 +14,6 @@ http {
     access_log off;
     types {
         text/html                   html;
-        text/html                   html;
         text/css                    css;
         application/javascript      js;
         image/png                   png;
@@ -71,53 +70,86 @@ http {
 - Configurations on a URL/route
 
 ```nginx
-server {
+http {
     # Directory where the requested file should be located
+    # at least one must be defined.
+    # Context: http, server, location
     root /tmp/www;
 
-    location /about {
-        # we look for about in /tmp/www/about
+    server {
+        location /about {
+            # we look for about in /tmp/www/about
 
-        # List of accepted HTTP methods for the route.
+            # List of accepted HTTP methods for the route.
+            methods GET POST;
+
+            # Redirecting an old page to a new one
+            return 301 /new-page;
+        }
+
+        location /home {
+            # we look for home in /tmp/test/home
+            root /tmp/test;
+
+            # List of accepted HTTP methods for the route.
+            methods GET;
+
+            # Enabling or disabling directory listing. Generates a simple HTML page
+            # listing every file inside that directory.
+            autoindex on; # options are on/off.
+
+            # Default file to serve when the requested resource is a directory.
+            # server tries files in order. If none match and `autoindex` is not enabled,
+            # the server returns a 403 status. If we have a match, the server does an
+            # internal redirect. For example, If you request /, and Nginx finds
+            # index.html, it internally changes the request to /index.html. This is
+            # crucial because it means Nginx will then look for a new location block
+            # that matches /index.html to see if there are any specific rules
+            # (like caching or headers) for that specific file.
+            # Context: http, server, location
+            index index.html index.htm index.php;
+        }
+
+        location /upload {
+            methods POST;
+
+            # if the request is bigger than max body size, the server returns
+            # 413 Request Entity Too Large.
+            client_max_body_size 20M; # Allow 20MB on this location
+
+            # determines how much of the file is kept in RAM before Nginx starts
+            # writing to a temporary file on disk.
+            client_body_buffer_size 128k; # Default is usually 8k or 16k
+
+            # determines where the uploaded files for this path would go. The path is
+            # relative to the parent root
+            # Context: http, server, location
+            upload_store uploads;
+        }
+    }
+}
+
+```
+
+- CGI
+
+```nginx
+server {
+    location /cgi-bin {
+        # Working directory for the CGI child follows this route's filesystem mapping:
+        # the process runs with a cwd under this root (typically the script's directory)
+        # so relative opens/paths in the script resolve as expected. If not defined,
+        # then the CGI would use the parent root.
+        root ./cgi-bin;
+
+        # `methods` lists which HTTP verbs may target this location as CGI: the server
+        # runs the script for GET/POST (etc.), not serve the script file as plain text.
         methods GET POST;
 
-        # Redirecting an old page to a new one
-        return 301 /new-page;
-    }
-
-    location /home {
-        # we look for home in /tmp/test/home
-        root /tmp/test;
-
-        # List of accepted HTTP methods for the route.
-        methods GET;
-
-        # Enabling or disabling directory listing. Generates a simple HTML page
-        # listing every file inside that directory.
-        autoindex on; # options are on/off.
-
-        # Default file to serve when the requested resource is a directory.
-        # server tries files in order. If none match and `autoindex` is not enabled,
-        # the server returns a 403 status. If we have a match, the server does an
-        # internal redirect. For example, If you request /, and Nginx finds
-        # index.html, it internally changes the request to /index.html. This is
-        # crucial because it means Nginx will then look for a new location block
-        # that matches /index.html to see if there are any specific rules
-        # (like caching or headers) for that specific file.
-        # Context: http, server, location
-        index index.html index.htm index.php;
-    }
-
-    location /upload {
-        methods POST;
-
-        # if the request is bigger than max body size, the server returns
-        # 413 Request Entity Too Large.
-        client_max_body_size 20M; # Allow 20MB on this location
-
-        # determines how much of the file is kept in RAM before Nginx starts
-        # writing to a temporary file on disk.
-        client_body_buffer_size 128k; # Default is usually 8k or 16k
+        # A path under this location (e.g. /cgi-bin/whatever.py) is run with the program
+        # from cgi_pass for that file extension.
+        cgi_pass .py /usr/bin/python3;
+        cgi_pass .php /usr/bin/php8.4;
     }
 }
 ```
