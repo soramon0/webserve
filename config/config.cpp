@@ -24,13 +24,11 @@ struct SharedConfig {
   std::map<std::string, std::vector<std::string>> types;
   // where to save uploads of locations with POST method
   std::string upload_store; // defaults to /tmp/webserve
-  //  [0]([0].py [1]/usr/bin/python3)
-  std::vector<std::pair<std::string, std::string>> cgi_pass;
+  std::map<std::string, std::string> cgi_pass;
 };
 
 struct Location {
   std::string path;
-  std::vector<std::string> methods; // defaults to GET if not defined
   ReturnDir *return_rule;
 
   // copy from parent (server) and update if needed to match location
@@ -41,21 +39,16 @@ struct Server {
   // std::string server_name; virtual hosts
   int port;
   std::string interface;
-  std::vector<Location> locations;
+  std::map<std::string, &Location> locations;
   ReturnDir *return_rule;
 
   // copy from parent (http) and update if needed to match server
   SharedConfig *shared_config;
 };
 
-//  shared config between all servers
-struct Http {
-  std::vector<Server> servers;
-  SharedConfig *shared_config;
-};
-
 //  global config
 struct Config {
+  std::vector<Server> servers;
+  SharedConfig *shared_config;
   //   Logger *l
-  Http http;
 };
