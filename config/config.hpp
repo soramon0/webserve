@@ -1,14 +1,13 @@
-// # global config
 #include <map>
 #include <string>
 #include <vector>
 
-struct ReturnDir {
+class ReturnDir {
   int code;        // optional, default to temporary redirect 302
   std::string url; // redirect url
 };
 
-struct SharedConfig {
+class SharedConfig {
   std::string root;
   std::vector<std::string> index;
   // directory listing if path matches and has a trailing /
@@ -27,7 +26,7 @@ struct SharedConfig {
   std::map<std::string, std::string> cgi_pass;
 };
 
-struct Location {
+class Location {
   std::string path;
   ReturnDir *return_rule;
 
@@ -35,11 +34,11 @@ struct Location {
   SharedConfig *shared_config;
 };
 
-struct Server {
+class Server {
   // std::string server_name; virtual hosts
   int port;
   std::string interface;
-  std::map<std::string, &Location> locations;
+  std::map<std::string, Location> locations;
   ReturnDir *return_rule;
 
   // copy from parent (http) and update if needed to match server
@@ -47,7 +46,7 @@ struct Server {
 };
 
 //  global config
-struct Config {
+class Config {
   std::vector<Server> servers;
   SharedConfig *shared_config;
   //   Logger *l
