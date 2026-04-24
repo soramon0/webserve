@@ -20,6 +20,5 @@ public:
   Location &withPath(const std::string &path);
   Location &withRedirect(uint16_t code, const std::string &url);
   Location &withRedirect(const std::string &url);
-
-  void assignSharedConfig(SharedConfig *shared_config);
+  Location &withSharedConfig(const SharedConfig &cfg);
 };

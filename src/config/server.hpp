@@ -15,15 +15,17 @@ private:
   // copy from parent (http) and update if needed to match server
   SharedConfig *shared_config;
 
+  friend class Config;
+
 public:
   Server();
-  ~Server();
+  virtual ~Server();
 
   Server &withPort(uint16_t port);
   Server &withInterface(const std::string &interface);
   Server &withRedirect(uint16_t code, const std::string &url);
   Server &withRedirect(const std::string &url);
   Server &withLocation(const std::string &path, const Location &loc);
-
-  void assignSharedConfig(SharedConfig *shared_config);
+  Server &withSharedConfig(const SharedConfig &cfg);
+  Server *clone();
 };

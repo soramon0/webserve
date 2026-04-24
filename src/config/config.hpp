@@ -5,13 +5,14 @@
 
 class Config {
 public:
-  std::vector<Server> servers;
+  std::vector<Server*> servers;
   SharedConfig *shared_config;
 
   ~Config();
   Config();
 
-  void assignSharedConfig(SharedConfig *shared_config);
+  Config &withServer(const Server &server);
+  Config &withSharedConfig(const SharedConfig &cfg);
 
   std::string toString() const;
 

@@ -45,9 +45,22 @@ Server &Server::withLocation(const std::string &path, const Location &loc) {
   return *this;
 }
 
-void Server::assignSharedConfig(SharedConfig *shared_config) {
+Server &Server::withSharedConfig(const SharedConfig &cfg) {
   if (this->shared_config) {
-    delete shared_config;
+    delete this->shared_config;
   }
-  this->shared_config = shared_config;
+
+  this->shared_config = cfg.clone();
+  return *this;
+}
+
+Server *Server::clone() {
+  SharedConfig *cfg = NULL;
+  if (this->shared_config) {
+    cfg = this->shared_config->clone();
+  }
+  Server *clone = new Server(*this);
+  clone->shared_config = cfg;
+
+  return clone;
 }

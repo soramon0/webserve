@@ -40,9 +40,11 @@ Location &Location::withRedirect(const std::string &url) {
   return *this;
 }
 
-void Location::assignSharedConfig(SharedConfig *shared_config) {
+Location &Location::withSharedConfig(const SharedConfig &cfg) {
   if (this->shared_config) {
-    delete shared_config;
+    delete this->shared_config;
   }
-  this->shared_config = shared_config;
+
+  this->shared_config = cfg.clone();
+  return *this;
 }
