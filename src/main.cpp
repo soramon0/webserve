@@ -21,10 +21,13 @@ int main() {
                         .withInterface("127.0.0.1")
                         .withRedirect(307, "/home"));
 
-  config.withServer(Server()
-                        .withPort(8000)
-                        .withInterface("127.0.0.1")
-                        .withRedirect(303, "/fallback"));
+  config.withServer(
+      Server()
+          .withPort(8000)
+          .withInterface("127.0.0.1")
+          .withRedirect(303, "/fallback")
+          .withLocation("/",
+                        Location().withPath("/").withRedirect(301, "/home")));
 
   std::cout << config.toString() << std::endl;
   return 0;

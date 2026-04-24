@@ -5,7 +5,7 @@
 
 class Config {
 public:
-  std::vector<Server*> servers;
+  std::vector<Server> servers;
   SharedConfig *shared_config;
 
   ~Config();

@@ -19,13 +19,16 @@ private:
 
 public:
   Server();
+  Server(const Server &other);
+  Server &operator=(const Server &other);
   virtual ~Server();
 
   Server &withPort(uint16_t port);
   Server &withInterface(const std::string &interface);
   Server &withRedirect(uint16_t code, const std::string &url);
   Server &withRedirect(const std::string &url);
-  Server &withLocation(const std::string &path, const Location &loc);
+  Server &withLocation(const std::string &path, const Location &location);
   Server &withSharedConfig(const SharedConfig &cfg);
-  Server *clone();
+
+  std::string toString(int indent) const;
 };

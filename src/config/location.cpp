@@ -2,10 +2,49 @@
 
 #include "location.hpp"
 #include "redirect.hpp"
+#include <sstream>
 
-Location::Location() : path(), return_rule(NULL) {};
+Location::Location() : path(), return_rule(NULL), shared_config(NULL) {};
 
-Location::Location(const std::string &path) : path(path), return_rule(NULL) {};
+Location::Location(const Location &other)
+    : path(other.path), return_rule(NULL), shared_config(NULL) {
+  if (other.return_rule) {
+    this->return_rule = new ReturnDir(*other.return_rule);
+  }
+
+  if (other.shared_config) {
+    this->shared_config = other.shared_config->clone();
+  }
+}
+
+Location &Location::operator=(const Location &other) {
+  if (this == &other) {
+    return *this;
+  }
+
+  this->path = other.path;
+
+  if (this->return_rule) {
+    delete this->return_rule;
+    this->return_rule = NULL;
+  }
+  if (this->shared_config) {
+    delete this->shared_config;
+    this->shared_config = NULL;
+  }
+
+  if (other.return_rule) {
+    this->return_rule = new ReturnDir(*other.return_rule);
+  }
+  if (other.shared_config) {
+    this->shared_config = other.shared_config->clone();
+  }
+
+  return *this;
+}
+
+Location::Location(const std::string &path)
+    : path(path), return_rule(NULL), shared_config(NULL) {};
 
 Location::~Location() {
   if (this->return_rule) {
@@ -47,4 +86,20 @@ Location &Location::withSharedConfig(const SharedConfig &cfg) {
 
   this->shared_config = cfg.clone();
   return *this;
+}
+
+std::string Location::toString(int indent) const {
+  std::ostringstream oss;
+  std::string tab = std::string(indent, '\t');
+
+  oss << tab << "location " << this->path << " {\n";
+  if (this->return_rule) {
+    oss << tab << "\treturn " << this->return_rule->code << " "
+        << this->return_rule->url << ";\n";
+  }
+  if (this->shared_config) {
+    oss << this->shared_config->toString(indent + 1);
+  }
+  oss << tab << "}\n";
+  return oss.str();
 }
