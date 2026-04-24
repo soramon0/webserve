@@ -5,9 +5,21 @@
 #include <string>
 
 class Location {
+private:
   std::string path;
   ReturnDir *return_rule;
 
   // copy from parent (server) and update if needed to match location
   SharedConfig *shared_config;
+
+public:
+  Location();
+  ~Location();
+  Location(const std::string &path);
+
+  Location &withPath(const std::string &path);
+  Location &withRedirect(uint16_t code, const std::string &url);
+  Location &withRedirect(const std::string &url);
+
+  void assignSharedConfig(SharedConfig *shared_config);
 };
