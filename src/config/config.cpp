@@ -1,5 +1,4 @@
 #include "config.hpp"
-#include <cstddef>
 #include <sstream>
 
 Config::Config() : shared_config(NULL) {};
