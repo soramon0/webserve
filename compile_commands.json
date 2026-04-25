@@ -1,0 +1,25 @@
+[
+  {
+    "file": "src/main.cpp",
+    "arguments": [
+      "g++",
+      "-Isrc",
+      "-Iinclude",
+      "-MMD",
+      "-MP",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c++98",
+      "-g3",
+      "-O0",
+      "-DDEBUG",
+      "-c",
+      "src/main.cpp",
+      "-o",
+      "obj/debug/main.o"
+    ],
+    "directory": "/home/sora/w/sora/mdrasa/webserve",
+    "output": "obj/debug/main.o"
+  }
+]
