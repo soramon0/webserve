@@ -1,7 +1,8 @@
 CXX      := g++
-NAME     := webserve
-ARGS     ?=
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98
+LDFLAGS  :=
+NAME     := webserv
+ARGS     ?=
 
 # Colors
 GREEN   := \033[1;32m
@@ -20,10 +21,10 @@ endif
 # Build Configuration
 ifdef release
     BUILD_TYPE := release
-    CXXFLAGS   += -O3 -DNDEBUG
+    CXXFLAGS   += -O3 -DDEBUG=0
 else
     BUILD_TYPE := debug
-    CXXFLAGS   += -g3 -O0 -DDEBUG
+    CXXFLAGS   += -g3 -O0 -DDEBUG=1
 endif
 
 ifdef sanitize
@@ -35,10 +36,10 @@ endif
 SRC_DIR    := src
 OBJ_DIR    := obj/$(BUILD_TYPE)
 BUILD_DIR  := build/$(BUILD_TYPE)
+INC_DIR    := include
 
 # Pre-processor
-CPPFLAGS := -I$(SRC_DIR) -MMD -MP
-LDFLAGS  +=
+CPPFLAGS := -I$(SRC_DIR) -I$(INC_DIR) -MMD -MP
 
 # Auto-generate full paths
 SRCS := $(shell find $(SRC_DIR) -name '*.cpp')
