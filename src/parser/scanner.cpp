@@ -41,13 +41,22 @@ void Scanner::tokenize(std::ifstream &file) {
         tokens.push_back(Token(Directive::SEMICOLON, row, column++));
       } else if (src[column] == '"' || src[column] == '\'') {
         char quote = src[column];
-        size_t start = ++column; // start after opening quote
+        size_t start = ++column; // skip starting quote
         while (column < len && src[column] != quote) {
           column++;
         }
+
+        // TODO: return error indicator
+        if (column == len) {
+          Logger::error("Line %zu: Unterminated quote starting at column %zu",
+                        row, start);
+        }
+
         std::string str = src.substr(start, column - start);
         tokens.push_back(Token(Directive::WORD, str, row, start - 1));
-        column++; // skip closing quote
+
+        if (column < len)
+          column++; // Safely skip closing quote
       } else {
         size_t start = column;
         while (column < len && !std::isspace(src[column]) &&
