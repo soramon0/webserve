@@ -6,10 +6,10 @@
 
 class Scanner {
 public:
+  std::vector<Token> tokens;
   ssize_t scan(char *filepath);
 
 private:
-  std::vector<Token> tokens;
 
   void tokenize(std::ifstream &file);
 };
