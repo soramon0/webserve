@@ -31,7 +31,7 @@ struct Directive {
     case SEMICOLON:
       return "SEMICOLON";
     case END_OF_FILE:
-      return "END_OF_FILE";
+      return "EOF";
     default:
       return "UNKNOWN";
     }
@@ -54,7 +54,7 @@ struct Token {
 
   std::string toString() const {
     std::ostringstream oss;
-    oss << row << ":" << column << " " << type << ": ";
+    oss << row << ":" << column + 1 << " " << type << ": ";
     if (lexeme.empty()) {
       oss << type;
     } else {

@@ -33,6 +33,11 @@ void Scanner::tokenize(std::ifstream &file) {
         continue;
       }
 
+      if (src[column] == '#') {
+        column = len; // skip the whole line
+        continue;
+      }
+
       if (src[column] == '{') {
         tokens.push_back(Token(Directive::LBRACE, row, column++));
       } else if (src[column] == '}') {
@@ -53,7 +58,9 @@ void Scanner::tokenize(std::ifstream &file) {
         }
 
         std::string str = src.substr(start, column - start);
-        tokens.push_back(Token(Directive::WORD, str, row, start - 1));
+        if (!str.empty()) {
+          tokens.push_back(Token(Directive::WORD, str, row, start - 1));
+        }
 
         if (column < len)
           column++; // Safely skip closing quote
@@ -67,16 +74,16 @@ void Scanner::tokenize(std::ifstream &file) {
         std::string word = src.substr(start, column - start);
         Directive::Type type = Directive::WORD;
 
-        if (word == "http")
-          type = Directive::HTTP;
-        else if (word == "server")
-          type = Directive::SERVER;
-        else if (word == "location")
-          type = Directive::LOCATION;
+        std::map<std::string, Directive::Type>::iterator it =
+            keywords.find(word);
+        if (it != keywords.end())
+          type = it->second;
 
         tokens.push_back(Token(type, word, row, start));
       }
     }
     row++;
   }
+
+  tokens.push_back(Token(Directive::END_OF_FILE, row, 0));
 }
