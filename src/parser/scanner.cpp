@@ -1,7 +1,9 @@
 #include "scanner.hpp"
 #include "../logger/log.hpp"
+#include "lib/utils.hpp"
 #include "token.hpp"
 #include <cctype>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <string>
@@ -15,11 +17,10 @@ ssize_t Scanner::scan(char *filepath) {
     return -1;
   }
 
-  tokenize(configFile);
-  return 0;
+  return (tokenize(configFile));
 }
 
-void Scanner::tokenize(std::ifstream &file) {
+ssize_t Scanner::tokenize(std::ifstream &file) {
   size_t row = 1;
   std::string src;
 
@@ -51,16 +52,13 @@ void Scanner::tokenize(std::ifstream &file) {
           column++;
         }
 
-        // TODO: return error indicator
         if (column == len) {
-          Logger::error("Line %zu: Unterminated quote starting at column %zu",
-                        row, start);
+          reportError(src, row, start - 1, "could not find closing quote");
+          return 1;
         }
 
         std::string str = src.substr(start, column - start);
-        if (!str.empty()) {
-          tokens.push_back(Token(Directive::WORD, str, row, start - 1));
-        }
+        tokens.push_back(Token(Directive::WORD, str, row, start - 1));
 
         if (column < len)
           column++; // Safely skip closing quote
@@ -86,4 +84,5 @@ void Scanner::tokenize(std::ifstream &file) {
   }
 
   tokens.push_back(Token(Directive::END_OF_FILE, row, 0));
+  return (0);
 }

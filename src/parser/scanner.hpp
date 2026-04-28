@@ -19,5 +19,5 @@ public:
   ssize_t scan(char *filepath);
 
 private:
-  void tokenize(std::ifstream &file);
+  ssize_t tokenize(std::ifstream &file);
 };
