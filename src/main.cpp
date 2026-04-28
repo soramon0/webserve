@@ -1,6 +1,4 @@
 #include "common.h"
-#include "config/config.hpp"
-#include "config/config_mock.hpp"
 #include "logger/log.hpp"
 #include "parser/scanner.hpp"
 #include <iostream>
