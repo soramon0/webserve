@@ -3,11 +3,11 @@
 #include "token.hpp"
 #include <fstream>
 #include <map>
+#include <string>
 #include <vector>
 
 class Scanner {
 public:
-  std::map<std::string, Directive::Type> keywords;
   std::vector<Token> tokens;
 
   Scanner() {
@@ -16,8 +16,9 @@ public:
     keywords["location"] = Directive::LOCATION;
   }
 
-  ssize_t scan(char *filepath);
+  ssize_t tokenize(std::ifstream &file);
+  void printTokens() const;
 
 private:
-  ssize_t tokenize(std::ifstream &file);
+  std::map<std::string, Directive::Type> keywords;
 };

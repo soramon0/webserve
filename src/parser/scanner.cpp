@@ -6,19 +6,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <string>
-
-ssize_t Scanner::scan(char *filepath) {
-  std::ifstream configFile(filepath);
-
-  if (!configFile) {
-    Logger::error("Could not open configuration file '%s': %s", filepath,
-                  std::strerror(errno));
-    return -1;
-  }
-
-  return (tokenize(configFile));
-}
 
 ssize_t Scanner::tokenize(std::ifstream &file) {
   size_t row = 1;
@@ -83,4 +72,11 @@ ssize_t Scanner::tokenize(std::ifstream &file) {
 
   tokens.push_back(Token(Directive::END_OF_FILE, row, 0));
   return (0);
+}
+
+void Scanner::printTokens() const {
+  for (std::vector<Token>::const_iterator it = tokens.begin();
+       it != tokens.end(); it++) {
+    std::cout << it->toString() << std::endl;
+  }
 }
