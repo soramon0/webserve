@@ -54,7 +54,7 @@ ssize_t Scanner::tokenize(std::ifstream &file) {
 
         if (column == len) {
           reportError(src, row, start - 1, "could not find closing quote");
-          return 1;
+          return -1;
         }
 
         std::string str = src.substr(start, column - start);
