@@ -59,9 +59,7 @@ ssize_t Scanner::tokenize(std::ifstream &file) {
 
         std::string str = src.substr(start, column - start);
         tokens.push_back(Token(Directive::WORD, str, row, start - 1));
-
-        if (column < len)
-          column++; // Safely skip closing quote
+        column++; // Safely skip closing quote
       } else {
         size_t start = column;
         while (column < len && !std::isspace(src[column]) &&
