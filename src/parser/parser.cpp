@@ -1,23 +1,17 @@
 #include "parser.hpp"
+#include "config/config.hpp"
 #include "logger/log.hpp"
-#include "parser/scanner.hpp"
-#include <cstring>
-#include <fstream>
+#include "parser/token.hpp"
+#include <vector>
 
-ssize_t Parser::parseConfig(char *filepath) {
-  std::ifstream configFile(filepath);
+Parser::Parser(const std::vector<Token> &t) : tokens(t), pos(0) {}
 
-  if (!configFile) {
-    Logger::error("Could not open configuration file '%s': %s", filepath,
-                  std::strerror(errno));
-    return -1;
+Config *Parser::parse() {
+  if (tokens.empty() || tokens[pos].type == Directive::END_OF_FILE) {
+    Logger::error("Configuration file is empty");
+    return NULL;
   }
 
-  Scanner scanner;
-  if (scanner.tokenize(configFile) != 0) {
-    return -1;
-  }
-  scanner.printTokens();
-
-  return (0);
+  Config *cfg = new Config();
+  return (cfg);
 }

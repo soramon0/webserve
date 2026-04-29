@@ -1,19 +1,26 @@
 #include "scanner.hpp"
-#include "../logger/log.hpp"
 #include "lib/utils.hpp"
+#include "logger/log.hpp"
 #include "token.hpp"
-#include <cctype>
-#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <string>
 
-ssize_t Scanner::tokenize(std::ifstream &file) {
+const std::vector<Token> &Scanner::getTokens() const { return this->tokens; }
+
+ssize_t Scanner::scan(const char *filepath) {
+  std::ifstream configFile(filepath);
+
+  if (!configFile) {
+    Logger::error("Could not open configuration file '%s': %s", filepath,
+                  std::strerror(errno));
+    return -1;
+  }
+
   size_t row = 1;
   std::string src;
 
-  while (std::getline(file, src)) {
+  while (std::getline(configFile, src)) {
     Logger::debug("line %zu: %s", row, src.c_str());
     size_t len = src.length();
     size_t column = 0;

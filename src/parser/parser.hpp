@@ -1,8 +1,16 @@
 #pragma once
 
+#include "config/config.hpp"
+#include "parser/token.hpp"
 #include <cstdio>
+#include <vector>
 
 class Parser {
 public:
-  ssize_t parseConfig(char *filepath);
+  Parser(const std::vector<Token> &tokens);
+  Config *parse();
+
+private:
+  const std::vector<Token> &tokens;
+  size_t pos;
 };
