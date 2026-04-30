@@ -15,7 +15,6 @@ public:
   }
 
   ssize_t scan(const char *filepath);
-  const std::vector<Token> &getTokens() const;
   void printTokens() const;
 
 private:

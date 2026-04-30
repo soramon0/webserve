@@ -6,8 +6,6 @@
 #include <fstream>
 #include <iostream>
 
-const std::vector<Token> &Scanner::getTokens() const { return this->tokens; }
-
 ssize_t Scanner::scan(const char *filepath) {
   std::ifstream configFile(filepath, std::ios::binary);
 
