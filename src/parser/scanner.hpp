@@ -21,4 +21,7 @@ public:
 private:
   std::map<std::string, Directive::Type> keywords;
   std::vector<Token> tokens;
+  std::vector<std::streampos> lineOffsets;
+
+  friend class Parser;
 };
