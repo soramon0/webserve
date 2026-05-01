@@ -20,50 +20,76 @@ Config *Parser::parse() {
 
   Config *cfg = new Config();
   while (!atEnd()) {
-    bool hasErr = false;
-    const Token &token = advance();
-
-    if (token.type == Directive::HTTP) {
-      hasErr = parseHttp(cfg) != 0;
-    } else if (token.type == Directive::SERVER) {
-      hasErr = parseServer(cfg) != 0;
-    } else if (token.type == Directive::LOCATION) {
-      hasErr = parseLocation(cfg) != 0;
+    if (check(Directive::HTTP)) {
+      advance();
+      if (parseHttp(cfg) != 0) {
+        goto cleanup;
+      }
     } else {
-      reportParseError(token, "unknown directive");
-      hasErr = true;
-    }
-
-    if (hasErr) {
-      delete cfg;
-      return (NULL);
+      reportParseError(peek(), "directives must be inside an http block");
+      goto cleanup;
     }
   }
+
+cleanup:
+  delete cfg;
+  cfg = NULL;
 
   return (cfg);
 }
 
 ssize_t Parser::parseHttp(Config *config) {
-  if (!ctxIs(CTX_ROOT, CTX_HTTP)) {
+  (void)config;
+  if (!expectContext(CTX_ROOT, CTX_HTTP)) {
     return -1;
   }
 
-  (void)config;
+  Context prevCtx = this->ctx;
+  this->ctx = CTX_HTTP;
+
+  if (!consume(Directive::LBRACE, "expected '{'"))
+    return -1;
+
+  while (!check(Directive::RBRACE) && !atEnd()) {
+    const Token &t = advance();
+    if (t.type == Directive::SERVER) {
+      if (parseServer(config) != 0)
+        return -1;
+    } else {
+      // Handle other http-level directives like 'index'
+      parseDirective(config);
+    }
+  }
+
+  if (!consume(Directive::RBRACE, "expected '}'"))
+    return -1;
+
+  this->ctx = prevCtx;
   return 0;
 }
 
 ssize_t Parser::parseServer(Config *config) {
-  if (!ctxIs(CTX_HTTP, CTX_SERVER)) {
+  (void)config;
+  if (!expectContext(CTX_HTTP, CTX_SERVER)) {
     return -1;
   }
-  (void)config;
+
+  Context prevCtx = this->ctx;
+  this->ctx = CTX_SERVER;
+
+  // parse...
+
+  this->ctx = prevCtx;
   return 0;
 }
 
 ssize_t Parser::parseLocation(Config *config) {
-  if (!ctxIs(CTX_SERVER, CTX_LOCATION)) {
+  if (!expectContext(CTX_SERVER, CTX_LOCATION)) {
     return -1;
   }
+
+  Context prevCtx = this->ctx;
+  this->ctx = CTX_LOCATION;
 
   const Token *token = consume(Directive::WORD, "expected location uri");
   if (!token) {
@@ -80,8 +106,7 @@ ssize_t Parser::parseLocation(Config *config) {
     return (-1);
   }
 
-  // match directives
-
+  this->ctx = prevCtx;
   return 0;
 }
 
@@ -90,16 +115,15 @@ ssize_t Parser::parseDirective(Config *config) {
   return 0;
 }
 
-bool Parser::ctxIs(Context want, Context next) {
-  if (this->ctx == want) {
-    this->ctx = next;
+bool Parser::expectContext(Context context, Context want) {
+  if (this->ctx == context) {
     return true;
   }
 
   std::ostringstream oss;
 
-  oss << "directive `" << ctxToString(next)
-      << "` is not allowed here (must be at `" << ctxToString(want)
+  oss << "directive `" << ctxToString(want)
+      << "` is not allowed here (must be at `" << ctxToString(context)
       << "` block)";
 
   reportParseError(previous(), oss.str());

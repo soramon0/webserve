@@ -30,7 +30,7 @@ private:
   const Token &previous() const;
   const Token &advance();
   const Token *consume(Directive::Type type, const std::string &msg);
+  bool expectContext(Context context, Context want);
 
-  bool ctxIs(Context want, Context next);
   std::string ctxToString(Context context) const;
 };
