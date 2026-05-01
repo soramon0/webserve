@@ -9,6 +9,7 @@
 class Scanner {
 public:
   Scanner() {
+    keywords["events"] = Directive::EVENTS;
     keywords["http"] = Directive::HTTP;
     keywords["server"] = Directive::SERVER;
     keywords["location"] = Directive::LOCATION;

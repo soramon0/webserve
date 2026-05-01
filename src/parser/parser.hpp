@@ -11,13 +11,14 @@ public:
   Config *parse();
 
 private:
-  enum Context { CTX_ROOT, CTX_HTTP, CTX_SERVER, CTX_LOCATION };
+  enum Context { CTX_ROOT, CTX_EVENTS, CTX_HTTP, CTX_SERVER, CTX_LOCATION };
 
   std::string cfgFile;
   size_t pos;
   Context ctx;
   Scanner scanner;
 
+  ssize_t parseEvents();
   ssize_t parseHttp(Config *config);
   ssize_t parseServer(Config *config);
   ssize_t parseLocation(Config *config);

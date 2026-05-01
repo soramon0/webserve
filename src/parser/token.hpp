@@ -4,6 +4,7 @@
 
 struct Directive {
   enum Type {
+    EVENTS,
     HTTP,
     SERVER,
     LOCATION,
@@ -16,6 +17,8 @@ struct Directive {
 
   static std::string toString(Type type) {
     switch (type) {
+    case EVENTS:
+      return "events";
     case HTTP:
       return "HTTP";
     case SERVER:

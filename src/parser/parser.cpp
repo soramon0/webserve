@@ -20,7 +20,12 @@ Config *Parser::parse() {
 
   Config *cfg = new Config();
   while (!atEnd()) {
-    if (check(Directive::HTTP)) {
+    if (check(Directive::EVENTS)) {
+      advance();
+      if (parseEvents() != 0) {
+        goto cleanup;
+      }
+    } else if (check(Directive::HTTP)) {
       advance();
       if (parseHttp(cfg) != 0) {
         goto cleanup;
@@ -36,6 +41,29 @@ cleanup:
   cfg = NULL;
 
   return (cfg);
+}
+
+// NOTE: parseEvents is noop for now
+ssize_t Parser::parseEvents() {
+  if (!expectContext(CTX_ROOT, CTX_EVENTS)) {
+    return -1;
+  }
+
+  Context prevCtx = this->ctx;
+  this->ctx = CTX_EVENTS;
+
+  if (!consume(Directive::LBRACE, "expected '{'"))
+    return -1;
+
+  while (!check(Directive::RBRACE) && !atEnd()) {
+    advance();
+  }
+
+  if (!consume(Directive::RBRACE, "expected '}'"))
+    return -1;
+
+  this->ctx = prevCtx;
+  return 0;
 }
 
 ssize_t Parser::parseHttp(Config *config) {
@@ -178,6 +206,8 @@ std::string Parser::ctxToString(Context context) const {
   switch (context) {
   case CTX_ROOT:
     return "root";
+  case CTX_EVENTS:
+    return "events";
   case CTX_HTTP:
     return "http";
   case CTX_SERVER:
