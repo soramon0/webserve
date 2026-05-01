@@ -1,10 +1,14 @@
 services:
   web:
     image: nginx:latest
+    container_name: web
     restart: unless-stopped
+    network_mode: "host"
     ports:
       - "8080:80"
-      - "8081:9999"
     volumes:
-      - ./html:/usr/share/nginx/web:ro
-      - ./config/nginx.conf:/etc/nginx/conf.d/web.conf:ro
+      # Mount your local config directory to the Nginx config path
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Mount a local folder to serve files for testing 'root' or 'index'
+      - ./nginx/www:/var/www/html:ro
+    command: /bin/sh -c "nginx -g 'daemon off;'"
