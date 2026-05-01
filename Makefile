@@ -49,7 +49,7 @@ DEPS := $(OBJS:.o=.d)
 # Safety Net
 .DELETE_ON_ERROR:
 
-.PHONY: all clean fclean re run release help
+.PHONY: all clean fclean re run release help nginx_t
 
 all: $(NAME)
 
@@ -84,6 +84,10 @@ fclean: clean
 	$(Q)rm -rf $(firstword $(subst /, ,$(BUILD_DIR)))
 
 re: fclean all
+
+nginx_t:
+	$(Q)docker compose run --rm web nginx -t
+
 
 help:
 	@printf "$(MAGENTA)Available targets:$(RESET)\n"
