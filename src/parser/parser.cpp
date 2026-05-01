@@ -43,7 +43,7 @@ cleanup:
   return (cfg);
 }
 
-// NOTE: parseEvents is noop for now
+// NOTE: events directive is noop for now
 ssize_t Parser::parseEvents() {
   if (!expectContext(CTX_ROOT, CTX_EVENTS)) {
     return -1;
@@ -189,7 +189,7 @@ void Parser::reportParseError(const Token &t, const std::string &msg) const {
   std::ifstream file(this->cfgFile.c_str(), std::ios::binary);
 
   if (!file) {
-    Logger::error("%zu:%zu: %s", t.row, t.column, msg.c_str());
+    Logger::error("%zu:%zu| %s", t.row, t.column, msg.c_str());
   } else {
     file.seekg(scanner.lineOffsets[t.row - 1]);
 
@@ -197,7 +197,7 @@ void Parser::reportParseError(const Token &t, const std::string &msg) const {
     if (std::getline(file, line)) {
       reportError(line, t.row, t.column, msg);
     } else {
-      Logger::error("%zu:%zu: %s", t.row, t.column, msg.c_str());
+      Logger::error("%zu:%zu| %s", t.row, t.column, msg.c_str());
     }
   }
 }
