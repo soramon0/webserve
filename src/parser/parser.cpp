@@ -31,7 +31,7 @@ Config *Parser::parse() {
         goto cleanup;
       }
     } else {
-      reportParseError(peek(), "directives must be inside an http block");
+      reportParseError(peek(), "unknown directive");
       goto cleanup;
     }
   }
