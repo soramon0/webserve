@@ -55,20 +55,18 @@ cleanup:
 }
 
 ssize_t Parser::parseLocation(Config *config) {
-  const Token &token = advance();
-  if (!match(token, Directive::WORD)) {
-    reportParseError(token, "expected location uri");
+  const Token *token = consume(Directive::WORD, "expected location uri");
+  if (!token) {
     return (-1);
   }
 
   Location loc;
-  loc.withPath(token.lexeme);
+  loc.withPath(token->lexeme);
   if (config->shared_config) {
     loc.withSharedConfig(*config->shared_config);
   }
 
-  if (!match(peek(), Directive::LBRACE)) {
-    reportParseError(token, "expected \"{\" to start location block");
+  if (!consume(Directive::LBRACE, "expected \"{\" to start location block")) {
     return (-1);
   }
 
@@ -82,26 +80,32 @@ ssize_t Parser::parseDirective(Config *config) {
   return 0;
 }
 
-const Token &Parser::peek() const { return scanner.tokens[pos]; }
-
-const Token &Parser::advance() {
-  if (!atEnd())
-    pos++;
-  return scanner.tokens[pos - 1];
-}
-
-bool Parser::atEnd() const {
-  return scanner.tokens[pos].type == Directive::END_OF_FILE;
-}
-
-bool Parser::match(const Token &token, Directive::Type type) {
-  if (token.type == type) {
-    pos++;
-    return true;
+const Token *Parser::consume(Directive::Type type, const std::string &msg) {
+  if (check(type)) {
+    return &advance();
   }
 
-  return false;
+  reportParseError(peek(), msg);
+  return NULL;
 }
+
+bool Parser::check(Directive::Type type) {
+  if (atEnd())
+    return false;
+  return peek().type == type;
+}
+
+const Token &Parser::peek() const { return scanner.tokens[pos]; }
+const Token &Parser::previous() const { return scanner.tokens[pos - 1]; }
+
+const Token &Parser::advance() {
+  if (!atEnd()) {
+    pos++;
+  }
+  return previous();
+}
+
+bool Parser::atEnd() const { return peek().type == Directive::END_OF_FILE; }
 
 void Parser::reportParseError(const Token &t, const std::string &msg) const {
   std::ifstream file(this->cfgFile.c_str(), std::ios::binary);
@@ -109,16 +113,13 @@ void Parser::reportParseError(const Token &t, const std::string &msg) const {
   if (!file) {
     Logger::error("%zu:%zu: %s", t.row, t.column, msg.c_str());
   } else {
-    size_t row = t.row;
-    if (row > scanner.lineOffsets.size()) {
-      row = scanner.lineOffsets.size();
-    }
-
-    file.seekg(scanner.lineOffsets[row - 1]);
+    file.seekg(scanner.lineOffsets[t.row - 1]);
 
     std::string line;
     if (std::getline(file, line)) {
       reportError(line, t.row, t.column, msg);
+    } else {
+      Logger::error("%zu:%zu: %s", t.row, t.column, msg.c_str());
     }
   }
 }

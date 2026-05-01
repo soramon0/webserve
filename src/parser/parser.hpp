@@ -23,7 +23,9 @@ private:
   void reportParseError(const Token &token, const std::string &msg) const;
 
   bool atEnd() const;
+  bool check(Directive::Type type);
   const Token &peek() const;
+  const Token &previous() const;
   const Token &advance();
-  bool match(const Token &token, Directive::Type type);
+  const Token *consume(Directive::Type type, const std::string &msg);
 };
