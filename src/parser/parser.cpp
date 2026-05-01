@@ -5,12 +5,13 @@
 #include <fstream>
 #include <iostream>
 
-Parser::Parser(const char *filepath)
-    : cfgFile(filepath), pos(0), ctx(Parser::CTX_ROOT), scanner() {}
+Parser::Parser(const char *path) : cfgFile(path), pos(0), scanner(), ctx() {
+  ctx.push_back(CTX_ROOT);
+}
 
 Config *Parser::parse() {
   if (scanner.scan(this->cfgFile.c_str()) != 0) {
-    return (NULL);
+    return NULL;
   }
 
   if (atEnd()) {
@@ -48,9 +49,7 @@ ssize_t Parser::parseEvents() {
   if (!expectContext(CTX_ROOT, CTX_EVENTS)) {
     return -1;
   }
-
-  Context prevCtx = this->ctx;
-  this->ctx = CTX_EVENTS;
+  this->ctx.push_back(CTX_EVENTS);
 
   if (!consume(Directive::LBRACE, "expected '{'"))
     return -1;
@@ -62,18 +61,15 @@ ssize_t Parser::parseEvents() {
   if (!consume(Directive::RBRACE, "expected '}'"))
     return -1;
 
-  this->ctx = prevCtx;
+  this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseHttp(Config *config) {
-  (void)config;
+ssize_t Parser::parseHttp(Config *cfg) {
   if (!expectContext(CTX_ROOT, CTX_HTTP)) {
     return -1;
   }
-
-  Context prevCtx = this->ctx;
-  this->ctx = CTX_HTTP;
+  this->ctx.push_back(CTX_HTTP);
 
   if (!consume(Directive::LBRACE, "expected '{'"))
     return -1;
@@ -81,43 +77,41 @@ ssize_t Parser::parseHttp(Config *config) {
   while (!check(Directive::RBRACE) && !atEnd()) {
     const Token &t = advance();
     if (t.type == Directive::SERVER) {
-      if (parseServer(config) != 0)
+      if (parseServer(cfg) != 0)
         return -1;
     } else {
       // Handle other http-level directives like 'index'
-      parseDirective(config);
+      if (parseDirective(cfg) != 0) {
+        return -1;
+      }
     }
   }
 
   if (!consume(Directive::RBRACE, "expected '}'"))
     return -1;
 
-  this->ctx = prevCtx;
+  this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseServer(Config *config) {
-  (void)config;
+ssize_t Parser::parseServer(Config *cfg) {
+  (void)cfg;
   if (!expectContext(CTX_HTTP, CTX_SERVER)) {
     return -1;
   }
-
-  Context prevCtx = this->ctx;
-  this->ctx = CTX_SERVER;
+  this->ctx.push_back(CTX_SERVER);
 
   // parse...
 
-  this->ctx = prevCtx;
+  this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseLocation(Config *config) {
+ssize_t Parser::parseLocation(Config *cfg) {
   if (!expectContext(CTX_SERVER, CTX_LOCATION)) {
     return -1;
   }
-
-  Context prevCtx = this->ctx;
-  this->ctx = CTX_LOCATION;
+  this->ctx.push_back(CTX_LOCATION);
 
   const Token *token = consume(Directive::WORD, "expected location uri");
   if (!token) {
@@ -126,25 +120,25 @@ ssize_t Parser::parseLocation(Config *config) {
 
   Location loc;
   loc.withPath(token->lexeme);
-  if (config->shared_config) {
-    loc.withSharedConfig(*config->shared_config);
+  if (cfg->shared_config) {
+    loc.withSharedConfig(*cfg->shared_config);
   }
 
   if (!consume(Directive::LBRACE, "expected \"{\" to start location block")) {
     return (-1);
   }
 
-  this->ctx = prevCtx;
+  this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseDirective(Config *config) {
-  (void)config;
+ssize_t Parser::parseDirective(Config *cfg) {
+  (void)cfg;
   return 0;
 }
 
 bool Parser::expectContext(Context context, Context want) {
-  if (this->ctx == context) {
+  if (ctx.back() == context) {
     return true;
   }
 

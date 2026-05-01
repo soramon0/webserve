@@ -7,7 +7,7 @@
 
 class Parser {
 public:
-  Parser(const char *filepath);
+  Parser(const char *path);
   Config *parse();
 
 private:
@@ -15,14 +15,14 @@ private:
 
   std::string cfgFile;
   size_t pos;
-  Context ctx;
   Scanner scanner;
+  std::vector<Context> ctx;
 
   ssize_t parseEvents();
-  ssize_t parseHttp(Config *config);
-  ssize_t parseServer(Config *config);
-  ssize_t parseLocation(Config *config);
-  ssize_t parseDirective(Config *config);
+  ssize_t parseHttp(Config *cfg);
+  ssize_t parseServer(Config *cfg);
+  ssize_t parseLocation(Config *cfg);
+  ssize_t parseDirective(Config *cfg);
   void reportParseError(const Token &token, const std::string &msg) const;
 
   bool atEnd() const;
