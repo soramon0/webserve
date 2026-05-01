@@ -18,6 +18,8 @@ private:
   Context ctx;
   Scanner scanner;
 
+  ssize_t parseHttp(Config *config);
+  ssize_t parseServer(Config *config);
   ssize_t parseLocation(Config *config);
   ssize_t parseDirective(Config *config);
   void reportParseError(const Token &token, const std::string &msg) const;
@@ -28,4 +30,7 @@ private:
   const Token &previous() const;
   const Token &advance();
   const Token *consume(Directive::Type type, const std::string &msg);
+
+  bool ctxIs(Context want, Context next);
+  std::string ctxToString(Context context) const;
 };

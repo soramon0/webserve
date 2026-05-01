@@ -20,41 +20,51 @@ Config *Parser::parse() {
 
   Config *cfg = new Config();
   while (!atEnd()) {
+    bool hasErr = false;
     const Token &token = advance();
+
     if (token.type == Directive::HTTP) {
-      // parse http
-      this->ctx = Parser::CTX_HTTP;
-      // ...
-      // go to previous block
-      this->ctx = Parser::CTX_ROOT;
+      hasErr = parseHttp(cfg) != 0;
     } else if (token.type == Directive::SERVER) {
-      // parse server
-      this->ctx = Parser::CTX_SERVER;
-      // ...
-      // go to previous block
-      this->ctx = Parser::CTX_HTTP;
+      hasErr = parseServer(cfg) != 0;
     } else if (token.type == Directive::LOCATION) {
-      this->ctx = Parser::CTX_LOCATION;
-
-      if (parseLocation(cfg) != 0) {
-        goto cleanup;
-      }
-
-      this->ctx = Parser::CTX_SERVER;
+      hasErr = parseLocation(cfg) != 0;
     } else {
       reportParseError(token, "unknown directive");
-      goto cleanup;
+      hasErr = true;
+    }
+
+    if (hasErr) {
+      delete cfg;
+      return (NULL);
     }
   }
-
-cleanup:
-  delete cfg;
-  cfg = NULL;
 
   return (cfg);
 }
 
+ssize_t Parser::parseHttp(Config *config) {
+  if (!ctxIs(CTX_ROOT, CTX_HTTP)) {
+    return -1;
+  }
+
+  (void)config;
+  return 0;
+}
+
+ssize_t Parser::parseServer(Config *config) {
+  if (!ctxIs(CTX_HTTP, CTX_SERVER)) {
+    return -1;
+  }
+  (void)config;
+  return 0;
+}
+
 ssize_t Parser::parseLocation(Config *config) {
+  if (!ctxIs(CTX_SERVER, CTX_LOCATION)) {
+    return -1;
+  }
+
   const Token *token = consume(Directive::WORD, "expected location uri");
   if (!token) {
     return (-1);
@@ -78,6 +88,22 @@ ssize_t Parser::parseLocation(Config *config) {
 ssize_t Parser::parseDirective(Config *config) {
   (void)config;
   return 0;
+}
+
+bool Parser::ctxIs(Context want, Context next) {
+  if (this->ctx == want) {
+    this->ctx = next;
+    return true;
+  }
+
+  std::ostringstream oss;
+
+  oss << "directive `" << ctxToString(next)
+      << "` is not allowed here (must be at `" << ctxToString(want)
+      << "` block)";
+
+  reportParseError(previous(), oss.str());
+  return false;
 }
 
 const Token *Parser::consume(Directive::Type type, const std::string &msg) {
@@ -121,5 +147,20 @@ void Parser::reportParseError(const Token &t, const std::string &msg) const {
     } else {
       Logger::error("%zu:%zu: %s", t.row, t.column, msg.c_str());
     }
+  }
+}
+
+std::string Parser::ctxToString(Context context) const {
+  switch (context) {
+  case CTX_ROOT:
+    return "root";
+  case CTX_HTTP:
+    return "http";
+  case CTX_SERVER:
+    return "server";
+  case CTX_LOCATION:
+    return "location";
+  default:
+    return "unknown";
   }
 }
