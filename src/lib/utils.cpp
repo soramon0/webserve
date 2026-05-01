@@ -21,7 +21,7 @@ void reportError(const std::string &src, size_t row, size_t start,
   // [Error] "row:column: line_content"
   // logger prefix
   size_t loggerPrefix = 11;
-  oss << row << ":" << start + 1 << ": " << src << "\n";
+  oss << row << ":" << start + 1 << "| " << src << "\n";
   size_t prefixLen = countDigits(row) + countDigits(start + 1) + loggerPrefix;
   std::string underline(prefixLen + start, ' ');
   underline += "^ " + msg;
