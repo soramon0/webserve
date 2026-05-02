@@ -18,6 +18,9 @@ private:
   Scanner scanner;
   std::vector<Context> ctx;
 
+  typedef std::vector<Context> Contexts;
+  std::map<Directive::Type, Contexts> ctxMap;
+
   ssize_t parseEvents();
   ssize_t parseHttp(Config *cfg);
   ssize_t parseServer(Config *cfg);
@@ -32,6 +35,7 @@ private:
   const Token &advance();
   const Token *consume(Directive::Type type, const std::string &msg);
   bool expectContext(Context context, Context want);
+  bool expectTokenContext(Directive::Type type);
 
   std::string ctxToString(Context context) const;
 };

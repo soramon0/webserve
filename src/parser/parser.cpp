@@ -5,8 +5,14 @@
 #include <fstream>
 #include <iostream>
 
-Parser::Parser(const char *path) : cfgFile(path), pos(0), scanner(), ctx() {
+Parser::Parser(const char *path)
+    : cfgFile(path), pos(0), scanner(), ctx(), ctxMap() {
   ctx.push_back(CTX_ROOT);
+
+  ctxMap[Directive::EVENTS].push_back(CTX_ROOT);
+  ctxMap[Directive::HTTP].push_back(CTX_ROOT);
+  ctxMap[Directive::SERVER].push_back(CTX_HTTP);
+  ctxMap[Directive::LOCATION].push_back(CTX_SERVER);
 }
 
 Config *Parser::parse() {
@@ -37,11 +43,11 @@ Config *Parser::parse() {
     }
   }
 
+  return cfg;
+
 cleanup:
   delete cfg;
-  cfg = NULL;
-
-  return (cfg);
+  return NULL;
 }
 
 // NOTE: events directive is noop for now
@@ -55,6 +61,8 @@ ssize_t Parser::parseEvents() {
     return -1;
 
   while (!check(Directive::RBRACE) && !atEnd()) {
+    if (!expectTokenContext(peek().type))
+      return -1;
     advance();
   }
 
@@ -66,24 +74,25 @@ ssize_t Parser::parseEvents() {
 }
 
 ssize_t Parser::parseHttp(Config *cfg) {
-  if (!expectContext(CTX_ROOT, CTX_HTTP)) {
+  if (!expectContext(CTX_ROOT, CTX_HTTP))
     return -1;
-  }
   this->ctx.push_back(CTX_HTTP);
 
   if (!consume(Directive::LBRACE, "expected '{'"))
     return -1;
 
   while (!check(Directive::RBRACE) && !atEnd()) {
-    const Token &t = advance();
-    if (t.type == Directive::SERVER) {
+    Directive::Type type = peek().type;
+    if (!expectTokenContext(type))
+      return -1;
+
+    if (type == Directive::SERVER) {
+      advance();
       if (parseServer(cfg) != 0)
         return -1;
     } else {
-      // Handle other http-level directives like 'index'
-      if (parseDirective(cfg) != 0) {
+      if (parseDirective(cfg) != 0)
         return -1;
-      }
     }
   }
 
@@ -96,37 +105,42 @@ ssize_t Parser::parseHttp(Config *cfg) {
 
 ssize_t Parser::parseServer(Config *cfg) {
   (void)cfg;
-  if (!expectContext(CTX_HTTP, CTX_SERVER)) {
+  if (!expectContext(CTX_HTTP, CTX_SERVER))
     return -1;
-  }
   this->ctx.push_back(CTX_SERVER);
 
   // parse...
+  advance();
 
   this->ctx.pop_back();
   return 0;
 }
 
 ssize_t Parser::parseLocation(Config *cfg) {
-  if (!expectContext(CTX_SERVER, CTX_LOCATION)) {
+  if (!expectContext(CTX_SERVER, CTX_LOCATION))
     return -1;
-  }
   this->ctx.push_back(CTX_LOCATION);
 
-  const Token *token = consume(Directive::WORD, "expected location uri");
-  if (!token) {
-    return (-1);
-  }
+  if (!consume(Directive::WORD, "expected location uri"))
+    return -1;
 
   Location loc;
-  loc.withPath(token->lexeme);
+  loc.withPath(previous().lexeme);
   if (cfg->shared_config) {
     loc.withSharedConfig(*cfg->shared_config);
   }
 
-  if (!consume(Directive::LBRACE, "expected \"{\" to start location block")) {
-    return (-1);
+  while (!check(Directive::RBRACE) && !atEnd()) {
+    Directive::Type type = peek().type;
+    if (!expectTokenContext(type))
+      return -1;
+
+    if (parseDirective(cfg) != 0)
+      return -1;
   }
+
+  if (!consume(Directive::RBRACE, "expected '}'"))
+    return (-1);
 
   this->ctx.pop_back();
   return 0;
@@ -134,28 +148,13 @@ ssize_t Parser::parseLocation(Config *cfg) {
 
 ssize_t Parser::parseDirective(Config *cfg) {
   (void)cfg;
+  advance();
   return 0;
 }
 
-bool Parser::expectContext(Context context, Context want) {
-  if (ctx.back() == context) {
-    return true;
-  }
-
-  std::ostringstream oss;
-
-  oss << "directive `" << ctxToString(want)
-      << "` is not allowed here (must be at `" << ctxToString(context)
-      << "` block)";
-
-  reportParseError(previous(), oss.str());
-  return false;
-}
-
 const Token *Parser::consume(Directive::Type type, const std::string &msg) {
-  if (check(type)) {
+  if (check(type))
     return &advance();
-  }
 
   reportParseError(peek(), msg);
   return NULL;
@@ -171,9 +170,8 @@ const Token &Parser::peek() const { return scanner.tokens[pos]; }
 const Token &Parser::previous() const { return scanner.tokens[pos - 1]; }
 
 const Token &Parser::advance() {
-  if (!atEnd()) {
+  if (!atEnd())
     pos++;
-  }
   return previous();
 }
 
@@ -193,22 +191,5 @@ void Parser::reportParseError(const Token &t, const std::string &msg) const {
     } else {
       Logger::error("%zu:%zu| %s", t.row, t.column, msg.c_str());
     }
-  }
-}
-
-std::string Parser::ctxToString(Context context) const {
-  switch (context) {
-  case CTX_ROOT:
-    return "root";
-  case CTX_EVENTS:
-    return "events";
-  case CTX_HTTP:
-    return "http";
-  case CTX_SERVER:
-    return "server";
-  case CTX_LOCATION:
-    return "location";
-  default:
-    return "unknown";
   }
 }

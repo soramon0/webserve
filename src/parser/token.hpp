@@ -20,13 +20,13 @@ struct Directive {
     case EVENTS:
       return "events";
     case HTTP:
-      return "HTTP";
+      return "http";
     case SERVER:
-      return "SERVER";
+      return "server";
     case LOCATION:
-      return "LOCATION";
+      return "location";
     case WORD:
-      return "WORD";
+      return "word";
     case LBRACE:
       return "LBRACE";
     case RBRACE:
