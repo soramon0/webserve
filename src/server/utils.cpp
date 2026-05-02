@@ -18,12 +18,17 @@ int epoll_instance()
     return fd;
 }
 
-void add_to_epoll(int epoll_fd, SOCKET listen_sock, int flags)
+void add_to_epoll(int epoll_fd, SOCKET sock, int flags)
 {
     struct epoll_event ev;
     ev.events = flags;
-    ev.data.fd = listen_sock;
+    ev.data.fd = sock;
 
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_sock, &ev) ==  -1)
-        Logger::error("Error: Can't add listen_socket %d to epoll", listen_sock);
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sock, &ev) ==  -1)
+    {
+        Logger::error("Error: Can't add socket %d to epoll", listen_sock);
+        close(sock);
+        return -1;
+    }
+    return 0;
 }

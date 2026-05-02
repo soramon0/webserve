@@ -9,7 +9,6 @@ class Webserv
 private:
 	Config						conf;
 	int							epoll_fd;
-	// std::vector<int>			listning_socks;
 	std::map<SOCKET, Client>	clients;
 	std::map<SOCKET, Server*>	servers;
 public:
