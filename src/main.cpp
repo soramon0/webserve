@@ -2,17 +2,29 @@
 #include "config/config.hpp"
 #include "logger/log.hpp"
 #include "parser/parser.hpp"
+#include "server/Webserv.hpp"
 
-int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    Logger::fatal("Usage: %s <configuration_file>", argv[0]);
-  }
+int main(int ac, char *av[]) {
+	try {
+		if (ac > 2)
+			throw std::invalid_argument("Usage: ./webserv [config_file]");
 
-  Config *config = Parser(argv[1]).parse();
-  if (config == NULL) {
-    return (EXIT_FAILURE);
-  }
+		std::string config_file = (ac == 2) ? av[1] : "../nginx/nginx.conf";
 
-  delete config;
-  return (EXIT_SUCCESS);
+		Config *config = Parser(config_file).parse();
+		if (config == NULL) {
+			return (EXIT_FAILURE);
+		}
+
+		Webserv websrv(*config);
+		delete config;
+
+		websrv.start();
+
+	}
+	catch(const std::exception& e) {
+		std::cerr << e.what() << '\n';
+	}
+
+	return (EXIT_SUCCESS);
 }
