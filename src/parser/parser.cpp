@@ -151,6 +151,10 @@ ssize_t Parser::parseLocation(Location &loc) {
     return -1;
 
   loc.path = previous().lexeme;
+
+  if (!consume(Directive::LBRACE, "expected '{' after location"))
+    return -1;
+
   while (!check(Directive::RBRACE) && !atEnd()) {
     Directive::Type type = peek().type;
     if (!expectTokenContext(type))
@@ -168,8 +172,27 @@ ssize_t Parser::parseLocation(Location &loc) {
 }
 
 ssize_t Parser::parseDirective(SharedConfig &cfg) {
-  (void)cfg;
-  advance();
+  const Token &dir = peek();
+
+  while (!check(Directive::SEMICOLON) && !atEnd()) {
+    advance();
+    if (previous().lexeme == "root") {
+      if (!consume(Directive::WORD, "expected path after `root` directive."))
+        return -1;
+      cfg.root = previous().lexeme;
+      if (peek().type == Directive::WORD) {
+        reportParseError(peek(),
+                         "invalid number of arguments in `root` directive.");
+        return -1;
+      }
+    } else {
+      reportParseError(previous(), "invalid directive.");
+      return -1;
+    }
+  }
+
+  if (!consume(Directive::SEMICOLON, "expected ';' after `" + dir.lexeme + "`"))
+    return (-1);
   return 0;
 }
 
