@@ -1,7 +1,9 @@
 #include "config.hpp"
 #include <sstream>
 
-Config::Config() : shared_config(NULL) {};
+Config::Config() : servers(2), shared_config(NULL) {
+  servers[0].port = 8080;
+};
 
 Config::~Config() { delete shared_config; }
 

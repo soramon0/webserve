@@ -44,6 +44,7 @@ void	Webserv::eventLoop()
 	while (true)
 	{
 		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+		std::cout << "hello\n";
 		int ev, fd;
 		for (int i = 0; i < n_ev; i++)
 		{
@@ -169,10 +170,12 @@ void	Webserv::handleHttpRequest(SOCKET c)
 		handleHttpResponse(c);
 	}
 }
+
 void	Webserv::handleHttpResponse(SOCKET c)
 {
 	const char response[100] = HELLO_WORLD_RESPONSE;
 
+	
 	int n = send(c, response, strlen(response), 0);
 	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
 	close(c);

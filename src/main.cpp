@@ -12,14 +12,10 @@ int main(int ac, char *av[]) {
 
 		std::string config_file = (ac == 2) ? av[1] : "../nginx/nginx.conf";
 
-		Config *config = Parser(config_file.c_str()).parse();
-		if (config == NULL) {
-			return (EXIT_FAILURE);
-		}
+		Config config;
 
-		Webserv websrv(*config);
-		delete config;
 
+		Webserv websrv(config);
 		websrv.start();
 
 	}
