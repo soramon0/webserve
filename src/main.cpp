@@ -3,6 +3,7 @@
 #include "logger/log.hpp"
 #include "parser/parser.hpp"
 #include "server/Webserv.hpp"
+#include <iostream>
 
 int main(int ac, char *av[]) {
 	try {
@@ -11,7 +12,7 @@ int main(int ac, char *av[]) {
 
 		std::string config_file = (ac == 2) ? av[1] : "../nginx/nginx.conf";
 
-		Config *config = Parser(config_file).parse();
+		Config *config = Parser(config_file.c_str()).parse();
 		if (config == NULL) {
 			return (EXIT_FAILURE);
 		}

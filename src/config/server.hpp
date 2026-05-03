@@ -16,6 +16,7 @@ private:
   SharedConfig *shared_config;
 
   friend class Config;
+  friend class Webserv;
 
 public:
   Server();

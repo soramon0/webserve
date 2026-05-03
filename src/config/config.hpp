@@ -18,6 +18,6 @@ public:
 
 private:
   // Only won config should be created so disable copying
-  Config(const Config &other);
-  Config &operator=(const Config &other);
+  // Config(const Config &other);
+  // Config &operator=(const Config &other);
 };

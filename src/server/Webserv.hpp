@@ -1,13 +1,15 @@
 #pragma once
 
 #include "../../include/common.h"
+#include "../config/config.hpp"
+#include "Client.hpp"
 #include <vector>
 #include <map>
 
 class Webserv
 {
 private:
-	Config						conf;
+	Config						config;
 	int							epoll_fd;
 	std::map<SOCKET, Client>	clients;
 	std::map<SOCKET, Server*>	servers;

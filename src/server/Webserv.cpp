@@ -1,12 +1,15 @@
 #include "Webserv.hpp"
 #include "utils.hpp"
+#include "../logger/log.hpp"
 #include <sys/epoll.h>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <cstring>
 
 #define MAX_EVENTS 64
 #define BLANKLINE "\r\n\r\n"
+#define HELLO_WORLD_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!"
 
 Webserv::Webserv(Config _conf) : config(_conf) {}
 
@@ -83,7 +86,7 @@ SOCKET	Webserv::createSocket(int id)
 	struct addrinfo *addr;
 	getaddrinfo(host.c_str(), port.c_str(), &hints, &addr);
 
-	int socket_listen = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
+	int socket_listen = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 	if (!ISVALIDSOCKET(socket_listen))
 		Logger::fatal("Invalid socket error"); //TODO close everything
 
@@ -91,9 +94,9 @@ SOCKET	Webserv::createSocket(int id)
 	if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) 
 		Logger::error("setsockopt failed");
 
-	if (bind(socket_listen, address->ai_addr, address->ai_addrlen))
+	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen))
 		Logger::fatal("Can't bind"); //TODO close everything
-	freeaddrinfo(address);
+	freeaddrinfo(addr);
 
 	std::cout << "Listening...\n";
 	if (listen(socket_listen, SOMAXCONN))
@@ -127,10 +130,51 @@ void	Webserv::handleNewConnection(SOCKET srv)
 			continue ;
 
 		clients[c.socket] = c;
-		Logger::info("client Connected...\n\n")
-
+		Logger::info("client Connected...\n\n");
 	}
 }
-void	Webserv::handleHttpRequest(SOCKET c);
-void	Webserv::handleHttpResponse(SOCKET c);
-void	Webserv::handleClientData(SOCKET c);
+void	Webserv::handleClientData(SOCKET c)
+{
+	Client& cl = clients[c];
+
+	if (MAX_REQUEST_SIZE == cl.received)
+	{
+		//send error page 40x
+	}
+
+	int bytes = recv(cl.socket, cl.request + cl.received , MAX_REQUEST_SIZE - cl.received, 0);
+
+	if (bytes <= 0)
+	{
+		clients.erase(c);
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
+		close(c);
+		return ;
+	}
+
+	cl.received += bytes;
+	cl.request[cl.received] = 0;
+	handleHttpRequest(c);
+}
+
+
+void	Webserv::handleHttpRequest(SOCKET c)
+{
+	Client& cl = clients[c];
+
+	Logger::info("=============REQUEST===========\n%s", cl.request);
+	if (strstr(cl.request, BLANKLINE))
+	{
+		modify_epoll(epoll_fd, c, EPOLLOUT);
+		handleHttpResponse(c);
+	}
+}
+void	Webserv::handleHttpResponse(SOCKET c)
+{
+	const char response[100] = HELLO_WORLD_RESPONSE;
+
+	int n = send(c, response, strlen(response), 0);
+	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
+	close(c);
+	Logger::info("Client disconneted...& send n = %d bytes", n);
+}
