@@ -8,8 +8,7 @@
 typedef std::vector<std::string> mimetype;
 typedef std::map<std::string, mimetype> mimetype_map;
 
-class SharedConfig {
-private:
+struct SharedConfig {
   std::string root;
   std::vector<std::string> index;
   // directory listing if path matches and has a trailing /
@@ -32,11 +31,6 @@ private:
   std::string upload_store; // defaults to /tmp/webserve
   std::map<std::string, std::string> cgi_pass;
 
-  friend class Config;
-  friend class Server;
-  friend class Location;
-
-public:
   SharedConfig();
 
   SharedConfig &withRoot(const std::string &root);

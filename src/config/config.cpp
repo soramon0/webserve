@@ -1,7 +1,7 @@
 #include "config.hpp"
 #include <sstream>
 
-Config::Config() : shared_config(NULL) {};
+Config::Config() { this->shared_config = new SharedConfig(); };
 
 Config::~Config() { delete shared_config; }
 
@@ -23,6 +23,19 @@ Config &Config::withSharedConfig(const SharedConfig &cfg) {
 
   this->shared_config = cfg.clone();
   return *this;
+}
+
+bool Config::hasServer(const Server &srv) const {
+  if (servers.empty())
+    return false;
+
+  std::vector<Server>::const_iterator it;
+  for (it = servers.begin(); it != servers.end(); it++) {
+    if (it->interface == srv.interface) {
+      return true;
+    }
+  }
+  return false;
 }
 
 std::string Config::toString() const {

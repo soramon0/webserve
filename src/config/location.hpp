@@ -4,16 +4,12 @@
 #include "shared_config.hpp"
 #include <string>
 
-class Location {
-private:
+struct Location {
   std::string path;
   ReturnDir *return_rule;
-
   // copy from parent (server) and update if needed to match location
   SharedConfig *shared_config;
-  friend class Server;
 
-public:
   Location();
   ~Location();
   Location(const Location &other);

@@ -2,16 +2,17 @@
 #include "redirect.hpp"
 #include <sstream>
 
-Server::Server()
-    : port(8000), interface("0.0.0.0"), return_rule(NULL), shared_config(NULL) {
+Server::Server() : port(8000), interface("0.0.0.0"), return_rule(NULL) {
+  this->shared_config = new SharedConfig();
 }
 
 Server::Server(const Server &other)
     : port(other.port), interface(other.interface), locations(other.locations),
-      return_rule(NULL), shared_config(NULL) {
-
+      return_rule(NULL) {
   if (other.shared_config) {
     this->shared_config = other.shared_config->clone();
+  } else {
+    this->shared_config = new SharedConfig();
   }
 
   if (other.return_rule) {

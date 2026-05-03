@@ -3,8 +3,7 @@
 #include <string>
 #include <vector>
 
-class Config {
-public:
+struct Config {
   std::vector<Server> servers;
   SharedConfig *shared_config;
 
@@ -15,6 +14,8 @@ public:
   Config &withSharedConfig(const SharedConfig &cfg);
 
   std::string toString() const;
+
+  bool hasServer(const Server &srv) const;
 
 private:
   // Only won config should be created so disable copying

@@ -5,19 +5,14 @@
 #include <stdint.h>
 #include <string>
 
-class Server {
-private:
+struct Server {
   uint16_t port;
   std::string interface;
   std::map<std::string, Location> locations;
   ReturnDir *return_rule;
-
   // copy from parent (http) and update if needed to match server
   SharedConfig *shared_config;
 
-  friend class Config;
-
-public:
   Server();
   Server(const Server &other);
   Server &operator=(const Server &other);
