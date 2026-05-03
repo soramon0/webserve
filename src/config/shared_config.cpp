@@ -1,20 +1,18 @@
 #include "shared_config.hpp"
 #include <sstream>
 
-SharedConfig::SharedConfig()
-    : autoindex(false), client_max_body_size(MAX_BODY_SIZE),
-      upload_store("/tmp/webserve") {
-
-  this->withMimetype("html", "text/html")
-      .withMimetype("htm", "text/html")
-      .withMimetype("css", "text/css")
-      .withMimetype("js", "application/javascript");
-
-  this->withErrorPage(404, "./404.html")
-      .withErrorPage(500, "./500.html")
-      .withErrorPage(502, "./502.html")
-      .withErrorPage(503, "./503.html")
-      .withErrorPage(504, "./504.html");
+SharedConfig::SharedConfig() : autoindex(INDEX_UNSET), client_max_body_size(0) {
+  // TODO: set after parsing if empty
+  // this->withMimetype("html", "text/html")
+  //     .withMimetype("htm", "text/html")
+  //     .withMimetype("css", "text/css")
+  //     .withMimetype("js", "application/javascript");
+  //
+  // this->withErrorPage(404, "./404.html")
+  //     .withErrorPage(500, "./500.html")
+  //     .withErrorPage(502, "./502.html")
+  //     .withErrorPage(503, "./503.html")
+  //     .withErrorPage(504, "./504.html");
 }
 
 SharedConfig &SharedConfig::withIndex(const std::string &index) {
@@ -33,7 +31,7 @@ SharedConfig &SharedConfig::withUploadStore(const std::string &store) {
 }
 
 SharedConfig &SharedConfig::withAutoIndex(bool on) {
-  this->autoindex = on;
+  this->autoindex = on ? INDEX_ON : INDEX_OFF;
   return *this;
 }
 
@@ -81,7 +79,8 @@ std::string SharedConfig::toString(int indent) const {
   std::ostringstream oss;
 
   oss << tab << "root " << root << ";\n";
-  oss << tab << "autoindex " << (this->autoindex ? "on" : "off") << ";\n";
+  oss << tab << "autoindex " << (this->autoindex == INDEX_ON ? "on" : "off")
+      << ";\n";
 
   if (this->index.size() > 0) {
     oss << tab << "index ";

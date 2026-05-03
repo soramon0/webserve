@@ -14,7 +14,12 @@ private:
   std::vector<std::string> index;
   // directory listing if path matches and has a trailing /
   // autoindex off by default. index has precedence over autoindex.
-  bool autoindex;
+  enum AutoIndex {
+    INDEX_UNSET,
+    INDEX_ON,
+    INDEX_OFF,
+  };
+  AutoIndex autoindex;
   // collect `error_page 500 502 503 504 ./50x.html` into a map
   // {500: "./50x.html", 502: "./50x.html", 503: "./50x.html", 504:"./50x.html"}
   std::map<int, std::string> error_page;
