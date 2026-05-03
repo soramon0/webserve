@@ -34,6 +34,8 @@ private:
   const Token &previous() const;
   const Token &advance();
   const Token *consume(Directive::Type type, const std::string &msg);
+  const Token *consume(Directive::Type type);
+
   bool expectContext(Context context, Context want);
   bool expectTokenContext(Directive::Type type);
 

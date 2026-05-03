@@ -172,27 +172,39 @@ ssize_t Parser::parseLocation(Location &loc) {
 }
 
 ssize_t Parser::parseDirective(SharedConfig &cfg) {
-  const Token &dir = peek();
+  if (!consume(Directive::WORD, "invalid here."))
+    return -1;
 
-  while (!check(Directive::SEMICOLON) && !atEnd()) {
-    advance();
-    if (previous().lexeme == "root") {
-      if (!consume(Directive::WORD, "expected path after `root` directive."))
-        return -1;
-      cfg.root = previous().lexeme;
-      if (peek().type == Directive::WORD) {
-        reportParseError(peek(),
-                         "invalid number of arguments in `root` directive.");
-        return -1;
-      }
-    } else {
-      reportParseError(previous(), "invalid directive.");
+  const Token &dir = previous();
+  if (dir.lexeme == "root") {
+    if (!consume(Directive::WORD, "expected path after `root` directive."))
+      return -1;
+    cfg.root = dir.lexeme;
+    if (peek().type == Directive::WORD) {
+      reportParseError(peek(),
+                       "invalid number of arguments in `root` directive.");
       return -1;
     }
+  } else if (dir.lexeme == "index") {
+    while (consume(Directive::WORD)) {
+      cfg.index.push_back(previous().lexeme);
+    }
+    if (cfg.index.size() == 0) {
+      reportParseError(
+          previous(),
+          "at least one argument is required in `index` directive.");
+      return -1;
+    }
+  } else {
+    reportParseError(previous(), "invalid directive.");
+    return -1;
   }
 
-  if (!consume(Directive::SEMICOLON, "expected ';' after `" + dir.lexeme + "`"))
-    return (-1);
+  if (!consume(Directive::SEMICOLON)) {
+    reportParseError(dir, "expected ';' after `" + dir.lexeme + "`.");
+    return -1;
+  }
+
   return 0;
 }
 
@@ -201,6 +213,12 @@ const Token *Parser::consume(Directive::Type type, const std::string &msg) {
     return &advance();
 
   reportParseError(peek(), msg);
+  return NULL;
+}
+
+const Token *Parser::consume(Directive::Type type) {
+  if (check(type))
+    return &advance();
   return NULL;
 }
 
