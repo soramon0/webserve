@@ -22,10 +22,10 @@ private:
   std::map<Directive::Type, Contexts> ctxMap;
 
   ssize_t parseEvents();
-  ssize_t parseHttp(Config *cfg);
-  ssize_t parseServer(Config *cfg);
-  ssize_t parseLocation(Config *cfg);
-  ssize_t parseDirective(Config *cfg);
+  ssize_t parseHttp(Config &cfg);
+  ssize_t parseServer(Server &srv);
+  ssize_t parseLocation(Location &loc);
+  ssize_t parseDirective(SharedConfig &cfg);
   void reportParseError(const Token &token, const std::string &msg) const;
 
   bool atEnd() const;

@@ -34,7 +34,7 @@ Config *Parser::parse() {
       }
     } else if (check(Directive::HTTP)) {
       advance();
-      if (parseHttp(cfg) != 0) {
+      if (parseHttp(*cfg) != 0) {
         goto cleanup;
       }
     } else {
@@ -57,7 +57,7 @@ ssize_t Parser::parseEvents() {
   }
   this->ctx.push_back(CTX_EVENTS);
 
-  if (!consume(Directive::LBRACE, "expected '{'"))
+  if (!consume(Directive::LBRACE, "expected '{' after events"))
     return -1;
 
   while (!check(Directive::RBRACE) && !atEnd()) {
@@ -66,19 +66,19 @@ ssize_t Parser::parseEvents() {
     advance();
   }
 
-  if (!consume(Directive::RBRACE, "expected '}'"))
+  if (!consume(Directive::RBRACE, "expected '}' to close events"))
     return -1;
 
   this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseHttp(Config *cfg) {
+ssize_t Parser::parseHttp(Config &cfg) {
   if (!expectContext(CTX_ROOT, CTX_HTTP))
     return -1;
   this->ctx.push_back(CTX_HTTP);
 
-  if (!consume(Directive::LBRACE, "expected '{'"))
+  if (!consume(Directive::LBRACE, "expected '{' after http"))
     return -1;
 
   while (!check(Directive::RBRACE) && !atEnd()) {
@@ -87,36 +87,62 @@ ssize_t Parser::parseHttp(Config *cfg) {
       return -1;
 
     if (type == Directive::SERVER) {
-      advance();
-      if (parseServer(cfg) != 0)
+      const Token &token = advance();
+      Server srv;
+      if (parseServer(srv) != 0)
         return -1;
+      if (cfg.hasServer(srv)) {
+        // TODO: add better error indicator;
+        reportParseError(token, "server has a used host:port");
+        return -1;
+      }
+      cfg.servers.push_back(srv);
     } else {
-      if (parseDirective(cfg) != 0)
+      if (parseDirective(*cfg.shared_config) != 0)
         return -1;
     }
   }
 
-  if (!consume(Directive::RBRACE, "expected '}'"))
+  if (!consume(Directive::RBRACE, "expected '}' to close http"))
     return -1;
 
   this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseServer(Config *cfg) {
-  (void)cfg;
+ssize_t Parser::parseServer(Server &srv) {
   if (!expectContext(CTX_HTTP, CTX_SERVER))
     return -1;
   this->ctx.push_back(CTX_SERVER);
 
-  // parse...
-  advance();
+  if (!consume(Directive::LBRACE, "expected '{' after server"))
+    return -1;
+
+  while (!check(Directive::RBRACE) && !atEnd()) {
+    Directive::Type type = peek().type;
+    if (!expectTokenContext(type))
+      return -1;
+
+    if (type == Directive::LOCATION) {
+      advance();
+      Location loc;
+      if (parseLocation(loc) != 0)
+        return -1;
+      srv.withLocation(loc.path, loc);
+    } else {
+      if (parseDirective(*srv.shared_config) != 0)
+        return -1;
+    }
+  }
+
+  if (!consume(Directive::RBRACE, "expected '}' to close server"))
+    return -1;
 
   this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseLocation(Config *cfg) {
+ssize_t Parser::parseLocation(Location &loc) {
   if (!expectContext(CTX_SERVER, CTX_LOCATION))
     return -1;
   this->ctx.push_back(CTX_LOCATION);
@@ -124,18 +150,13 @@ ssize_t Parser::parseLocation(Config *cfg) {
   if (!consume(Directive::WORD, "expected location uri"))
     return -1;
 
-  Location loc;
   loc.withPath(previous().lexeme);
-  if (cfg->shared_config) {
-    loc.withSharedConfig(*cfg->shared_config);
-  }
-
   while (!check(Directive::RBRACE) && !atEnd()) {
     Directive::Type type = peek().type;
     if (!expectTokenContext(type))
       return -1;
 
-    if (parseDirective(cfg) != 0)
+    if (parseDirective(*loc.shared_config) != 0)
       return -1;
   }
 
@@ -146,7 +167,7 @@ ssize_t Parser::parseLocation(Config *cfg) {
   return 0;
 }
 
-ssize_t Parser::parseDirective(Config *cfg) {
+ssize_t Parser::parseDirective(SharedConfig &cfg) {
   (void)cfg;
   advance();
   return 0;
