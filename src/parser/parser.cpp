@@ -128,7 +128,7 @@ ssize_t Parser::parseServer(Server &srv) {
       Location loc;
       if (parseLocation(loc) != 0)
         return -1;
-      srv.withLocation(loc.path, loc);
+      srv.locations[loc.path] = loc;
     } else {
       if (parseDirective(*srv.shared_config) != 0)
         return -1;
@@ -150,7 +150,7 @@ ssize_t Parser::parseLocation(Location &loc) {
   if (!consume(Directive::WORD, "expected location uri"))
     return -1;
 
-  loc.withPath(previous().lexeme);
+  loc.path = previous().lexeme;
   while (!check(Directive::RBRACE) && !atEnd()) {
     Directive::Type type = peek().type;
     if (!expectTokenContext(type))
@@ -160,7 +160,7 @@ ssize_t Parser::parseLocation(Location &loc) {
       return -1;
   }
 
-  if (!consume(Directive::RBRACE, "expected '}'"))
+  if (!consume(Directive::RBRACE, "expected '}' after location"))
     return (-1);
 
   this->ctx.pop_back();
