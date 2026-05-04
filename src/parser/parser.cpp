@@ -13,6 +13,9 @@ Parser::Parser(const char *path)
   ctxMap[Directive::HTTP].push_back(CTX_ROOT);
   ctxMap[Directive::SERVER].push_back(CTX_HTTP);
   ctxMap[Directive::LOCATION].push_back(CTX_SERVER);
+
+  directiveHandlers.insert(std::make_pair("root", &Parser::handleRoot));
+  directiveHandlers.insert(std::make_pair("index", &Parser::handleIndex));
 }
 
 Config *Parser::parse() {
@@ -176,36 +179,17 @@ ssize_t Parser::parseDirective(SharedConfig &cfg) {
     return -1;
 
   const Token &dir = previous();
-  if (dir.lexeme == "root") {
-    if (!consume(Directive::WORD, "expected path after `root` directive."))
-      return -1;
-    cfg.root = previous().lexeme;
-    if (peek().type == Directive::WORD) {
-      reportParseError(peek(),
-                       "invalid number of arguments in `root` directive.");
-      return -1;
-    }
-  } else if (dir.lexeme == "index") {
-    while (consume(Directive::WORD)) {
-      cfg.index.push_back(previous().lexeme);
-    }
-    if (cfg.index.size() == 0) {
-      reportParseError(
-          previous(),
-          "at least one argument is required in `index` directive.");
-      return -1;
-    }
-  } else {
-    reportParseError(previous(), "invalid directive.");
+
+  std::map<std::string, DirectiveHandler>::iterator it =
+      directiveHandlers.find(dir.lexeme);
+
+  if (it == directiveHandlers.end()) {
+    reportParseError(dir, "unknown directive.");
     return -1;
   }
 
-  if (!consume(Directive::SEMICOLON)) {
-    reportParseError(dir, "expected ';' after `" + dir.lexeme + "`.");
-    return -1;
-  }
-
-  return 0;
+  DirectiveHandler func = it->second;
+  return (this->*func)(cfg);
 }
 
 const Token *Parser::consume(Directive::Type type, const std::string &msg) {

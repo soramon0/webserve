@@ -21,6 +21,9 @@ private:
   typedef std::vector<Context> Contexts;
   std::map<Directive::Type, Contexts> ctxMap;
 
+  typedef ssize_t (Parser::*DirectiveHandler)(SharedConfig &);
+  std::map<std::string, DirectiveHandler> directiveHandlers;
+
   ssize_t parseEvents();
   ssize_t parseHttp(Config &cfg);
   ssize_t parseServer(Server &srv);
@@ -40,4 +43,7 @@ private:
   bool expectTokenContext(Directive::Type type);
 
   std::string ctxToString(Context context) const;
+
+  ssize_t handleRoot(SharedConfig &cfg);
+  ssize_t handleIndex(SharedConfig &cfg);
 };
