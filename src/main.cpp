@@ -1,5 +1,6 @@
 #include "common.h"
 #include "config/config.hpp"
+#include "config/config_mock.hpp"
 #include "logger/log.hpp"
 #include "parser/parser.hpp"
 #include "server/Webserv.hpp"
@@ -14,9 +15,8 @@ int main(int ac, char *av[]) {
 
 		Config config;
 
-
-		Webserv websrv(config);
-		websrv.start();
+		setup_mock_config(config);
+		Webserv(config).start();
 
 	}
 	catch(const std::exception& e) {
