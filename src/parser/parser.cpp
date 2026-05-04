@@ -101,7 +101,8 @@ ssize_t Parser::parseHttp(Config &cfg) {
       }
       cfg.servers.push_back(srv);
     } else {
-      if (parseDirective(*cfg.shared_config) != 0)
+      DirectiveCtx ctx = DirectiveCtx::withSharedConfig(cfg.shared_config);
+      if (parseDirective(ctx) != 0)
         return -1;
     }
   }
@@ -122,18 +123,19 @@ ssize_t Parser::parseServer(Server &srv) {
     return -1;
 
   while (!check(Directive::RBRACE) && !atEnd()) {
-    Directive::Type type = peek().type;
-    if (!expectTokenContext(type))
+    const Token &token = peek();
+    if (!expectTokenContext(token.type))
       return -1;
 
-    if (type == Directive::LOCATION) {
+    if (token.type == Directive::LOCATION) {
       advance();
       Location loc;
       if (parseLocation(loc) != 0)
         return -1;
       srv.locations[loc.path] = loc;
     } else {
-      if (parseDirective(*srv.shared_config) != 0)
+      DirectiveCtx ctx = DirectiveCtx::withServer(&srv);
+      if (parseDirective(ctx) != 0)
         return -1;
     }
   }
@@ -163,7 +165,8 @@ ssize_t Parser::parseLocation(Location &loc) {
     if (!expectTokenContext(type))
       return -1;
 
-    if (parseDirective(*loc.shared_config) != 0)
+    DirectiveCtx ctx = DirectiveCtx::withLocation(&loc);
+    if (parseDirective(ctx) != 0)
       return -1;
   }
 
@@ -174,7 +177,7 @@ ssize_t Parser::parseLocation(Location &loc) {
   return 0;
 }
 
-ssize_t Parser::parseDirective(SharedConfig &cfg) {
+ssize_t Parser::parseDirective(DirectiveCtx &ctx) {
   if (!consume(Directive::WORD, "invalid here."))
     return -1;
 
@@ -189,7 +192,7 @@ ssize_t Parser::parseDirective(SharedConfig &cfg) {
   }
 
   DirectiveHandler func = it->second;
-  return (this->*func)(cfg);
+  return (this->*func)(ctx);
 }
 
 const Token *Parser::consume(Directive::Type type, const std::string &msg) {
