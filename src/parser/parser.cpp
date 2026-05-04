@@ -179,7 +179,7 @@ ssize_t Parser::parseDirective(SharedConfig &cfg) {
   if (dir.lexeme == "root") {
     if (!consume(Directive::WORD, "expected path after `root` directive."))
       return -1;
-    cfg.root = dir.lexeme;
+    cfg.root = previous().lexeme;
     if (peek().type == Directive::WORD) {
       reportParseError(peek(),
                        "invalid number of arguments in `root` directive.");
