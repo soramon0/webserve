@@ -41,6 +41,7 @@ private:
 
   bool expectContext(Context context, Context want);
   bool expectTokenContext(Directive::Type type);
+  bool expectEnd(const Token &dir, Directive::Type type);
 
   std::string ctxToString(Context context) const;
 

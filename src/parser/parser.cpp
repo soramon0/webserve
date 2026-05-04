@@ -212,6 +212,16 @@ bool Parser::check(Directive::Type type) {
   return peek().type == type;
 }
 
+bool Parser::expectEnd(const Token &dir, Directive::Type type) {
+  if (!consume(type)) {
+    reportParseError(dir, "expected '" + Directive::toString(type) +
+                              "' to end `" + dir.lexeme + "` directive.");
+    return false;
+  }
+
+  return true;
+}
+
 const Token &Parser::peek() const { return scanner.tokens[pos]; }
 const Token &Parser::previous() const { return scanner.tokens[pos - 1]; }
 

@@ -14,10 +14,8 @@ ssize_t Parser::handleRoot(SharedConfig &cfg) {
     return -1;
   }
 
-  if (!consume(Directive::SEMICOLON)) {
-    reportParseError(dir, "expected ';' after `" + dir.lexeme + "`.");
+  if (!expectEnd(dir, Directive::SEMICOLON))
     return -1;
-  }
 
   return 0;
 }
@@ -35,10 +33,8 @@ ssize_t Parser::handleIndex(SharedConfig &cfg) {
     return -1;
   }
 
-  if (!consume(Directive::SEMICOLON)) {
-    reportParseError(dir, "expected ';' after `" + dir.lexeme + "`.");
+  if (!expectEnd(dir, Directive::SEMICOLON))
     return -1;
-  }
 
   return 0;
 }

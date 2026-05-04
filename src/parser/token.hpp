@@ -28,11 +28,11 @@ struct Directive {
     case WORD:
       return "word";
     case LBRACE:
-      return "LBRACE";
+      return "}";
     case RBRACE:
-      return "RBRACE";
+      return "{";
     case SEMICOLON:
-      return "SEMICOLON";
+      return ";";
     case END_OF_FILE:
       return "EOF";
     default:
