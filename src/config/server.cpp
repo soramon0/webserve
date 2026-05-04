@@ -117,8 +117,19 @@ std::string Server::toString(int indent) const {
   std::string tab = std::string(indent, '\t');
 
   oss << tab << "server {\n";
-  oss << tab << "\t" << "listen " << this->interface << ":" << this->port
-      << ";\n";
+  if (!this->interface.empty()) {
+    oss << tab << "\t" << "listen " << this->interface;
+
+    if (this->port != 0) {
+      oss << ":" << this->port;
+    }
+    oss << ";\n";
+  }
+
+  if (this->interface.empty() && this->port != 0) {
+    oss << tab << "\t" << "listen " << this->port;
+    oss << ";\n";
+  }
 
   if (this->return_rule) {
     oss << tab << "\t" << "return " << this->return_rule->code << " "

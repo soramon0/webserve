@@ -78,9 +78,13 @@ std::string SharedConfig::toString(int indent) const {
   std::string tab = std::string(indent, '\t');
   std::ostringstream oss;
 
-  oss << tab << "root " << root << ";\n";
-  oss << tab << "autoindex " << (this->autoindex == INDEX_ON ? "on" : "off")
-      << ";\n";
+  if (!root.empty()) {
+    oss << tab << "root " << root << ";\n";
+  }
+  if (this->autoindex != INDEX_UNSET) {
+    oss << tab << "autoindex " << (this->autoindex == INDEX_ON ? "on" : "off")
+        << ";\n";
+  }
 
   if (this->index.size() > 0) {
     oss << tab << "index ";
@@ -94,18 +98,25 @@ std::string SharedConfig::toString(int indent) const {
     }
   }
 
-  oss << tab << "client_max_body_size " << this->client_max_body_size << ";\n";
-  oss << tab << "upload_store " << this->upload_store << ";\n";
+  if (this->client_max_body_size != 0) {
+    oss << tab << "client_max_body_size " << this->client_max_body_size
+        << ";\n";
+  }
+  if (!this->upload_store.empty()) {
 
-  if (this->access_log_path.empty()) {
-    oss << tab << "access_log off;\n";
-  } else {
+    oss << tab << "upload_store " << this->upload_store << ";\n";
+  }
+
+  if (!this->access_log_path.empty()) {
     oss << tab << "access_log " << this->access_log_path << ";\n";
   }
 
-  for (std::map<int, std::string>::const_iterator it = this->error_page.begin();
-       it != this->error_page.end(); ++it) {
-    oss << tab << "error_page " << it->first << " " << it->second << ";\n";
+  if (this->error_page.size() != 0) {
+    for (std::map<int, std::string>::const_iterator it =
+             this->error_page.begin();
+         it != this->error_page.end(); ++it) {
+      oss << tab << "error_page " << it->first << " " << it->second << ";\n";
+    }
   }
 
   if (this->types.size() > 0) {
@@ -119,8 +130,6 @@ std::string SharedConfig::toString(int indent) const {
       oss << ";\n";
     }
     oss << tab << "}\n";
-  } else {
-    oss << tab << "mime_types {}\n";
   }
 
   if (this->cgi_pass.size() > 0) {
@@ -131,8 +140,6 @@ std::string SharedConfig::toString(int indent) const {
       oss << tab << "\t" << it->first << "\t" << it->second << ";\n";
     }
     oss << tab << "}\n";
-  } else {
-    oss << tab << "cgi_pass {}";
   }
 
   return oss.str();
