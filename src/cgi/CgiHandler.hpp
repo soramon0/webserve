@@ -9,14 +9,14 @@ class CgiHandler
 private:
 	int									pipe_in[2];
 	int									pipe_out[2];
+	pid_t									_pid;
+	std::string							_output;
 	std::string							_scriptPath;
 	std::string							_interpreter;
 	std::string							_body;
 	std::map<std::string, std::string>	_env;
 
-	std::string	parentProcess(pid_t pid);
 	void		childProcess();
-
 	char**		buildEnvp() const;
 	void		freeEnvp(char** envp, int size);
 
@@ -26,8 +26,10 @@ public:
 			const std::string& body,
 			const std::map<std::string, std::string>& env);
 
-	std::string	execute();
-	std::string	buildResponse(const std::string& cgiOutput);
+	int				start();
+	bool			readChunk();
+	std::string		getOutput() const;
+	std::string		buildResponse(const std::string& cgiOutput);
 };
 
 #endif
