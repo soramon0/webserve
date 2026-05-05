@@ -16,6 +16,7 @@ Parser::Parser(const char *path)
 
   directiveHandlers.insert(std::make_pair("root", &Parser::handleRoot));
   directiveHandlers.insert(std::make_pair("index", &Parser::handleIndex));
+  directiveHandlers.insert(std::make_pair("listen", &Parser::handleListen));
 }
 
 Config *Parser::parse() {

@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include <cstdlib>
 
 ssize_t Parser::handleRoot(DirectiveCtx &ctx) {
   const Token &dir = previous();
@@ -42,29 +43,42 @@ ssize_t Parser::handleIndex(DirectiveCtx &ctx) {
 ssize_t Parser::handleListen(DirectiveCtx &ctx) {
   const Token &dir = previous();
 
-  if (!consume(Directive::WORD, "expected port:host after `listen` directive."))
-    return -1;
-
-  // parse these formats
-  // listen port;
-  // listen host;
-  // listen port:host;
-  // listen !0;
-  const std::string &listen = previous().lexeme;
-  ctx.server->interface = listen;
-
-  // NOTE: we have cfg config but we need to update server struct
-
-  if (peek().type == Directive::WORD) {
-    reportParseError(peek(),
-                     "invalid number of arguments in `listen` directive.");
+  if (!ctx.server) {
+    reportParseError(dir, "`listen` directive is not allowed here.");
     return -1;
   }
 
-  if (!expectEnd(dir, Directive::SEMICOLON))
+  if (!consume(Directive::WORD, "expected host:port after `listen` directive."))
     return -1;
 
-  return 0;
+  std::string raw = previous().lexeme;
+  std::string host = "0.0.0.0";
+  int port = 8080;
+
+  size_t colonPos = raw.find(':');
+  if (colonPos != std::string::npos) {
+    // Format: host:port
+    host = raw.substr(0, colonPos);
+    std::string portStr = raw.substr(colonPos + 1);
+    port = std::atoi(portStr.c_str());
+  } else {
+    // Format could be just "8080" (port) or "localhost" (host)
+    if (raw.find_first_not_of("0123456789") == std::string::npos) {
+      port = std::atoi(raw.c_str());
+    } else {
+      host = raw;
+    }
+  }
+
+  if (port <= 0 || port > 65535) {
+    reportParseError(previous(), "invalid port in `listen` directive.");
+    return -1;
+  }
+
+  ctx.server->interface = host;
+  ctx.server->port = port;
+
+  return expectEnd(dir, Directive::SEMICOLON) ? 0 : -1;
 }
 
 DirectiveCtx DirectiveCtx::withServer(Server *srv) {
