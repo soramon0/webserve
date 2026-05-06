@@ -20,8 +20,8 @@ CgiHandler::CgiHandler(const std::string &scriptPath,
 
 char **CgiHandler::buildEnvp() const
 {
-	char **envp = new char *[_env.size() + 1];
-	size_t i = 0;
+	char	**envp = new char *[_env.size() + 1];
+	size_t	i = 0;
 
 	for (std::map<std::string, std::string>::const_iterator it = _env.begin();
 		 it != _env.end(); it++)
@@ -31,7 +31,6 @@ char **CgiHandler::buildEnvp() const
 		std::memcpy(envp[i], token.c_str(), token.size() + 1);
 		i++;
 	}
-
 	envp[i] = NULL;
 	return (envp);
 }
@@ -58,12 +57,14 @@ void CgiHandler::childProcess()
 		std::cerr << "dup2()" << std::endl;
 		_exit(1);
 	}
+
 	close(pipe_in[0]);
 	close(pipe_out[1]);
 
 	size_t pos = _scriptPath.find_last_of('/');
 	if (pos == std::string::npos)
 		_exit(1);
+
 	std::string dir = _scriptPath.substr(0, pos + 1);
 	if (chdir(dir.c_str()) == -1)
 	{
@@ -83,9 +84,9 @@ void CgiHandler::childProcess()
 
 bool CgiHandler::readChunk()
 {
-	int status;
-	char buffer[1024];
-	ssize_t bytes;
+	int		status;
+	char	buffer[1024];
+	ssize_t	bytes;
 
 	bytes = read(pipe_out[0], buffer, sizeof(buffer));
 	if (bytes == 0)
@@ -128,6 +129,7 @@ int CgiHandler::start()
 	else
 	{
 		int status;
+
 		close(pipe_in[0]);
 		close(pipe_out[1]);
 
@@ -141,14 +143,8 @@ int CgiHandler::start()
 			}
 		}
 		close(pipe_in[1]);
-
 	}
 	return (pipe_out[0]);
-}
-
-std::string CgiHandler::getOutput() const
-{
-	return (_output);
 }
 
 std::string CgiHandler::buildResponse(const std::string &output)
@@ -169,4 +165,9 @@ std::string CgiHandler::buildResponse(const std::string &output)
 	response += "\r\n" + body;
 
 	return (response);
+}
+
+std::string CgiHandler::getOutput() const
+{
+	return (_output);
 }

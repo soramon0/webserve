@@ -1,5 +1,6 @@
 #include "CgiHandler.hpp"
 #include <iostream>
+#include <fcntl.h>
 
 int main()
 {
@@ -10,7 +11,14 @@ int main()
 	env["QUERY_STRING"] = "name=asma";
 
 	CgiHandler cgi("./test.py", "/usr/bin/python3", "name=asma", env);
-	std::cout << cgi.buildResponse(cgi.execute()) << std::endl;
+	int fd = cgi.start();
+	if (fd == -1)
+	{
+		std::cerr << "strat() failed" << std::endl;
+		return (1);
+	}
+	while (!cgi.readChunk());
+	std::cout << cgi.buildResponse(cgi.getOutput()) << std::endl;
 
 
 	return (0);

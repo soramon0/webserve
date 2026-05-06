@@ -3,14 +3,22 @@
 
 #include <string>
 
-struct Request
-{
-	std::string method;
-	std::string path;
-	std::string	queryString;
-	std::string body;
-	std::string contentType;
-	std::string protocol;
+class Request {
+private:
+    std::string method;
+    std::string path;
+    std::string query;
+    std::string protocol;
+    std::string body;
+    std::string contentType;
+
+public: 
+    std::string getMethod() const { return method; }
+    std::string getPath() const { return path; }
+    std::string getQuery() const { return query; }
+    std::string getProtocol() const { return protocol; }
+    std::string getBody() const { return body; }
+    std::string getContentType() const { return contentType; }
 };
 
 #endif
