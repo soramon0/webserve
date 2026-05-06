@@ -30,6 +30,7 @@ private:
   friend class Config;
   friend class Server;
   friend class Location;
+	friend class Webserv;
 
 public:
   SharedConfig();

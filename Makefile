@@ -74,6 +74,9 @@ release:
 run: $(NAME)
 	@printf "$(MAGENTA)Running $(NAME)...$(RESET)\n"
 	./$(BUILD_DIR)/$(NAME) $(ARGS)
+valgrind: $(NAME)
+	@printf "$(MAGENTA)Valgrinding $(NAME)...$(RESET)\n"
+	valgrind --track-origins=yes ./$(BUILD_DIR)/$(NAME) $(ARGS)
 
 clean:
 	@printf "$(YELLOW)Cleaning objects...$(RESET)\n"

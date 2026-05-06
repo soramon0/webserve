@@ -8,7 +8,7 @@
 #include <cstring>
 
 #define MAX_EVENTS 64
-#define BLANKLINE "\r\n\r\n"
+
 #define HELLO_WORLD_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!"
 
 Webserv::Webserv(Config _conf) : config(_conf) {}
@@ -28,7 +28,6 @@ void	Webserv::start()
 			Logger::error("Can't set non-blocking");
 			continue ;
 		}
-		// TODO: close all opened fds before exiting
 		if (add_to_epoll(epoll_fd, listen_sock, EPOLLIN) == -1)
 			continue ;
 		servers[listen_sock] = &config.servers[i];
@@ -44,8 +43,8 @@ void	Webserv::eventLoop()
 	while (true)
 	{
 		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
-		std::cout << "hello\n";
 		int ev, fd;
+		
 		for (int i = 0; i < n_ev; i++)
 		{
 			ev = events[i].events;
@@ -129,21 +128,25 @@ void	Webserv::handleNewConnection(SOCKET srv)
 		}
 		if (add_to_epoll(epoll_fd, c.socket, EPOLLIN) == -1)
 			continue ;
-
+		c.srv = servers[srv];
 		clients[c.socket] = c;
 		Logger::info("client Connected...\n\n");
 	}
 }
 void	Webserv::handleClientData(SOCKET c)
 {
-	Client& cl = clients[c];
-
-	if (MAX_REQUEST_SIZE == cl.received)
+	Client&	cl = clients[c];
+    size_t	max_size = cl.srv->shared_config->client_max_body_size;
+	int		buffer_size = max_size - cl.received;
+	char	buffer[buffer_size];
+	
+	if (max_size == cl.received)
 	{
 		//send error page 40x
+		return;
 	}
 
-	int bytes = recv(cl.socket, cl.request + cl.received , MAX_REQUEST_SIZE - cl.received, 0);
+	int bytes = recv(cl.socket, buffer, buffer_size, 0);
 
 	if (bytes <= 0)
 	{
@@ -152,9 +155,10 @@ void	Webserv::handleClientData(SOCKET c)
 		close(c);
 		return ;
 	}
-
 	cl.received += bytes;
-	cl.request[cl.received] = 0;
+	buffer[bytes] = '\0';
+
+	cl.request_buffer.append(buffer, bytes);
 	handleHttpRequest(c);
 }
 
@@ -162,10 +166,11 @@ void	Webserv::handleClientData(SOCKET c)
 void	Webserv::handleHttpRequest(SOCKET c)
 {
 	Client& cl = clients[c];
-
-	Logger::info("=============REQUEST===========\n%s", cl.request);
-	if (strstr(cl.request, BLANKLINE))
+	// Logger::info("=============REQUEST===========\n%s", cl.request_buffer.c_str());
+	cl.parseRequest();
+	if (!cl.is_complete)
 	{
+		cl.request.printRequest();
 		modify_epoll(epoll_fd, c, EPOLLOUT);
 		handleHttpResponse(c);
 	}
@@ -173,11 +178,15 @@ void	Webserv::handleHttpRequest(SOCKET c)
 
 void	Webserv::handleHttpResponse(SOCKET c)
 {
-	const char response[100] = HELLO_WORLD_RESPONSE;
-
+	std::string response = HELLO_WORLD_RESPONSE;
 	
-	int n = send(c, response, strlen(response), 0);
+	int n = send(c, response.c_str(), response.size(), 0);
 	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
 	close(c);
 	Logger::info("Client disconneted...& send n = %d bytes", n);
 }
+
+
+// TODO: create a README file exsplain what you ve done so far
+// TODO: add documatations to every function in your code
+// TODO: connect "request parsing" part with "muliplexing"

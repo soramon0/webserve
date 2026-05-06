@@ -37,9 +37,9 @@ int add_to_epoll(int epoll_fd, SOCKET sock, int flags)
 int modify_epoll(int epoll_fd, int c, int flag)
 {
 	struct epoll_event ev;
+
 	ev.events = flag;
 	ev.data.fd = c;
-
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, c, &ev) == -1)
     {
         Logger::error("Error: Can't modify socket %d", c);
