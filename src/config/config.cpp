@@ -5,8 +5,8 @@ Config::Config() : shared_config(NULL) {};
 
 Config::~Config()
 {
-  // if (shared_config)
-  //   delete shared_config; 
+  if (shared_config)
+    delete shared_config; 
 }
 
 Config &Config::withServer(const Server &server) {

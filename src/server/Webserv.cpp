@@ -166,9 +166,9 @@ void	Webserv::handleClientData(SOCKET c)
 void	Webserv::handleHttpRequest(SOCKET c)
 {
 	Client& cl = clients[c];
-	// Logger::info("=============REQUEST===========\n%s", cl.request_buffer.c_str());
+
 	cl.parseRequest();
-	if (!cl.is_complete)
+	if (cl.is_complete)
 	{
 		cl.request.printRequest();
 		modify_epoll(epoll_fd, c, EPOLLOUT);
@@ -185,7 +185,6 @@ void	Webserv::handleHttpResponse(SOCKET c)
 	close(c);
 	Logger::info("Client disconneted...& send n = %d bytes", n);
 }
-
 
 // TODO: create a README file exsplain what you ve done so far
 // TODO: add documatations to every function in your code
