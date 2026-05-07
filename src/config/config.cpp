@@ -57,3 +57,25 @@ std::string Config::toString() const {
   oss << "}";
   return oss.str();
 }
+
+void Config::applySharedInheritance() {
+  for (size_t i = 0; i < servers.size(); ++i) {
+    Server &srv = servers[i];
+
+    SharedConfig mergedSrv =
+        SharedConfig::mergeInherited(*shared_config, *srv.shared_config);
+
+    delete srv.shared_config;
+    srv.shared_config = new SharedConfig(mergedSrv);
+
+    for (std::map<std::string, Location>::iterator it = srv.locations.begin();
+         it != srv.locations.end(); ++it) {
+      Location &loc = it->second;
+      SharedConfig mergedLoc =
+          SharedConfig::mergeInherited(*srv.shared_config, *loc.shared_config);
+
+      delete loc.shared_config;
+      loc.shared_config = new SharedConfig(mergedLoc);
+    }
+  }
+}

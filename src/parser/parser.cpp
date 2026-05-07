@@ -60,6 +60,9 @@ Config *Parser::parse() {
     }
   }
 
+  // SECOND PHASE: merge configs from parent down to child
+  cfg->applySharedInheritance();
+
   return cfg;
 
 cleanup:

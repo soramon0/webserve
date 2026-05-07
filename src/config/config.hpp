@@ -17,6 +17,8 @@ struct Config {
 
   bool hasServer(const Server &srv) const;
 
+  void applySharedInheritance();
+
 private:
   // Only won config should be created so disable copying
   Config(const Config &other);

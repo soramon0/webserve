@@ -48,4 +48,7 @@ struct SharedConfig {
   SharedConfig *clone() const;
 
   std::string toString(int indent) const;
+
+  static SharedConfig mergeInherited(const SharedConfig &parent,
+                                     const SharedConfig &child);
 };
