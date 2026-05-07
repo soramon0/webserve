@@ -137,9 +137,47 @@ ssize_t Parser::handleAccessLogPath(DirectiveCtx &ctx) {
 }
 
 ssize_t Parser::handleCgiPass(DirectiveCtx &ctx) {
-  (void)ctx;
-  Logger::fatal("`cgi_pass` directive handler is not implemented");
-  return -1;
+  const Token &dir = previous();
+
+  if (!consume(Directive::WORD,
+               "expected extension after `cgi_pass` directive."))
+    return -1;
+
+  std::string ext = previous().lexeme;
+  if (ext.empty()) {
+    reportParseError(previous(), "extension can't be empty");
+    return -1;
+  }
+
+  if (ext.size() <= 1) {
+    reportParseError(previous(), "invalid extension.");
+    return -1;
+  }
+
+  if (ext[0] != '.') {
+    reportParseError(previous(), "extension must start with `.`.");
+    return -1;
+  }
+
+  size_t i = 1;
+  while (ext[i]) {
+    ext[i] =
+        static_cast<char>(std::tolower(static_cast<unsigned char>(ext[i])));
+    if (!std::isalpha(ext[i]) && !std::isdigit(ext[i])) {
+      reportParseError(previous(), "extension must be alphanumeric.");
+      return -1;
+    }
+    i++;
+  }
+
+  if (!consume(Directive::WORD,
+               "expected interpreter path after extension in `cgi_pass` "
+               "directive."))
+    return -1;
+
+  ctx.shared->withCgi(ext, previous().lexeme);
+
+  return expectDirectiveArgsCount(dir);
 }
 
 ssize_t Parser::handleListen(DirectiveCtx &ctx) {
