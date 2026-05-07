@@ -16,6 +16,16 @@ Parser::Parser(const char *path)
 
   directiveHandlers.insert(std::make_pair("root", &Parser::handleRoot));
   directiveHandlers.insert(std::make_pair("index", &Parser::handleIndex));
+  directiveHandlers.insert(
+      std::make_pair("autoindex", &Parser::handleAutoIndex));
+  directiveHandlers.insert(
+      std::make_pair("error_page", &Parser::handleErrorPage));
+  directiveHandlers.insert(
+      std::make_pair("client_max_body_size", &Parser::handleClientMaxBodySize));
+  directiveHandlers.insert(std::make_pair("types", &Parser::handleMimeTypes));
+  directiveHandlers.insert(
+      std::make_pair("upload_store", &Parser::handleUploadStore));
+  directiveHandlers.insert(std::make_pair("cgi_pass", &Parser::handleCgiPass));
   directiveHandlers.insert(std::make_pair("listen", &Parser::handleListen));
   directiveHandlers.insert(std::make_pair("return", &Parser::handleReturn));
 }

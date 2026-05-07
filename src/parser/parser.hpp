@@ -58,6 +58,12 @@ private:
 
   ssize_t handleRoot(DirectiveCtx &ctx);
   ssize_t handleIndex(DirectiveCtx &ctx);
+  ssize_t handleAutoIndex(DirectiveCtx &ctx);
+  ssize_t handleErrorPage(DirectiveCtx &ctx);
+  ssize_t handleClientMaxBodySize(DirectiveCtx &ctx);
+  ssize_t handleMimeTypes(DirectiveCtx &ctx);
+  ssize_t handleUploadStore(DirectiveCtx &ctx);
+  ssize_t handleCgiPass(DirectiveCtx &ctx);
   ssize_t handleListen(DirectiveCtx &ctx);
   ssize_t handleReturn(DirectiveCtx &ctx);
 };

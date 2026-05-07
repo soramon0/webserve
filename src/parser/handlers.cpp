@@ -1,3 +1,4 @@
+#include "logger/log.hpp"
 #include "parser.hpp"
 #include <cstdlib>
 
@@ -26,6 +27,42 @@ ssize_t Parser::handleIndex(DirectiveCtx &ctx) {
   }
 
   return expectEnd(dir, Directive::SEMICOLON) ? 0 : -1;
+}
+
+ssize_t Parser::handleAutoIndex(DirectiveCtx &ctx) {
+  (void)ctx;
+  Logger::fatal("`autoindex` directive handler is not implemented");
+  return -1;
+}
+
+ssize_t Parser::handleErrorPage(DirectiveCtx &ctx) {
+  (void)ctx;
+  Logger::fatal("`error_page` directive handler is not implemented");
+  return -1;
+}
+
+ssize_t Parser::handleClientMaxBodySize(DirectiveCtx &ctx) {
+  (void)ctx;
+  Logger::fatal("`client_max_body_size` directive handler is not implemented");
+  return -1;
+}
+
+ssize_t Parser::handleMimeTypes(DirectiveCtx &ctx) {
+  (void)ctx;
+  Logger::fatal("`types` directive handler is not implemented");
+  return -1;
+}
+
+ssize_t Parser::handleUploadStore(DirectiveCtx &ctx) {
+  (void)ctx;
+  Logger::fatal("`upload_store` directive handler is not implemented");
+  return -1;
+}
+
+ssize_t Parser::handleCgiPass(DirectiveCtx &ctx) {
+  (void)ctx;
+  Logger::fatal("`cgi_pass` directive handler is not implemented");
+  return -1;
 }
 
 ssize_t Parser::handleListen(DirectiveCtx &ctx) {
