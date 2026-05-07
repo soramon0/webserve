@@ -30,9 +30,21 @@ ssize_t Parser::handleIndex(DirectiveCtx &ctx) {
 }
 
 ssize_t Parser::handleAutoIndex(DirectiveCtx &ctx) {
-  (void)ctx;
-  Logger::fatal("`autoindex` directive handler is not implemented");
-  return -1;
+  const Token &dir = previous();
+
+  if (!consume(Directive::WORD,
+               "expected `on` or `off` after `autoindex` directive."))
+    return -1;
+
+  const Token &token = previous();
+  if (token.lexeme != "on" && token.lexeme != "off") {
+    reportParseError(token, "value must be `on` or `off`.");
+    return -1;
+  }
+
+  ctx.shared->withAutoIndex(token.lexeme == "on");
+
+  return expectDirectiveArgsCount(dir);
 }
 
 ssize_t Parser::handleErrorPage(DirectiveCtx &ctx) {
