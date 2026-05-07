@@ -63,6 +63,7 @@ private:
   ssize_t handleClientMaxBodySize(DirectiveCtx &ctx);
   ssize_t handleMimeTypes(DirectiveCtx &ctx);
   ssize_t handleUploadStore(DirectiveCtx &ctx);
+  ssize_t handleAccessLogPath(DirectiveCtx &ctx);
   ssize_t handleCgiPass(DirectiveCtx &ctx);
   ssize_t handleListen(DirectiveCtx &ctx);
   ssize_t handleReturn(DirectiveCtx &ctx);

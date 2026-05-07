@@ -42,7 +42,7 @@ SharedConfig &SharedConfig::withErrorPage(uint16_t status,
 }
 
 SharedConfig &SharedConfig::withAccessLogPath(const std::string &path) {
-  this->access_log_path = path;
+  this->access_log = path;
   return *this;
 }
 
@@ -107,8 +107,8 @@ std::string SharedConfig::toString(int indent) const {
     oss << tab << "upload_store " << this->upload_store << ";\n";
   }
 
-  if (!this->access_log_path.empty()) {
-    oss << tab << "access_log " << this->access_log_path << ";\n";
+  if (!this->access_log.empty()) {
+    oss << tab << "access_log " << this->access_log << ";\n";
   }
 
   if (this->error_page.size() != 0) {

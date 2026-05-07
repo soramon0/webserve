@@ -25,7 +25,7 @@ struct SharedConfig {
   size_t client_max_body_size;
   // empty string is off but if we have a string then it's the path where to
   // save the access log
-  std::string access_log_path;
+  std::string access_log;
   mimetype_map types;
   // where to save uploads of locations with POST method
   std::string upload_store; // defaults to /tmp/webserve

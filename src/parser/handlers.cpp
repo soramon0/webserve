@@ -96,9 +96,27 @@ ssize_t Parser::handleMimeTypes(DirectiveCtx &ctx) {
 }
 
 ssize_t Parser::handleUploadStore(DirectiveCtx &ctx) {
-  (void)ctx;
-  Logger::fatal("`upload_store` directive handler is not implemented");
-  return -1;
+  const Token &dir = previous();
+
+  if (!consume(Directive::WORD,
+               "expected path after `upload_store` directive."))
+    return -1;
+
+  ctx.shared->upload_store = previous().lexeme;
+
+  return expectDirectiveArgsCount(dir);
+}
+
+ssize_t Parser::handleAccessLogPath(DirectiveCtx &ctx) {
+  const Token &dir = previous();
+
+  if (!consume(Directive::WORD,
+               "expected path after `access_log_path` directive."))
+    return -1;
+
+  ctx.shared->access_log = previous().lexeme;
+
+  return expectDirectiveArgsCount(dir);
 }
 
 ssize_t Parser::handleCgiPass(DirectiveCtx &ctx) {

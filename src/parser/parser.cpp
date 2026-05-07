@@ -25,6 +25,8 @@ Parser::Parser(const char *path)
   directiveHandlers.insert(std::make_pair("types", &Parser::handleMimeTypes));
   directiveHandlers.insert(
       std::make_pair("upload_store", &Parser::handleUploadStore));
+  directiveHandlers.insert(
+      std::make_pair("access_log", &Parser::handleAccessLogPath));
   directiveHandlers.insert(std::make_pair("cgi_pass", &Parser::handleCgiPass));
   directiveHandlers.insert(std::make_pair("listen", &Parser::handleListen));
   directiveHandlers.insert(std::make_pair("return", &Parser::handleReturn));
