@@ -48,9 +48,39 @@ ssize_t Parser::handleAutoIndex(DirectiveCtx &ctx) {
 }
 
 ssize_t Parser::handleErrorPage(DirectiveCtx &ctx) {
-  (void)ctx;
-  Logger::fatal("`error_page` directive handler is not implemented");
-  return -1;
+  const Token &dir = previous();
+
+  std::vector<int> codes;
+  while (check(Directive::WORD)) {
+    const Token &t = peek();
+    if (t.lexeme.find_first_not_of("0123456789") != std::string::npos)
+      break;
+
+    int code = std::atoi(t.lexeme.c_str());
+    if (code < 300 || code > 599) {
+      reportParseError(t, "value must be between 300 and 599.");
+      return -1;
+    }
+    codes.push_back(code);
+    advance();
+  }
+
+  if (codes.size() == 0) {
+    reportParseError(peek(), "code is required in `error_page` directive.");
+    return -1;
+  }
+
+  if (!consume(Directive::WORD,
+               "expected path after code in `error_page` directive.")) {
+    return -1;
+  }
+
+  std::string path = previous().lexeme;
+  for (size_t i = 0; i < codes.size(); i++) {
+    ctx.shared->withErrorPage(codes[i], path);
+  }
+
+  return expectDirectiveArgsCount(dir);
 }
 
 ssize_t Parser::handleClientMaxBodySize(DirectiveCtx &ctx) {
