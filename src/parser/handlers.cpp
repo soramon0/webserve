@@ -1,4 +1,3 @@
-#include "logger/log.hpp"
 #include "parser.hpp"
 #include <cstdlib>
 
@@ -107,9 +106,42 @@ ssize_t Parser::handleClientMaxBodySize(DirectiveCtx &ctx) {
 }
 
 ssize_t Parser::handleMimeTypes(DirectiveCtx &ctx) {
-  (void)ctx;
-  Logger::fatal("`types` directive handler is not implemented");
-  return -1;
+  const Token &dir = previous();
+
+  if (!consume(Directive::LBRACE, "expected '{' after `types` directive."))
+    return -1;
+
+  while (!check(Directive::RBRACE) && !atEnd()) {
+    if (check(Directive::SEMICOLON)) {
+      advance();
+      continue;
+    }
+
+    if (!consume(Directive::WORD,
+                 "expected MIME type or '}' inside `types` block."))
+      return -1;
+
+    std::string mime = previous().lexeme;
+    bool has_ext = false;
+    while (check(Directive::WORD)) {
+      advance();
+      ctx.shared->withMimetype(previous().lexeme, mime);
+      has_ext = true;
+    }
+
+    if (!has_ext) {
+      reportParseError(previous(),
+                       "expected at least one extension after MIME type in "
+                       "`types` block.");
+      return -1;
+    }
+
+    if (!consume(Directive::SEMICOLON,
+                 "expected ';' after MIME extensions in `types` block."))
+      return -1;
+  }
+
+  return expectEnd(dir, Directive::RBRACE) ? 0 : -1;
 }
 
 ssize_t Parser::handleUploadStore(DirectiveCtx &ctx) {
