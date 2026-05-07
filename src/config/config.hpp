@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#define MAX_CLIENT_BODY_SIZE 1000000 // 1m
+
 struct Config {
   std::vector<Server> servers;
   SharedConfig *shared_config;

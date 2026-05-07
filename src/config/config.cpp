@@ -59,6 +59,10 @@ std::string Config::toString() const {
 }
 
 void Config::applySharedInheritance() {
+  if (this->shared_config->client_max_body_size == 0) {
+    this->shared_config->client_max_body_size = MAX_CLIENT_BODY_SIZE;
+  }
+
   for (size_t i = 0; i < servers.size(); ++i) {
     Server &srv = servers[i];
 

@@ -3,8 +3,6 @@
 #include <string>
 #include <vector>
 
-#define MAX_BODY_SIZE 1000000 // 1m
-
 typedef std::vector<std::string> mimetype;
 typedef std::map<std::string, mimetype> mimetype_map;
 
