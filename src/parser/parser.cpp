@@ -98,7 +98,7 @@ ssize_t Parser::parseHttp(Config &cfg) {
     return -1;
   this->ctx.push_back(CTX_HTTP);
 
-  if (!consume(Directive::LBRACE, "expected '{' after http"))
+  if (!consume(Directive::LBRACE, "expected '{' after http."))
     return -1;
 
   while (!check(Directive::RBRACE) && !atEnd()) {
@@ -113,7 +113,11 @@ ssize_t Parser::parseHttp(Config &cfg) {
         return -1;
       if (cfg.hasServer(srv)) {
         // TODO: add better error indicator;
-        reportParseError(token, "server has a used host:port");
+        reportParseError(token, "server has a used host:port.");
+        return -1;
+      }
+      if (srv.interface.empty()) {
+        reportParseError(token, "server requires `listen` directive.");
         return -1;
       }
       cfg.servers.push_back(srv);
@@ -124,7 +128,7 @@ ssize_t Parser::parseHttp(Config &cfg) {
     }
   }
 
-  if (!consume(Directive::RBRACE, "expected '}' to close http"))
+  if (!consume(Directive::RBRACE, "expected '}' to close http."))
     return -1;
 
   this->ctx.pop_back();
