@@ -1,5 +1,5 @@
 #include "Client.hpp"
-#include <cstring>
+#include <string>
 #include <sstream>
 #include <cstdlib>
 
@@ -27,17 +27,18 @@ void	Client::parseHeaders(std::string head)
 	else
 	{
 		request.path = url.substr(0, p);
-		request.query = url.substr(p);
+		request.query = url.substr(p + 1);
 	}
 	s >> request.protocol;
 
 	std::string header;
 	while (std::getline(s, header))
 	{
+		if (header.empty()) break;
+		header.erase(header.size() - 1);  // Remove \r
 		size_t k_end = header.find(':');
-		if (k_end == std::string::npos)
-			continue ;
-		request.headers[header.substr(0, k_end)] = header.substr(k_end + 1);
+		if (k_end == std::string::npos) continue ;
+		request.headers[header.substr(0, k_end)] = header.substr(k_end + 2);
 	}
 	is_header_parsed = 1;
 }
@@ -71,7 +72,7 @@ void	Client::parseRequest()
 		{
 			parseHeaders(request_buffer.substr(0, hpos));
 			request.body = request_buffer.substr(hpos + 4);
-			offset = request_buffer.size() - 1;
+			offset = request_buffer.size();
 			checkRequest();
 		}
 	}

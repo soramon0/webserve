@@ -23,6 +23,7 @@ public:
 	void	handleHttpRequest(SOCKET c);
 	void	handleHttpResponse(SOCKET c);
 	void	handleClientData(SOCKET c);
+	void	removeClient(SOCKET c);
 	void	eventLoop();
 };
 

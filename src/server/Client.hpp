@@ -11,7 +11,7 @@ class Client
 	socklen_t		addrlen;
 	struct sockaddr addr;
 	SOCKET			socket;
-	char			tmp_request[MAX_REQUEST_SIZE + 1];
+	// char			tmp_request[MAX_REQUEST_SIZE + 1];
 	size_t			received;
 	Request			request;
 

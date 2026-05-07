@@ -15,7 +15,7 @@ Webserv::Webserv(Config _conf) : config(_conf) {}
 
 Webserv::~Webserv() {}
 
-void	Webserv::start()
+void Webserv::start()
 {
 	int srvlen = config.servers.size();
 
@@ -32,11 +32,10 @@ void	Webserv::start()
 			continue ;
 		servers[listen_sock] = &config.servers[i];
 	}
-
 	eventLoop();
 }
 
-void	Webserv::eventLoop()
+void Webserv::eventLoop()
 {
 	struct epoll_event events[MAX_EVENTS];
 
@@ -69,7 +68,7 @@ void	Webserv::eventLoop()
 	}
 }
 
-SOCKET	Webserv::createSocket(int id)
+SOCKET Webserv::createSocket(int id)
 {
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
@@ -105,7 +104,7 @@ SOCKET	Webserv::createSocket(int id)
 	return socket_listen;
 }
 
-void	Webserv::handleNewConnection(SOCKET srv)
+void Webserv::handleNewConnection(SOCKET srv)
 {
 	while (true)
 	{
@@ -133,56 +132,56 @@ void	Webserv::handleNewConnection(SOCKET srv)
 		Logger::info("client Connected...\n\n");
 	}
 }
-void	Webserv::handleClientData(SOCKET c)
+
+void Webserv::handleClientData(SOCKET c)
 {
 	Client&	cl = clients[c];
     size_t	max_size = cl.srv->shared_config->client_max_body_size;
-	int		buffer_size = max_size - cl.received;
-	char	buffer[buffer_size];
 	
-	if (max_size == cl.received)
+	if (cl.received >= max_size)
 	{
-		//send error page 40x
+		//send error page 413, remove client
 		return;
 	}
-
-	int bytes = recv(cl.socket, buffer, buffer_size, 0);
+	
+	char buffer[MAX_REQUEST_SIZE];
+	int bytes = recv(cl.socket, buffer, sizeof(buffer), 0);
 
 	if (bytes <= 0)
 	{
-		clients.erase(c);
-		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
-		close(c);
+		removeClient(c);
 		return ;
 	}
-	cl.received += bytes;
-	buffer[bytes] = '\0';
-
 	cl.request_buffer.append(buffer, bytes);
+	cl.received += bytes;
 	handleHttpRequest(c);
 }
 
+void Webserv::removeClient(SOCKET c)
+{
+	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
+	close(c);
+	clients.erase(c);
+}
 
-void	Webserv::handleHttpRequest(SOCKET c)
+void Webserv::handleHttpRequest(SOCKET c)
 {
 	Client& cl = clients[c];
-
+	
 	cl.parseRequest();
 	if (cl.is_complete)
 	{
 		cl.request.printRequest();
 		modify_epoll(epoll_fd, c, EPOLLOUT);
-		handleHttpResponse(c);
 	}
 }
 
-void	Webserv::handleHttpResponse(SOCKET c)
+void Webserv::handleHttpResponse(SOCKET c)
 {
 	std::string response = HELLO_WORLD_RESPONSE;
 	
 	int n = send(c, response.c_str(), response.size(), 0);
-	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
-	close(c);
+	removeClient(c);
 	Logger::info("Client disconneted...& send n = %d bytes", n);
 }
 
