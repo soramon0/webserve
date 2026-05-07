@@ -31,7 +31,7 @@ bool Config::hasServer(const Server &srv) const {
 
   std::vector<Server>::const_iterator it;
   for (it = servers.begin(); it != servers.end(); it++) {
-    if (it->interface == srv.interface) {
+    if (it->interface == srv.interface && it->port == srv.port) {
       return true;
     }
   }
