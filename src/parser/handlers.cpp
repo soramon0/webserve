@@ -9,16 +9,7 @@ ssize_t Parser::handleRoot(DirectiveCtx &ctx) {
 
   ctx.shared->root = previous().lexeme;
 
-  if (peek().type == Directive::WORD) {
-    reportParseError(peek(),
-                     "invalid number of arguments in `root` directive.");
-    return -1;
-  }
-
-  if (!expectEnd(dir, Directive::SEMICOLON))
-    return -1;
-
-  return 0;
+  return expectDirectiveArgsCount(dir);
 }
 
 ssize_t Parser::handleIndex(DirectiveCtx &ctx) {
@@ -34,16 +25,13 @@ ssize_t Parser::handleIndex(DirectiveCtx &ctx) {
     return -1;
   }
 
-  if (!expectEnd(dir, Directive::SEMICOLON))
-    return -1;
-
-  return 0;
+  return expectEnd(dir, Directive::SEMICOLON) ? 0 : -1;
 }
 
 ssize_t Parser::handleListen(DirectiveCtx &ctx) {
   const Token &dir = previous();
 
-  if (!ctx.server) {
+  if (this->ctx.back() != CTX_SERVER) {
     reportParseError(dir, "`listen` directive is not allowed here.");
     return -1;
   }
@@ -78,7 +66,50 @@ ssize_t Parser::handleListen(DirectiveCtx &ctx) {
   ctx.server->interface = host;
   ctx.server->port = port;
 
-  return expectEnd(dir, Directive::SEMICOLON) ? 0 : -1;
+  return expectDirectiveArgsCount(dir);
+}
+
+ssize_t Parser::handleReturn(DirectiveCtx &ctx) {
+  const Token &dir = previous();
+
+  if (this->ctx.back() != CTX_SERVER && this->ctx.back() != CTX_LOCATION) {
+    reportParseError(dir, "`return` directive is not allowed here.");
+    return -1;
+  }
+
+  if (!consume(Directive::WORD,
+               "expected [code?] [uri] after `return` directive."))
+    return -1;
+
+  int code = 0;
+  std::string uri;
+  std::string raw = previous().lexeme;
+  if (raw.find_first_not_of("0123456789") == std::string::npos) {
+    code = std::atoi(raw.c_str());
+    if (code < 300 || code >= 400) {
+      reportParseError(previous(), "invalid return code.");
+      return -1;
+    }
+  } else {
+    uri = raw;
+    code = 302;
+  }
+
+  if (uri.empty()) {
+    if (!consume(Directive::WORD,
+                 "expected [uri] after code in `return` directive."))
+      return -1;
+    uri = previous().lexeme;
+  }
+
+  if (this->ctx.back() == CTX_SERVER) {
+    ctx.server->withRedirect(code, uri);
+  }
+  if (this->ctx.back() == CTX_LOCATION) {
+    ctx.loc->withRedirect(code, uri);
+  }
+
+  return expectDirectiveArgsCount(dir);
 }
 
 DirectiveCtx DirectiveCtx::withServer(Server *srv) {

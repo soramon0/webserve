@@ -17,6 +17,7 @@ Parser::Parser(const char *path)
   directiveHandlers.insert(std::make_pair("root", &Parser::handleRoot));
   directiveHandlers.insert(std::make_pair("index", &Parser::handleIndex));
   directiveHandlers.insert(std::make_pair("listen", &Parser::handleListen));
+  directiveHandlers.insert(std::make_pair("return", &Parser::handleReturn));
 }
 
 Config *Parser::parse() {
@@ -224,6 +225,16 @@ bool Parser::expectEnd(const Token &dir, Directive::Type type) {
   }
 
   return true;
+}
+
+ssize_t Parser::expectDirectiveArgsCount(const Token &dir) {
+  if (peek().type == Directive::WORD) {
+    reportParseError(peek(), "invalid number of arguments in `" + dir.lexeme +
+                                 "` directive.");
+    return -1;
+  }
+
+  return expectEnd(dir, Directive::SEMICOLON) ? 0 : -1;
 }
 
 const Token &Parser::peek() const { return scanner.tokens[pos]; }

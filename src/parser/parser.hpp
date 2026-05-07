@@ -52,10 +52,12 @@ private:
   bool expectContext(Context context, Context want);
   bool expectTokenContext(Directive::Type type);
   bool expectEnd(const Token &dir, Directive::Type type);
+  ssize_t expectDirectiveArgsCount(const Token &dir);
 
   std::string ctxToString(Context context) const;
 
   ssize_t handleRoot(DirectiveCtx &ctx);
   ssize_t handleIndex(DirectiveCtx &ctx);
   ssize_t handleListen(DirectiveCtx &ctx);
+  ssize_t handleReturn(DirectiveCtx &ctx);
 };
