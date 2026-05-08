@@ -3,7 +3,6 @@
 #include <sstream>
 
 Server::Server() : port(0), return_rule(NULL) {
-  // TODO: if listen not found then use: port(8000), interface("0.0.0.0")
   this->shared_config = new SharedConfig();
 }
 

@@ -27,7 +27,7 @@ struct SharedConfig {
   std::string access_log;
   mimetype_map types;
   // where to save uploads of locations with POST method
-  std::string upload_store; // defaults to /tmp/webserve
+  std::string upload_store;
   std::map<std::string, std::string> cgi_pass;
 
   SharedConfig();

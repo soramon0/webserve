@@ -1,19 +1,8 @@
 #include "shared_config.hpp"
 #include <sstream>
 
-SharedConfig::SharedConfig() : autoindex(INDEX_UNSET), client_max_body_size(0) {
-  // TODO: set after parsing if empty
-  // this->withMimetype("html", "text/html")
-  //     .withMimetype("htm", "text/html")
-  //     .withMimetype("css", "text/css")
-  //     .withMimetype("js", "application/javascript");
-  //
-  // this->withErrorPage(404, "./404.html")
-  //     .withErrorPage(500, "./500.html")
-  //     .withErrorPage(502, "./502.html")
-  //     .withErrorPage(503, "./503.html")
-  //     .withErrorPage(504, "./504.html");
-}
+SharedConfig::SharedConfig()
+    : autoindex(INDEX_UNSET), client_max_body_size(0) {}
 
 SharedConfig &SharedConfig::withIndex(const std::string &index) {
   this->index.push_back(index);
