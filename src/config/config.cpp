@@ -59,15 +59,30 @@ std::string Config::toString() const {
 }
 
 void Config::applySharedInheritance() {
-  if (this->shared_config->client_max_body_size == 0) {
-    this->shared_config->client_max_body_size = MAX_CLIENT_BODY_SIZE;
-  }
+  SharedConfig *defaultConfig = new SharedConfig();
+
+  defaultConfig->withRoot("nginx/www")
+      .withClientMaxBodySize(static_cast<size_t>(MAX_CLIENT_BODY_SIZE))
+      .withMimetype("html", "text/html")
+      .withMimetype("htm", "text/html")
+      .withMimetype("css", "text/css")
+      .withMimetype("js", "application/javascript")
+      .withMimetype("jpg", "image/jpeg")
+      .withMimetype("jpeg", "image/jpeg")
+      .withMimetype("png", "image/png")
+      .withMimetype("svg", "image/svg+xml");
+
+  SharedConfig httpConfig =
+      SharedConfig::mergeInherited(*defaultConfig, *this->shared_config);
+
+  delete this->shared_config;
+  this->shared_config = new SharedConfig(httpConfig);
 
   for (size_t i = 0; i < servers.size(); ++i) {
     Server &srv = servers[i];
 
     SharedConfig mergedSrv =
-        SharedConfig::mergeInherited(*shared_config, *srv.shared_config);
+        SharedConfig::mergeInherited(*this->shared_config, *srv.shared_config);
 
     delete srv.shared_config;
     srv.shared_config = new SharedConfig(mergedSrv);
