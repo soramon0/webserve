@@ -31,6 +31,7 @@ private:
   friend class Server;
   friend class Location;
 	friend class Webserv;
+	friend class Client;
 
 public:
   SharedConfig();

@@ -6,7 +6,8 @@
 #define CRLF "\r\n"
 #define BLANKLINE "\r\n\r\n"
 
-Client::Client() : received(0), is_complete(0), offset(0), is_header_parsed(0)
+Client::Client() : received(0), is_complete(0), offset(0),
+					is_header_parsed(0)
 {
 	addrlen = sizeof(addr);
 }
@@ -30,14 +31,15 @@ void	Client::parseHeaders(std::string head)
 		request.query = url.substr(p + 1);
 	}
 	s >> request.protocol;
-
 	std::string header;
 	while (std::getline(s, header))
 	{
-		if (header.empty()) break;
+		if (header.empty())
+			break;
 		header.erase(header.size() - 1);  // Remove \r
 		size_t k_end = header.find(':');
-		if (k_end == std::string::npos) continue ;
+		if (k_end == std::string::npos)
+			continue ;
 		request.headers[header.substr(0, k_end)] = header.substr(k_end + 2);
 	}
 	is_header_parsed = 1;
@@ -54,7 +56,7 @@ void	Client::checkRequest()
 			is_complete = true;
 	}
 	else if (request.method != "POST")
-		is_complete = true;	
+		is_complete = true;
 }
 
 void	Client::parseRequest()
@@ -71,9 +73,21 @@ void	Client::parseRequest()
 		if (hpos != std::string::npos)
 		{
 			parseHeaders(request_buffer.substr(0, hpos));
+			header_size = hpos + 4;
 			request.body = request_buffer.substr(hpos + 4);
 			offset = request_buffer.size();
 			checkRequest();
 		}
 	}
+}
+
+size_t Client::getMaxSize()
+{
+	size_t body_size;
+
+	if (!is_header_parsed)
+		return MAX_BODY_SIZE;
+	if (srv->locations.count(request.path))
+		body_size = srv->locations[request.path].shared_config->client_max_body_size;
+	return (header_size + body_size);
 }

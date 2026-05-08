@@ -12,6 +12,7 @@ private:
   // copy from parent (server) and update if needed to match location
   SharedConfig *shared_config;
   friend class Server;
+  friend class Client;
 
 public:
   Location();

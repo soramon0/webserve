@@ -17,6 +17,7 @@ private:
 
   friend class Config;
   friend class Webserv;
+  friend class Client;
 
 public:
   Server();

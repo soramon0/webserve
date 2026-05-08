@@ -6,6 +6,11 @@
 #include <vector>
 #include <map>
 
+
+#define MAX_EVENTS 64
+
+#define HELLO_WORLD_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!"
+
 class Webserv
 {
 private:

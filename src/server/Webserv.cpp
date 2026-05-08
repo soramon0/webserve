@@ -7,10 +7,6 @@
 #include <string>
 #include <cstring>
 
-#define MAX_EVENTS 64
-
-#define HELLO_WORLD_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!"
-
 Webserv::Webserv(Config _conf) : config(_conf) {}
 
 Webserv::~Webserv() {}
@@ -43,13 +39,17 @@ void Webserv::eventLoop()
 	{
 		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
 		int ev, fd;
-		
 		for (int i = 0; i < n_ev; i++)
 		{
 			ev = events[i].events;
 			fd = events[i].data.fd;
 
-			if (ev & EPOLLIN)
+			if (ev & (EPOLLERR | EPOLLHUP))
+			{
+				removeClient(fd);
+				continue;
+			}
+			else if (ev & EPOLLIN)
 			{
 				if (servers.count(fd))
 					handleNewConnection(fd);
@@ -59,10 +59,6 @@ void Webserv::eventLoop()
 			else if (ev & EPOLLOUT)
 			{
 				handleHttpResponse(fd);
-			}
-			else if (ev & (EPOLLERR | EPOLLHUP))
-			{
-				// handle errors
 			}
 		}
 	}
@@ -87,19 +83,19 @@ SOCKET Webserv::createSocket(int id)
 
 	int socket_listen = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 	if (!ISVALIDSOCKET(socket_listen))
-		Logger::fatal("Invalid socket error"); //TODO close everything
+		Logger::fatal("socket failed");
 
 	int opt = 1;
-	if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) 
+	if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
 		Logger::error("setsockopt failed");
 
 	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen))
-		Logger::fatal("Can't bind"); //TODO close everything
+		Logger::fatal("bind failed");
 	freeaddrinfo(addr);
 
-	std::cout << "Listening...\n";
+	Logger::info("Listening...");
 	if (listen(socket_listen, SOMAXCONN))
-		Logger::fatal("listen failed"); //TODO close everything
+		Logger::fatal("listen failed");
 
 	return socket_listen;
 }
@@ -129,21 +125,21 @@ void Webserv::handleNewConnection(SOCKET srv)
 			continue ;
 		c.srv = servers[srv];
 		clients[c.socket] = c;
-		Logger::info("client Connected...\n\n");
+		Logger::info("client Connected...");
 	}
 }
 
 void Webserv::handleClientData(SOCKET c)
 {
 	Client&	cl = clients[c];
-    size_t	max_size = cl.srv->shared_config->client_max_body_size;
-	
-	if (cl.received >= max_size)
+
+	if (cl.received >= cl.getMaxSize())
 	{
 		//send error page 413, remove client
+		removeClient(c);
 		return;
 	}
-	
+
 	char buffer[MAX_REQUEST_SIZE];
 	int bytes = recv(cl.socket, buffer, sizeof(buffer), 0);
 
@@ -159,6 +155,8 @@ void Webserv::handleClientData(SOCKET c)
 
 void Webserv::removeClient(SOCKET c)
 {
+	if (!clients.count(c))
+		return;
 	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
 	close(c);
 	clients.erase(c);
@@ -167,7 +165,7 @@ void Webserv::removeClient(SOCKET c)
 void Webserv::handleHttpRequest(SOCKET c)
 {
 	Client& cl = clients[c];
-	
+
 	cl.parseRequest();
 	if (cl.is_complete)
 	{
@@ -179,12 +177,9 @@ void Webserv::handleHttpRequest(SOCKET c)
 void Webserv::handleHttpResponse(SOCKET c)
 {
 	std::string response = HELLO_WORLD_RESPONSE;
-	
-	int n = send(c, response.c_str(), response.size(), 0);
-	removeClient(c);
-	Logger::info("Client disconneted...& send n = %d bytes", n);
-}
 
-// TODO: create a README file exsplain what you ve done so far
-// TODO: add documatations to every function in your code
-// TODO: connect "request parsing" part with "muliplexing"
+	int n = send(c, response.c_str(), response.size(), 0);
+	(void)n;
+	removeClient(c);
+	Logger::info("Client disconneted...\n");
+}
