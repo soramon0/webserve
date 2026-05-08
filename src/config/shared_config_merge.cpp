@@ -1,13 +1,4 @@
 #include "shared_config.hpp"
-#include <algorithm>
-
-static void appendUnique(std::vector<std::string> &dst,
-                         const std::vector<std::string> &src) {
-  for (size_t i = 0; i < src.size(); ++i) {
-    if (std::find(dst.begin(), dst.end(), src[i]) == dst.end())
-      dst.push_back(src[i]);
-  }
-}
 
 SharedConfig SharedConfig::mergeInherited(const SharedConfig &parent,
                                           const SharedConfig &child) {
@@ -38,7 +29,10 @@ SharedConfig SharedConfig::mergeInherited(const SharedConfig &parent,
 
   for (mimetype_map::const_iterator it = child.types.begin();
        it != child.types.end(); ++it) {
-    appendUnique(out.types[it->first], it->second);
+    for (mimetype::const_iterator itSet = it->second.begin();
+         itSet != it->second.end(); ++itSet) {
+      out.types[it->first].insert(*itSet);
+    }
   }
 
   for (std::map<std::string, std::string>::const_iterator it =

@@ -1,9 +1,10 @@
 #include <map>
+#include <set>
 #include <stdint.h>
 #include <string>
 #include <vector>
 
-typedef std::vector<std::string> mimetype;
+typedef std::set<std::string> mimetype;
 typedef std::map<std::string, mimetype> mimetype_map;
 
 struct SharedConfig {

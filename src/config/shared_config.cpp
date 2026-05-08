@@ -65,7 +65,7 @@ SharedConfig &SharedConfig::withClientMaxBodySize(size_t size) {
 
 SharedConfig &SharedConfig::withMimetype(const std::string &ext,
                                          const std::string &type) {
-  this->types[type].push_back(ext);
+  this->types[type].insert(ext);
   return *this;
 }
 
@@ -124,8 +124,10 @@ std::string SharedConfig::toString(int indent) const {
     for (mimetype_map::const_iterator it = this->types.begin();
          it != this->types.end(); ++it) {
       oss << tab << "\t" << it->first << "\t";
-      for (size_t i = 0; i < it->second.size(); i++) {
-        oss << " " << it->second[i];
+
+      for (mimetype::const_iterator itSet = it->second.begin();
+           itSet != it->second.end(); ++itSet) {
+        oss << " " << *itSet;
       }
       oss << ";\n";
     }
