@@ -74,6 +74,7 @@ void Config::applySharedInheritance() {
 
   SharedConfig httpConfig =
       SharedConfig::mergeInherited(*defaultConfig, *this->shared_config);
+  delete defaultConfig;
 
   delete this->shared_config;
   this->shared_config = new SharedConfig(httpConfig);
