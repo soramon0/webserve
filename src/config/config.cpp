@@ -72,29 +72,28 @@ void Config::resolveSharedConfigs() {
       .withMimetype("png", "image/png")
       .withMimetype("svg", "image/svg+xml");
 
-  SharedConfig *httpConfig =
-      SharedConfig::merge(defaultConfig, *this->shared_config);
+  SharedConfig *cfg = SharedConfig::merge(defaultConfig, *this->shared_config);
 
   delete this->shared_config;
-  this->shared_config = httpConfig;
+  this->shared_config = cfg;
 
   for (size_t i = 0; i < servers.size(); ++i) {
     Server &srv = servers[i];
 
-    SharedConfig *mergedSrv =
+    SharedConfig *srvCfg =
         SharedConfig::merge(*this->shared_config, *srv.shared_config);
 
     delete srv.shared_config;
-    srv.shared_config = mergedSrv;
+    srv.shared_config = srvCfg;
 
     for (std::map<std::string, Location>::iterator it = srv.locations.begin();
          it != srv.locations.end(); ++it) {
       Location &loc = it->second;
-      SharedConfig *mergedLoc =
+      SharedConfig *locCfg =
           SharedConfig::merge(*srv.shared_config, *loc.shared_config);
 
       delete loc.shared_config;
-      loc.shared_config = mergedLoc;
+      loc.shared_config = locCfg;
     }
   }
 }
