@@ -61,7 +61,7 @@ Config *Parser::parse() {
   }
 
   // SECOND PHASE: merge configs from parent down to child
-  cfg->applySharedInheritance();
+  cfg->resolveSharedConfigs();
 
   return cfg;
 

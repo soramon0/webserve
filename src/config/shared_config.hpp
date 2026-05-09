@@ -48,6 +48,6 @@ struct SharedConfig {
 
   std::string toString(int indent) const;
 
-  static SharedConfig mergeInherited(const SharedConfig &parent,
-                                     const SharedConfig &child);
+  static SharedConfig merge(const SharedConfig &parent,
+                            const SharedConfig &child);
 };

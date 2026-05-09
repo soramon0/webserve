@@ -58,10 +58,10 @@ std::string Config::toString() const {
   return oss.str();
 }
 
-void Config::applySharedInheritance() {
-  SharedConfig *defaultConfig = new SharedConfig();
+void Config::resolveSharedConfigs() {
+  SharedConfig defaultConfig;
 
-  defaultConfig->withRoot("nginx/www")
+  defaultConfig.withRoot("nginx/www")
       .withClientMaxBodySize(static_cast<size_t>(MAX_CLIENT_BODY_SIZE))
       .withMimetype("html", "text/html")
       .withMimetype("htm", "text/html")
@@ -73,8 +73,7 @@ void Config::applySharedInheritance() {
       .withMimetype("svg", "image/svg+xml");
 
   SharedConfig httpConfig =
-      SharedConfig::mergeInherited(*defaultConfig, *this->shared_config);
-  delete defaultConfig;
+      SharedConfig::merge(defaultConfig, *this->shared_config);
 
   delete this->shared_config;
   this->shared_config = new SharedConfig(httpConfig);
@@ -83,7 +82,7 @@ void Config::applySharedInheritance() {
     Server &srv = servers[i];
 
     SharedConfig mergedSrv =
-        SharedConfig::mergeInherited(*this->shared_config, *srv.shared_config);
+        SharedConfig::merge(*this->shared_config, *srv.shared_config);
 
     delete srv.shared_config;
     srv.shared_config = new SharedConfig(mergedSrv);
@@ -92,7 +91,7 @@ void Config::applySharedInheritance() {
          it != srv.locations.end(); ++it) {
       Location &loc = it->second;
       SharedConfig mergedLoc =
-          SharedConfig::mergeInherited(*srv.shared_config, *loc.shared_config);
+          SharedConfig::merge(*srv.shared_config, *loc.shared_config);
 
       delete loc.shared_config;
       loc.shared_config = new SharedConfig(mergedLoc);

@@ -1,7 +1,7 @@
 #include "shared_config.hpp"
 
-SharedConfig SharedConfig::mergeInherited(const SharedConfig &parent,
-                                          const SharedConfig &child) {
+SharedConfig SharedConfig::merge(const SharedConfig &parent,
+                                 const SharedConfig &child) {
   SharedConfig out = parent;
 
   if (!child.root.empty())
