@@ -12,7 +12,25 @@ static int running = true;
 
 Webserv::Webserv(Config _conf) : config(_conf) {}
 
-Webserv::~Webserv() {}
+Webserv::~Webserv()
+{
+	close(epoll_fd);
+	// close all sockets before
+	std::nap<SOCKET, Client>::iterator it_cl = clients.begin();
+	std::nap<SOCKET, Client>::iterator it_srv = servers.begin();
+	while (it_cl != clients.end())
+	{
+		close(it_cl->first);
+		++it_cl;
+	}
+	clients.clear();
+	while (it_srv != clients.end())
+	{
+		close(it_srv->first);
+		++it_srv;
+	}
+	servers.clear();
+}
 
 void Webserv::start()
 {
@@ -32,14 +50,6 @@ void Webserv::start()
 		servers[listen_sock] = &config.servers[i];
 	}
 	eventLoop();
-	cleanAll();
-}
-
-void Webserv::cleanAll()
-{
-	close(epoll_fd);
-	servers.clear();
-	clients.clear();
 }
 
 void sigintHandler(int sig)

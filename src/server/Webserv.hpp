@@ -30,6 +30,5 @@ public:
 	void	handleClientData(SOCKET c);
 	void	removeClient(SOCKET c);
 	void	eventLoop();
-	void	cleanAll();
 };
 
