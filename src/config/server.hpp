@@ -16,7 +16,7 @@ struct Server {
   Server();
   Server(const Server &other);
   Server &operator=(const Server &other);
-  virtual ~Server();
+  ~Server();
 
   Server &withPort(uint16_t port);
   Server &withInterface(const std::string &interface);
