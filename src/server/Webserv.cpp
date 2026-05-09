@@ -6,6 +6,9 @@
 #include <sstream>
 #include <string>
 #include <cstring>
+#include <signal.h>
+
+static int running = true;
 
 Webserv::Webserv(Config _conf) : config(_conf) {}
 
@@ -29,13 +32,29 @@ void Webserv::start()
 		servers[listen_sock] = &config.servers[i];
 	}
 	eventLoop();
+	cleanAll();
+}
+
+void Webserv::cleanAll()
+{
+	close(epoll_fd);
+	servers.clear();
+	clients.clear();
+}
+
+void sigintHandler(int sig)
+{
+	(void)sig;
+	running = false;
 }
 
 void Webserv::eventLoop()
 {
 	struct epoll_event events[MAX_EVENTS];
 
-	while (true)
+	signal(SIGINT, sigintHandler);
+
+	while (running)
 	{
 		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
 		int ev, fd;
@@ -67,7 +86,7 @@ void Webserv::eventLoop()
 SOCKET Webserv::createSocket(int id)
 {
 	struct addrinfo hints;
-	memset(&hints, 0, sizeof(hints));
+	std::memset(&hints, 0, sizeof(hints));
 
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;

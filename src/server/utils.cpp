@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <sys/epoll.h>
 #include "logger/log.hpp"
+#include <cstring>
 
 int set_nonblocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -22,6 +23,8 @@ int epoll_instance()
 int add_to_epoll(int epoll_fd, SOCKET sock, int flags)
 {
     struct epoll_event ev;
+
+    std::memset(&ev, 0, sizeof(ev));
     ev.events = flags;
     ev.data.fd = sock;
 
@@ -38,6 +41,7 @@ int modify_epoll(int epoll_fd, int c, int flag)
 {
 	struct epoll_event ev;
 
+    std::memset(&ev, 0, sizeof(ev));
 	ev.events = flag;
 	ev.data.fd = c;
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, c, &ev) == -1)
