@@ -28,9 +28,9 @@ struct Directive {
     case WORD:
       return "word";
     case LBRACE:
-      return "}";
-    case RBRACE:
       return "{";
+    case RBRACE:
+      return "}";
     case SEMICOLON:
       return ";";
     case END_OF_FILE:

@@ -159,8 +159,7 @@ ssize_t Parser::handleUploadStore(DirectiveCtx &ctx) {
 ssize_t Parser::handleAccessLogPath(DirectiveCtx &ctx) {
   const Token &dir = previous();
 
-  if (!consume(Directive::WORD,
-               "expected path after `access_log_path` directive."))
+  if (!consume(Directive::WORD, "expected path after `access_log` directive."))
     return -1;
 
   ctx.shared->access_log = previous().lexeme;
