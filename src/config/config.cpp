@@ -59,18 +59,18 @@ std::string Config::toString() const {
 }
 
 void Config::resolveSharedConfigs() {
-  SharedConfig defaultConfig;
-
-  defaultConfig.withRoot("nginx/www")
-      .withClientMaxBodySize(static_cast<size_t>(MAX_CLIENT_BODY_SIZE))
-      .withMimetype("html", "text/html")
-      .withMimetype("htm", "text/html")
-      .withMimetype("css", "text/css")
-      .withMimetype("js", "application/javascript")
-      .withMimetype("jpg", "image/jpeg")
-      .withMimetype("jpeg", "image/jpeg")
-      .withMimetype("png", "image/png")
-      .withMimetype("svg", "image/svg+xml");
+  SharedConfig defaultConfig =
+      SharedConfig()
+          .withRoot("nginx/www")
+          .withClientMaxBodySize(static_cast<size_t>(MAX_CLIENT_BODY_SIZE))
+          .withMimetype("html", "text/html")
+          .withMimetype("htm", "text/html")
+          .withMimetype("css", "text/css")
+          .withMimetype("js", "application/javascript")
+          .withMimetype("jpg", "image/jpeg")
+          .withMimetype("jpeg", "image/jpeg")
+          .withMimetype("png", "image/png")
+          .withMimetype("svg", "image/svg+xml");
 
   SharedConfig *cfg = SharedConfig::merge(defaultConfig, *this->shared_config);
 
