@@ -59,7 +59,7 @@ std::string Config::toString() const {
 }
 
 void Config::resolveSharedConfigs() {
-  SharedConfig defaultConfig =
+  SharedConfig defaultCfg =
       SharedConfig()
           .withRoot("nginx/www")
           .withClientMaxBodySize(static_cast<size_t>(MAX_CLIENT_BODY_SIZE))
@@ -72,7 +72,7 @@ void Config::resolveSharedConfigs() {
           .withMimetype("png", "image/png")
           .withMimetype("svg", "image/svg+xml");
 
-  SharedConfig *cfg = SharedConfig::merge(defaultConfig, *this->shared_config);
+  SharedConfig *cfg = SharedConfig::merge(defaultCfg, *this->shared_config);
 
   delete this->shared_config;
   this->shared_config = cfg;
