@@ -16,15 +16,15 @@ Webserv::~Webserv()
 {
 	close(epoll_fd);
 	// close all sockets before
-	std::nap<SOCKET, Client>::iterator it_cl = clients.begin();
-	std::nap<SOCKET, Client>::iterator it_srv = servers.begin();
+	std::map<SOCKET, Client>::iterator it_cl = clients.begin();
+	std::map<SOCKET, Server*>::iterator it_srv = servers.begin();
 	while (it_cl != clients.end())
 	{
 		close(it_cl->first);
 		++it_cl;
 	}
 	clients.clear();
-	while (it_srv != clients.end())
+	while (it_srv != servers.end())
 	{
 		close(it_srv->first);
 		++it_srv;
@@ -52,7 +52,7 @@ void Webserv::start()
 	eventLoop();
 }
 
-void sigintHandler(int sig)
+void sigHandler(int sig)
 {
 	(void)sig;
 	running = false;
@@ -62,7 +62,8 @@ void Webserv::eventLoop()
 {
 	struct epoll_event events[MAX_EVENTS];
 
-	signal(SIGINT, sigintHandler);
+	signal(SIGINT, sigHandler);
+	signal(SIGTERM, sigHandler);
 
 	while (running)
 	{
