@@ -1,6 +1,5 @@
 #include "common.h"
 #include "config/config.hpp"
-#include "config/config_mock.hpp"
 #include "logger/log.hpp"
 #include "parser/parser.hpp"
 #include "server/Webserv.hpp"
@@ -8,16 +7,16 @@
 
 int main(int ac, char *av[]) {
 	try {
-		if (ac > 2)
-			throw std::invalid_argument("Usage: ./webserv [config_file]");
+		if (ac < 2)
+			Logger::fatal("Usage: %s <configuration_file>", av[0]);
 
-		std::string config_file = (ac == 2) ? av[1] : "../nginx/nginx.conf";
-
-		Config config;
-
-		setup_mock_config(config);
-		Webserv(config).start();
-
+		Config *config = Parser(av[1]).parse();
+    if (config == NULL)
+      return (1);
+    
+		Webserv(*config).start();
+    // TODO: Webserv frees config in deconstructor.
+    delete config;
 	}
 	catch(const std::exception& e) {
 		std::cerr << e.what() << '\n';

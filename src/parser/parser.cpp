@@ -13,6 +13,23 @@ Parser::Parser(const char *path)
   ctxMap[Directive::HTTP].push_back(CTX_ROOT);
   ctxMap[Directive::SERVER].push_back(CTX_HTTP);
   ctxMap[Directive::LOCATION].push_back(CTX_SERVER);
+
+  directiveHandlers.insert(std::make_pair("root", &Parser::handleRoot));
+  directiveHandlers.insert(std::make_pair("index", &Parser::handleIndex));
+  directiveHandlers.insert(
+      std::make_pair("autoindex", &Parser::handleAutoIndex));
+  directiveHandlers.insert(
+      std::make_pair("error_page", &Parser::handleErrorPage));
+  directiveHandlers.insert(
+      std::make_pair("client_max_body_size", &Parser::handleClientMaxBodySize));
+  directiveHandlers.insert(std::make_pair("types", &Parser::handleMimeTypes));
+  directiveHandlers.insert(
+      std::make_pair("upload_store", &Parser::handleUploadStore));
+  directiveHandlers.insert(
+      std::make_pair("access_log", &Parser::handleAccessLogPath));
+  directiveHandlers.insert(std::make_pair("cgi_pass", &Parser::handleCgiPass));
+  directiveHandlers.insert(std::make_pair("listen", &Parser::handleListen));
+  directiveHandlers.insert(std::make_pair("return", &Parser::handleReturn));
 }
 
 Config *Parser::parse() {
@@ -34,7 +51,7 @@ Config *Parser::parse() {
       }
     } else if (check(Directive::HTTP)) {
       advance();
-      if (parseHttp(cfg) != 0) {
+      if (parseHttp(*cfg) != 0) {
         goto cleanup;
       }
     } else {
@@ -42,6 +59,9 @@ Config *Parser::parse() {
       goto cleanup;
     }
   }
+
+  // SECOND PHASE: merge configs from parent down to child
+  cfg->resolveSharedConfigs();
 
   return cfg;
 
@@ -57,7 +77,7 @@ ssize_t Parser::parseEvents() {
   }
   this->ctx.push_back(CTX_EVENTS);
 
-  if (!consume(Directive::LBRACE, "expected '{'"))
+  if (!consume(Directive::LBRACE, "expected '{' after events"))
     return -1;
 
   while (!check(Directive::RBRACE) && !atEnd()) {
@@ -66,19 +86,19 @@ ssize_t Parser::parseEvents() {
     advance();
   }
 
-  if (!consume(Directive::RBRACE, "expected '}'"))
+  if (!consume(Directive::RBRACE, "expected '}' to close events"))
     return -1;
 
   this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseHttp(Config *cfg) {
+ssize_t Parser::parseHttp(Config &cfg) {
   if (!expectContext(CTX_ROOT, CTX_HTTP))
     return -1;
   this->ctx.push_back(CTX_HTTP);
 
-  if (!consume(Directive::LBRACE, "expected '{'"))
+  if (!consume(Directive::LBRACE, "expected '{' after http."))
     return -1;
 
   while (!check(Directive::RBRACE) && !atEnd()) {
@@ -87,36 +107,68 @@ ssize_t Parser::parseHttp(Config *cfg) {
       return -1;
 
     if (type == Directive::SERVER) {
-      advance();
-      if (parseServer(cfg) != 0)
+      const Token &token = advance();
+      Server srv;
+      if (parseServer(srv) != 0)
         return -1;
+      if (cfg.hasServer(srv)) {
+        // TODO: add better error indicator;
+        reportParseError(token, "server has a used host:port.");
+        return -1;
+      }
+      if (srv.interface.empty()) {
+        reportParseError(token, "server requires `listen` directive.");
+        return -1;
+      }
+      cfg.servers.push_back(srv);
     } else {
-      if (parseDirective(cfg) != 0)
+      DirectiveCtx ctx = DirectiveCtx::withSharedConfig(cfg.shared_config);
+      if (parseDirective(ctx) != 0)
         return -1;
     }
   }
 
-  if (!consume(Directive::RBRACE, "expected '}'"))
+  if (!consume(Directive::RBRACE, "expected '}' to close http."))
     return -1;
 
   this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseServer(Config *cfg) {
-  (void)cfg;
+ssize_t Parser::parseServer(Server &srv) {
   if (!expectContext(CTX_HTTP, CTX_SERVER))
     return -1;
   this->ctx.push_back(CTX_SERVER);
 
-  // parse...
-  advance();
+  if (!consume(Directive::LBRACE, "expected '{' after server"))
+    return -1;
+
+  while (!check(Directive::RBRACE) && !atEnd()) {
+    const Token &token = peek();
+    if (!expectTokenContext(token.type))
+      return -1;
+
+    if (token.type == Directive::LOCATION) {
+      advance();
+      Location loc;
+      if (parseLocation(loc) != 0)
+        return -1;
+      srv.locations[loc.path] = loc;
+    } else {
+      DirectiveCtx ctx = DirectiveCtx::withServer(&srv);
+      if (parseDirective(ctx) != 0)
+        return -1;
+    }
+  }
+
+  if (!consume(Directive::RBRACE, "expected '}' to close server"))
+    return -1;
 
   this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseLocation(Config *cfg) {
+ssize_t Parser::parseLocation(Location &loc) {
   if (!expectContext(CTX_SERVER, CTX_LOCATION))
     return -1;
   this->ctx.push_back(CTX_LOCATION);
@@ -124,32 +176,44 @@ ssize_t Parser::parseLocation(Config *cfg) {
   if (!consume(Directive::WORD, "expected location uri"))
     return -1;
 
-  Location loc;
-  loc.withPath(previous().lexeme);
-  if (cfg->shared_config) {
-    loc.withSharedConfig(*cfg->shared_config);
-  }
+  loc.path = previous().lexeme;
+
+  if (!consume(Directive::LBRACE, "expected '{' after location"))
+    return -1;
 
   while (!check(Directive::RBRACE) && !atEnd()) {
     Directive::Type type = peek().type;
     if (!expectTokenContext(type))
       return -1;
 
-    if (parseDirective(cfg) != 0)
+    DirectiveCtx ctx = DirectiveCtx::withLocation(&loc);
+    if (parseDirective(ctx) != 0)
       return -1;
   }
 
-  if (!consume(Directive::RBRACE, "expected '}'"))
+  if (!consume(Directive::RBRACE, "expected '}' after location"))
     return (-1);
 
   this->ctx.pop_back();
   return 0;
 }
 
-ssize_t Parser::parseDirective(Config *cfg) {
-  (void)cfg;
-  advance();
-  return 0;
+ssize_t Parser::parseDirective(DirectiveCtx &ctx) {
+  if (!consume(Directive::WORD, "invalid here."))
+    return -1;
+
+  const Token &dir = previous();
+
+  std::map<std::string, DirectiveHandler>::iterator it =
+      directiveHandlers.find(dir.lexeme);
+
+  if (it == directiveHandlers.end()) {
+    reportParseError(dir, "unknown directive.");
+    return -1;
+  }
+
+  DirectiveHandler func = it->second;
+  return (this->*func)(ctx);
 }
 
 const Token *Parser::consume(Directive::Type type, const std::string &msg) {
@@ -160,10 +224,36 @@ const Token *Parser::consume(Directive::Type type, const std::string &msg) {
   return NULL;
 }
 
+const Token *Parser::consume(Directive::Type type) {
+  if (check(type))
+    return &advance();
+  return NULL;
+}
+
 bool Parser::check(Directive::Type type) {
   if (atEnd())
     return false;
   return peek().type == type;
+}
+
+bool Parser::expectEnd(const Token &dir, Directive::Type type) {
+  if (!consume(type)) {
+    reportParseError(dir, "expected '" + Directive::toString(type) +
+                              "' to end `" + dir.lexeme + "` directive.");
+    return false;
+  }
+
+  return true;
+}
+
+ssize_t Parser::expectDirectiveArgsCount(const Token &dir) {
+  if (peek().type == Directive::WORD) {
+    reportParseError(peek(), "invalid number of arguments in `" + dir.lexeme +
+                                 "` directive.");
+    return -1;
+  }
+
+  return expectEnd(dir, Directive::SEMICOLON) ? 0 : -1;
 }
 
 const Token &Parser::peek() const { return scanner.tokens[pos]; }

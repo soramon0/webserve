@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include <sstream>
 
 bool Parser::expectContext(Context context, Context want) {
   if (ctx.back() == context) {

@@ -1,19 +1,35 @@
-
-
 #include "location.hpp"
 #include "redirect.hpp"
 #include <sstream>
 
-Location::Location() : path(), return_rule(NULL), shared_config(NULL) {};
+Location::Location() : path(), return_rule(NULL) {
+  shared_config = new SharedConfig();
+};
+
+Location::Location(const std::string &path) : path(path), return_rule(NULL) {
+  shared_config = new SharedConfig();
+};
+
+Location::~Location() {
+  if (this->return_rule) {
+    delete this->return_rule;
+  }
+
+  if (this->shared_config) {
+    delete this->shared_config;
+  }
+};
 
 Location::Location(const Location &other)
-    : path(other.path), return_rule(NULL), shared_config(NULL) {
+    : path(other.path), return_rule(NULL) {
   if (other.return_rule) {
     this->return_rule = new ReturnDir(*other.return_rule);
   }
 
   if (other.shared_config) {
     this->shared_config = other.shared_config->clone();
+  } else {
+    this->shared_config = new SharedConfig();
   }
 }
 
@@ -42,19 +58,6 @@ Location &Location::operator=(const Location &other) {
 
   return *this;
 }
-
-Location::Location(const std::string &path)
-    : path(path), return_rule(NULL), shared_config(NULL) {};
-
-Location::~Location() {
-  if (this->return_rule) {
-    delete this->return_rule;
-  }
-
-  if (this->shared_config) {
-    delete this->shared_config;
-  }
-};
 
 Location &Location::withPath(const std::string &path) {
   this->path = path;

@@ -2,20 +2,7 @@
 #include <sstream>
 
 SharedConfig::SharedConfig()
-    : autoindex(false), client_max_body_size(MAX_BODY_SIZE),
-      upload_store("/tmp/webserve") {
-
-  this->withMimetype("html", "text/html")
-      .withMimetype("htm", "text/html")
-      .withMimetype("css", "text/css")
-      .withMimetype("js", "application/javascript");
-
-  this->withErrorPage(404, "./404.html")
-      .withErrorPage(500, "./500.html")
-      .withErrorPage(502, "./502.html")
-      .withErrorPage(503, "./503.html")
-      .withErrorPage(504, "./504.html");
-}
+    : autoindex(INDEX_UNSET), client_max_body_size(0) {}
 
 SharedConfig &SharedConfig::withIndex(const std::string &index) {
   this->index.push_back(index);
@@ -33,7 +20,7 @@ SharedConfig &SharedConfig::withUploadStore(const std::string &store) {
 }
 
 SharedConfig &SharedConfig::withAutoIndex(bool on) {
-  this->autoindex = on;
+  this->autoindex = on ? INDEX_ON : INDEX_OFF;
   return *this;
 }
 
@@ -44,7 +31,7 @@ SharedConfig &SharedConfig::withErrorPage(uint16_t status,
 }
 
 SharedConfig &SharedConfig::withAccessLogPath(const std::string &path) {
-  this->access_log_path = path;
+  this->access_log = path;
   return *this;
 }
 
@@ -67,7 +54,7 @@ SharedConfig &SharedConfig::withClientMaxBodySize(size_t size) {
 
 SharedConfig &SharedConfig::withMimetype(const std::string &ext,
                                          const std::string &type) {
-  this->types[type].push_back(ext);
+  this->types[type].insert(ext);
   return *this;
 }
 
@@ -80,8 +67,13 @@ std::string SharedConfig::toString(int indent) const {
   std::string tab = std::string(indent, '\t');
   std::ostringstream oss;
 
-  oss << tab << "root " << root << ";\n";
-  oss << tab << "autoindex " << (this->autoindex ? "on" : "off") << ";\n";
+  if (!root.empty()) {
+    oss << tab << "root " << root << ";\n";
+  }
+  if (this->autoindex != INDEX_UNSET) {
+    oss << tab << "autoindex " << (this->autoindex == INDEX_ON ? "on" : "off")
+        << ";\n";
+  }
 
   if (this->index.size() > 0) {
     oss << tab << "index ";
@@ -95,18 +87,25 @@ std::string SharedConfig::toString(int indent) const {
     }
   }
 
-  oss << tab << "client_max_body_size " << this->client_max_body_size << ";\n";
-  oss << tab << "upload_store " << this->upload_store << ";\n";
+  if (this->client_max_body_size != 0) {
+    oss << tab << "client_max_body_size " << this->client_max_body_size
+        << ";\n";
+  }
+  if (!this->upload_store.empty()) {
 
-  if (this->access_log_path.empty()) {
-    oss << tab << "access_log off;\n";
-  } else {
-    oss << tab << "access_log " << this->access_log_path << ";\n";
+    oss << tab << "upload_store " << this->upload_store << ";\n";
   }
 
-  for (std::map<int, std::string>::const_iterator it = this->error_page.begin();
-       it != this->error_page.end(); ++it) {
-    oss << tab << "error_page " << it->first << " " << it->second << ";\n";
+  if (!this->access_log.empty()) {
+    oss << tab << "access_log " << this->access_log << ";\n";
+  }
+
+  if (this->error_page.size() != 0) {
+    for (std::map<int, std::string>::const_iterator it =
+             this->error_page.begin();
+         it != this->error_page.end(); ++it) {
+      oss << tab << "error_page " << it->first << " " << it->second << ";\n";
+    }
   }
 
   if (this->types.size() > 0) {
@@ -114,14 +113,14 @@ std::string SharedConfig::toString(int indent) const {
     for (mimetype_map::const_iterator it = this->types.begin();
          it != this->types.end(); ++it) {
       oss << tab << "\t" << it->first << "\t";
-      for (size_t i = 0; i < it->second.size(); i++) {
-        oss << " " << it->second[i];
+
+      for (mimetype::const_iterator itSet = it->second.begin();
+           itSet != it->second.end(); ++itSet) {
+        oss << " " << *itSet;
       }
       oss << ";\n";
     }
     oss << tab << "}\n";
-  } else {
-    oss << tab << "mime_types {}\n";
   }
 
   if (this->cgi_pass.size() > 0) {
@@ -132,9 +131,51 @@ std::string SharedConfig::toString(int indent) const {
       oss << tab << "\t" << it->first << "\t" << it->second << ";\n";
     }
     oss << tab << "}\n";
-  } else {
-    oss << tab << "cgi_pass {}";
   }
 
   return oss.str();
+}
+
+SharedConfig *SharedConfig::merge(const SharedConfig &parent,
+                                  const SharedConfig &child) {
+  SharedConfig *out = parent.clone();
+
+  if (!child.root.empty())
+    out->root = child.root;
+
+  if (!child.index.empty())
+    out->index = child.index;
+
+  if (child.autoindex != SharedConfig::INDEX_UNSET)
+    out->autoindex = child.autoindex;
+
+  for (std::map<int, std::string>::const_iterator it = child.error_page.begin();
+       it != child.error_page.end(); ++it) {
+    out->error_page[it->first] = it->second;
+  }
+
+  if (child.client_max_body_size != 0)
+    out->client_max_body_size = child.client_max_body_size;
+
+  if (!child.access_log.empty())
+    out->access_log = child.access_log;
+
+  if (!child.upload_store.empty())
+    out->upload_store = child.upload_store;
+
+  for (mimetype_map::const_iterator it = child.types.begin();
+       it != child.types.end(); ++it) {
+    for (mimetype::const_iterator itSet = it->second.begin();
+         itSet != it->second.end(); ++itSet) {
+      out->types[it->first].insert(*itSet);
+    }
+  }
+
+  for (std::map<std::string, std::string>::const_iterator it =
+           child.cgi_pass.begin();
+       it != child.cgi_pass.end(); ++it) {
+    out->cgi_pass[it->first] = it->second;
+  }
+
+  return out;
 }

@@ -3,8 +3,9 @@
 #include <string>
 #include <vector>
 
-class Config {
-public:
+#define MAX_CLIENT_BODY_SIZE 1000000 // 1m
+
+struct Config {
   std::vector<Server> servers;
   SharedConfig *shared_config;
 
@@ -16,8 +17,12 @@ public:
 
   std::string toString() const;
 
+  bool hasServer(const Server &srv) const;
+
+  void resolveSharedConfigs();
+
 private:
   // Only won config should be created so disable copying
-  // Config(const Config &other);
-  // Config &operator=(const Config &other);
+  Config(const Config &other);
+  Config &operator=(const Config &other);
 };
