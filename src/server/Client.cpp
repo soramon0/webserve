@@ -83,7 +83,7 @@ void	Client::parseRequest()
 
 size_t Client::getMaxSize()
 {
-	size_t body_size;
+	size_t body_size = 0;
 
 	if (!is_header_parsed)
 		return MAX_REQUEST_SIZE;

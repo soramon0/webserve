@@ -15,7 +15,6 @@ class Request
 	std::map<std::string, std::string>  headers;
 	std::string                         body;
 
-
 	friend class Client;
 	friend class Webserv;
 	

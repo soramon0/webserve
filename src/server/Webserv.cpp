@@ -8,6 +8,10 @@
 #include <cstring>
 #include <signal.h>
 
+// TODO: finish all signal handling cases & logic
+// TODO: Add per‑client timeouts with last_activity and checkTimeouts
+// TODO: Fix handleHttpResponse for partial sends, buffering and EPOLLOUT
+
 static int running = true;
 
 Webserv::Webserv(Config* _conf) : config(_conf) {}
