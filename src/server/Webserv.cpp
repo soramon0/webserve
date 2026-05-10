@@ -68,6 +68,10 @@ void Webserv::eventLoop()
 	while (running)
 	{
 		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+
+		if (n_ev <= 0) // possible error : EINTR
+			continue;
+
 		int ev, fd;
 		for (int i = 0; i < n_ev; i++)
 		{
