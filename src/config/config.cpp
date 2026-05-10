@@ -5,6 +5,36 @@ Config::Config() { this->shared_config = new SharedConfig(); };
 
 Config::~Config() { delete shared_config; }
 
+
+Config::Config(const Config &other)
+{
+  this->servers = other.servers;
+if (other.shared_config) {
+    this->shared_config = other.shared_config->clone();
+  } else {
+    this->shared_config = new SharedConfig();
+  }
+}
+
+Config &Config::operator=(const Config &other) {
+  if (this == &other) {
+    return *this;
+  }
+
+  if (this->shared_config) {
+    delete this->shared_config;
+    this->shared_config = NULL;
+  }
+
+  this->servers = other.servers;
+
+  if (other.shared_config) {
+    this->shared_config = other.shared_config->clone();
+  }
+  return *this;
+}
+
+
 Config &Config::withServer(const Server &server) {
   Server srv(server);
 

@@ -21,8 +21,7 @@ struct Config {
 
   void resolveSharedConfigs();
 
-private:
-  // Only won config should be created so disable copying
+
   Config(const Config &other);
   Config &operator=(const Config &other);
 };

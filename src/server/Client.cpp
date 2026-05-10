@@ -86,7 +86,7 @@ size_t Client::getMaxSize()
 	size_t body_size;
 
 	if (!is_header_parsed)
-		return MAX_BODY_SIZE;
+		return MAX_REQUEST_SIZE;
 	if (srv->locations.count(request.path))
 		body_size = srv->locations[request.path].shared_config->client_max_body_size;
 	return (header_size + body_size);
