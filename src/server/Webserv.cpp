@@ -12,7 +12,7 @@
 // TODO: Add per‑client timeouts with last_activity and checkTimeouts
 // TODO: Fix handleHttpResponse for partial sends, buffering and EPOLLOUT
 
-static int running = true;
+static volatile sig_atomic_t running = true; // to avoid the "it works on my machine" problem
 
 Webserv::Webserv(Config* _conf) : config(_conf) {}
 
