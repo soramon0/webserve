@@ -3,7 +3,6 @@ CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 LDFLAGS  :=
 NAME     := webserv
 ARGS     ?= nginx/nginx.conf
-
 # Colors
 GREEN   := \033[1;32m
 YELLOW  := \033[1;33m
@@ -74,6 +73,9 @@ release:
 run: $(NAME)
 	@printf "$(MAGENTA)Running $(NAME)...$(RESET)\n"
 	./$(BUILD_DIR)/$(NAME) $(ARGS)
+valgrind: $(NAME)
+	@printf "$(MAGENTA)Valgrinding $(NAME)...$(RESET)\n"
+	valgrind --track-origins=yes ./$(BUILD_DIR)/$(NAME) $(ARGS)
 
 clean:
 	@printf "$(YELLOW)Cleaning objects...$(RESET)\n"

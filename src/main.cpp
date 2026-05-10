@@ -2,20 +2,25 @@
 #include "config/config.hpp"
 #include "logger/log.hpp"
 #include "parser/parser.hpp"
+#include "server/Webserv.hpp"
 #include <iostream>
 
-int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    Logger::fatal("Usage: %s <configuration_file>", argv[0]);
-  }
+int main(int ac, char *av[]) {
+	try {
+		if (ac < 2)
+			Logger::fatal("Usage: %s <configuration_file>", av[0]);
 
-  Config *config = Parser(argv[1]).parse();
-  if (config == NULL) {
-    return (EXIT_FAILURE);
-  }
+		Config *config = Parser(av[1]).parse();
+    if (config == NULL)
+      return (1);
+    
+		Webserv(*config).start();
+    // TODO: Webserv frees config in deconstructor.
+    delete config;
+	}
+	catch(const std::exception& e) {
+		std::cerr << e.what() << '\n';
+	}
 
-  std::cout << config->toString() << std::endl;
-
-  delete config;
-  return (EXIT_SUCCESS);
+	return (EXIT_SUCCESS);
 }
