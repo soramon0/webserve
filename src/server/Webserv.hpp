@@ -14,12 +14,12 @@
 class Webserv
 {
 private:
-	Config						config;
+	Config*						config;
 	int							epoll_fd;
 	std::map<SOCKET, Client>	clients;
 	std::map<SOCKET, Server*>	servers;
 public:
-	Webserv(Config _conf);
+	Webserv(Config* _conf);
 	~Webserv();
 
 	void	start();

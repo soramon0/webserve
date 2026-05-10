@@ -10,12 +10,11 @@
 
 static int running = true;
 
-Webserv::Webserv(Config _conf) : config(_conf) {}
+Webserv::Webserv(Config* _conf) : config(_conf) {}
 
 Webserv::~Webserv()
 {
 	close(epoll_fd);
-	// close all sockets before
 	std::map<SOCKET, Client>::iterator it_cl = clients.begin();
 	std::map<SOCKET, Server*>::iterator it_srv = servers.begin();
 	while (it_cl != clients.end())
@@ -30,11 +29,12 @@ Webserv::~Webserv()
 		++it_srv;
 	}
 	servers.clear();
+	delete config;
 }
 
 void Webserv::start()
 {
-	int srvlen = config.servers.size();
+	int srvlen = config->servers.size();
 
 	epoll_fd = epoll_instance();
 	for (int i = 0; i < srvlen; i++)
@@ -47,7 +47,7 @@ void Webserv::start()
 		}
 		if (add_to_epoll(epoll_fd, listen_sock, EPOLLIN) == -1)
 			continue ;
-		servers[listen_sock] = &config.servers[i];
+		servers[listen_sock] = &config->servers[i];
 	}
 	eventLoop();
 }
@@ -108,9 +108,9 @@ SOCKET Webserv::createSocket(int id)
 	hints.ai_flags = AI_PASSIVE;
 
 	std::ostringstream os;
-	os << config.servers[id].port;
+	os << config->servers[id].port;
 	std::string port = os.str();
-	std::string host = config.servers[id].interface;
+	std::string host = config->servers[id].interface;
 
 	struct addrinfo *addr;
 	getaddrinfo(host.c_str(), port.c_str(), &hints, &addr);

@@ -14,9 +14,7 @@ int main(int ac, char *av[]) {
     if (config == NULL)
       return (1);
     
-		Webserv(*config).start();
-    // TODO: Webserv frees config in deconstructor.
-    delete config;
+		Webserv(config).start();
 	}
 	catch(const std::exception& e) {
 		std::cerr << e.what() << '\n';
