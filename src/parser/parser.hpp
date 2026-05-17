@@ -67,4 +67,5 @@ private:
   ssize_t handleCgiPass(DirectiveCtx &ctx);
   ssize_t handleListen(DirectiveCtx &ctx);
   ssize_t handleReturn(DirectiveCtx &ctx);
+  ssize_t handleMethods(DirectiveCtx &ctx);
 };

@@ -211,6 +211,41 @@ ssize_t Parser::handleCgiPass(DirectiveCtx &ctx) {
   return expectDirectiveArgsCount(dir);
 }
 
+ssize_t Parser::handleMethods(DirectiveCtx &ctx) {
+  const Token &dir = previous();
+
+  if (this->ctx.back() != CTX_LOCATION) {
+    reportParseError(dir, "`methods` directive is not allowed here.");
+    return -1;
+  }
+
+  static std::map<std::string, int> methods;
+  if (methods.empty()) {
+    methods["GET"] = 1;
+    methods["POST"] = 1;
+    methods["DELETE"] = 1;
+  }
+
+  ctx.loc->methods.clear();
+  while (check(Directive::WORD)) {
+    const Token &t = peek();
+    if (methods.find(t.lexeme) == methods.end()) {
+      reportParseError(t, "unsupported http method.");
+      return -1;
+    }
+
+    ctx.loc->methods.push_back(t.lexeme);
+    advance();
+  }
+
+  if (ctx.loc->methods.size() == 0) {
+    reportParseError(peek(), "http method is required in `methods` directive.");
+    return -1;
+  }
+
+  return expectDirectiveArgsCount(dir);
+}
+
 ssize_t Parser::handleListen(DirectiveCtx &ctx) {
   const Token &dir = previous();
 

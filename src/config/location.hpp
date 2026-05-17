@@ -3,12 +3,14 @@
 #include "redirect.hpp"
 #include "shared_config.hpp"
 #include <string>
+#include <vector>
 
 struct Location {
   std::string path;
   ReturnDir *return_rule;
   // copy from parent (server) and update if needed to match location
   SharedConfig *shared_config;
+  std::vector<std::string> methods;
 
   Location();
   ~Location();
