@@ -1,4 +1,5 @@
 #include "location.hpp"
+#include "lib/utils.hpp"
 #include "redirect.hpp"
 #include <sstream>
 
@@ -107,7 +108,7 @@ std::string Location::toString(int indent) const {
   oss << tab << "\tmethods ";
   if (!this->methods.empty()) {
     for (size_t i = 0; i < this->methods.size(); i++) {
-      oss << this->methods[i];
+      oss << strToUpper(this->methods[i]);
       if (i + 1 < this->methods.size()) {
         oss << " ";
       } else {

@@ -1,3 +1,4 @@
+#include "lib/utils.hpp"
 #include "parser.hpp"
 #include <cstdlib>
 
@@ -219,27 +220,33 @@ ssize_t Parser::handleMethods(DirectiveCtx &ctx) {
     return -1;
   }
 
-  static std::map<std::string, int> methods;
-  if (methods.empty()) {
-    methods["GET"] = 1;
-    methods["POST"] = 1;
-    methods["DELETE"] = 1;
-  }
+  std::map<std::string, int> store;
+  store["get"] = 0;
+  store["post"] = 0;
+  store["delete"] = 0;
 
   ctx.loc->methods.clear();
   while (check(Directive::WORD)) {
     const Token &t = peek();
-    if (methods.find(t.lexeme) == methods.end()) {
+    const std::string httpMethod = strToLower(t.lexeme);
+    std::map<std::string, int>::iterator it = store.find(httpMethod);
+    if (it == store.end()) {
       reportParseError(t, "unsupported http method.");
       return -1;
     }
+    if (it->second != 0) {
+      reportParseError(t, "duplicate http method.");
+      return -1;
+    } else {
+      it->second++;
+    }
 
-    ctx.loc->methods.push_back(t.lexeme);
+    ctx.loc->methods.push_back(httpMethod);
     advance();
   }
 
   if (ctx.loc->methods.size() == 0) {
-    reportParseError(peek(), "http method is required in `methods` directive.");
+    reportParseError(dir, "at least one method required.");
     return -1;
   }
 
