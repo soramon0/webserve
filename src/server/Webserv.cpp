@@ -113,7 +113,7 @@ SOCKET Webserv::createSocket(int id) {
     Logger::fatal("bind failed");
   freeaddrinfo(addr);
 
-  Logger::info("Listening...");
+  Logger::info("Listening on http://%s:%s ...", host.c_str(), port.c_str());
   if (listen(socket_listen, SOMAXCONN))
     Logger::fatal("listen failed");
 
