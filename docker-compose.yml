@@ -4,8 +4,6 @@ services:
     container_name: web
     restart: unless-stopped
     network_mode: "host"
-    ports:
-      - "8080:80"
     volumes:
       # Mount your local config directory to the Nginx config path
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
