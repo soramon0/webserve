@@ -13,7 +13,7 @@ int main(int ac, char *av[]) {
 		Config *config = Parser(av[1]).parse();
     if (config == NULL)
       return (1);
-    
+
 		Webserv(config).start();
 	}
 	catch(const std::exception& e) {

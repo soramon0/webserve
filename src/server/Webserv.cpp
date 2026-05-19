@@ -14,9 +14,15 @@
 
 static volatile sig_atomic_t running = true; // to avoid the "it works on my machine" problem
 
-Webserv::Webserv(Config* _conf) : config(_conf) {}
+Webserv::Webserv(Config* _conf) : config(_conf), epoll_fd(-2), timeout(-1) {}
 
 Webserv::~Webserv()
+{
+	closeAll();
+	delete config;
+}
+
+void Webserv::closeAll()
 {
 	close(epoll_fd);
 	std::map<SOCKET, Client>::iterator it_cl = clients.begin();
@@ -33,7 +39,6 @@ Webserv::~Webserv()
 		++it_srv;
 	}
 	servers.clear();
-	delete config;
 }
 
 void Webserv::start()
@@ -56,6 +61,23 @@ void Webserv::start()
 	eventLoop();
 }
 
+void	Webserv::checkTimeouts()
+{
+	time_t now = time(0);
+
+	std::map<SOCKET, Client>::iterator it = clients.begin();
+	while (it != clients.end())
+	{
+		if (now - it->second.last_activity > 15)
+		{
+			// send 408/ 504 error for timeout
+			removeClient(it->first);
+			clients.erase(it);
+		}
+		++it;
+	}
+}
+
 void sigHandler(int sig)
 {
 	(void)sig;
@@ -71,7 +93,9 @@ void Webserv::eventLoop()
 
 	while (running)
 	{
-		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+		timeout = (clients.empty()) ? -1 : TIMEOUT;
+
+		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, timeout); // waits 2s
 
 		if (n_ev <= 0)
 		{
@@ -81,11 +105,11 @@ void Webserv::eventLoop()
 			continue;
 		}
 
-		int ev, fd;
+		checkTimeouts();
 		for (int i = 0; i < n_ev; i++)
 		{
-			ev = events[i].events;
-			fd = events[i].data.fd;
+			int ev = events[i].events;
+			int fd = events[i].data.fd;
 
 			if (ev & (EPOLLERR | EPOLLHUP))
 			{
@@ -101,7 +125,7 @@ void Webserv::eventLoop()
 			}
 			else if (ev & EPOLLOUT)
 			{
-				handleHttpResponse(fd);
+				sendResponse(fd);
 			}
 		}
 	}
@@ -150,6 +174,7 @@ void Webserv::handleNewConnection(SOCKET srv)
 		Client c;
 		c.socket = accept(srv, &c.addr, &c.addrlen);
 		c.received = 0;
+		c.last_activity = time(0);
 
 		if (c.socket == -1)
 		{
@@ -217,7 +242,7 @@ void Webserv::handleHttpRequest(SOCKET c)
 	}
 }
 
-void Webserv::handleHttpResponse(SOCKET c)
+void Webserv::sendResponse(SOCKET c)
 {
 	std::string response = HELLO_WORLD_RESPONSE;
 
