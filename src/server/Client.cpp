@@ -6,8 +6,8 @@
 #define CRLF "\r\n"
 #define BLANKLINE "\r\n\r\n"
 
-Client::Client() : received(0), is_complete(0), offset(0),
-					is_header_parsed(0)
+Client::Client() : socket(-2), received(0), offset(0), header_size(0),
+					is_complete(0), is_header_parsed(0)
 {
 	addrlen = sizeof(addr);
 }

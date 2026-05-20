@@ -11,17 +11,19 @@ class Client
 	socklen_t		addrlen;
 	struct sockaddr addr;
 	SOCKET			socket;
-	size_t			received;
+
 	Request			request;
-	Server*			srv;
 	std::string		request_buffer;
+
 	std::string		response_buffer;
+	Server*			srv;
 
 	//attributes for the complete request checker
-	bool			is_complete;
+	size_t			received;
 	size_t			offset;
-	int				is_header_parsed;
 	size_t			header_size;
+	bool			is_complete;
+	int				is_header_parsed;
 
 	// timouts
 	time_t			last_activity;

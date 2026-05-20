@@ -17,7 +17,7 @@ class Request
 
 	friend class Client;
 	friend class Webserv;
-	
+
 public:
 	Request();
 	~Request();
