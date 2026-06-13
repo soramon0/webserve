@@ -43,6 +43,12 @@ void Webserv::start() {
       continue;
     servers[listen_sock] = &config.servers[i];
   }
+
+  if (servers.size() == 0) {
+    Logger::error("could not register servers.");
+    return;
+  }
+
   eventLoop();
 }
 
@@ -63,20 +69,25 @@ void Webserv::eventLoop() {
     if (n_ev <= 0) // possible error : EINTR
       continue;
 
-    int ev, fd;
+    int ev;
+    SOCKET fd;
     for (int i = 0; i < n_ev; i++) {
       ev = events[i].events;
-      fd = events[i].data.fd;
+      fd = static_cast<SOCKET>(events[i].data.fd);
 
       if (ev & (EPOLLERR | EPOLLHUP)) {
         removeClient(fd);
         continue;
-      } else if (ev & EPOLLIN) {
+      }
+
+      if (ev & EPOLLIN) {
         if (servers.count(fd))
           handleNewConnection(fd);
         else
           handleClientData(fd);
-      } else if (ev & EPOLLOUT) {
+      }
+
+      if (ev & EPOLLOUT) {
         handleHttpResponse(fd);
       }
     }
@@ -121,7 +132,9 @@ SOCKET Webserv::createSocket(int id) {
 }
 
 void Webserv::handleNewConnection(SOCKET srv) {
-  while (true) {
+  int max_accepts = 32;
+
+  while (max_accepts-- > 0) {
     Client c;
     c.socket = accept(srv, &c.addr, &c.addrlen);
     c.received = 0;
