@@ -23,7 +23,7 @@ static uintptr_t align_forward(uintptr_t ptr, size_t align) {
 
 Arena::Arena(size_t cap)
     : buf(NULL), capacity(cap), prev_offset(0), curr_offset(0) {
-  buf = new unsigned char[capacity]();
+  buf = new (std::nothrow) unsigned char[capacity];
   if (buf == NULL)
     return;
 }
