@@ -19,6 +19,7 @@ private:
 public:
   Arena() : buf(NULL), capacity(0), prev_offset(0), curr_offset(0) {};
   Arena(size_t cap);
+  ~Arena();
 
   void *alloc_align(size_t size, size_t align);
   void *alloc(size_t size);

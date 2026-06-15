@@ -28,7 +28,12 @@ Arena::Arena(size_t cap)
     return;
 }
 
+Arena::~Arena() { delete[] buf; }
+
 void *Arena::alloc_align(size_t size, size_t align) {
+  if (!buf)
+    return NULL;
+
   uintptr_t curr_ptr = reinterpret_cast<uintptr_t>(buf + curr_offset);
   uintptr_t offset = align_forward(curr_ptr, align);
   offset -= reinterpret_cast<uintptr_t>(buf); // relative offset
@@ -48,9 +53,12 @@ void *Arena::alloc(size_t size) { return alloc_align(size, DEFAULT_ALIGNMENT); }
 
 void *Arena::resize_align(void *old_memory, size_t old_size, size_t new_size,
                           size_t align) {
-  unsigned char *old_mem = static_cast<unsigned char *>(old_memory);
+  if (!buf)
+    return NULL;
 
   assert(is_power_of_two(align));
+
+  unsigned char *old_mem = static_cast<unsigned char *>(old_memory);
 
   if (old_mem == NULL || old_size == 0) {
     return alloc_align(new_size, align);
@@ -62,6 +70,10 @@ void *Arena::resize_align(void *old_memory, size_t old_size, size_t new_size,
   }
 
   if (buf + prev_offset == old_mem) {
+    if (prev_offset + new_size > capacity) {
+      return NULL; // Out of memory!
+    }
+
     curr_offset = prev_offset + new_size;
     if (new_size > old_size) {
       std::memset(&buf[prev_offset + old_size], 0, new_size - old_size);
