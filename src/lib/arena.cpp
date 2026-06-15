@@ -64,7 +64,7 @@ void *Arena::resize_align(void *old_memory, size_t old_size, size_t new_size,
 
   if (buf + prev_offset == old_mem) {
     curr_offset = prev_offset + new_size;
-    if (new_size < old_size) {
+    if (new_size > old_size) {
       std::memset(&buf[curr_offset], 0, new_size - old_size);
     }
     return old_memory;
