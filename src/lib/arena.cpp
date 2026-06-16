@@ -21,14 +21,40 @@ static uintptr_t align_forward(uintptr_t ptr, size_t align) {
   return p;
 }
 
-Arena::Arena(size_t cap)
-    : buf(NULL), capacity(cap), prev_offset(0), curr_offset(0) {
-  buf = new (std::nothrow) unsigned char[capacity];
-  if (buf == NULL)
-    return;
+// call deinit() before re-initializing.
+bool Arena::init(size_t cap) {
+  if (buf != NULL || cap == 0) {
+    return false;
+  }
+
+  buf = new (std::nothrow) unsigned char[cap];
+  if (buf == NULL) {
+    return false;
+  }
+
+  capacity = cap;
+  return true;
 }
 
-Arena::~Arena() { delete[] buf; }
+bool Arena::reinit(size_t cap) {
+  deinit();
+  return init(cap);
+}
+
+bool Arena::deinit() {
+  if (buf == NULL) {
+    return false;
+  }
+
+  delete[] buf;
+  buf = NULL;
+  capacity = 0;
+  prev_offset = 0;
+  curr_offset = 0;
+  return true;
+}
+
+Arena::~Arena() { deinit(); }
 
 void *Arena::alloc_align(size_t size, size_t align) {
   if (!buf)
