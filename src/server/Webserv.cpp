@@ -167,34 +167,18 @@ void Webserv::handleNewConnection(SOCKET srv) {
 void Webserv::handleClientData(SOCKET c) {
   Client *cl = clients[c];
 
-  if (!cl->req_arena.setup(KIB(1))) {
-    // we could not allocate memory
-    // return 500;
-    removeClient(c);
-    return;
-  }
-
-  // TODO: Check total_max_size
-  // request line and heders shouldn't exceed 4 * 8kib
-  // request body shouldn't exceed client_max_body_size
-
-  ssize_t max_read = 512;
-  void *chunk = cl->req_arena.alloc(max_read);
-  if (!chunk) {
-    // NOTE: we either exeeded total_max_size or OOM error
-    removeClient(c);
-    return;
-  }
-
-  ssize_t bytes = recv(cl->socket, chunk, max_read, 0);
+  char buf[KIB(1) / 2];
+  ssize_t bytes = recv(cl->socket, buf, sizeof(buf), 0);
   if (bytes <= 0) {
     removeClient(c);
     return;
   }
 
-  cl->req_arena.resize(chunk, max_read, bytes);
-
-  handleHttpRequest(c);
+  if (!cl->req.feedChunk(buf, bytes)) {
+    // check request state for why request malformed
+    removeClient(c);
+    return;
+  }
 }
 
 void Webserv::removeClient(SOCKET c) {

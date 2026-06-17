@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "request.hpp"
+#include "http/http_request.hpp"
 #include "config/server.hpp"
 #include "lib/arena.hpp"
 
@@ -17,6 +18,7 @@ class Client
 	Server*			srv;
 	std::string		request_buffer;
 	Arena req_arena;
+	HttpRequest req;
 
 	//attributes for the complete requecst checker
 	bool			is_complete;
