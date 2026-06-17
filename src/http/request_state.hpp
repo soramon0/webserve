@@ -1,5 +1,8 @@
 #pragma once
 
+#include "lib/string_view.hpp"
+
+// TODO: remove. we're using state function
 struct RequestState {
   enum Type {
     STATE_START,
@@ -31,11 +34,14 @@ struct HttpRequest;
 
 struct Context {
   HttpRequest &req;
+  const StringView &buf;
+  size_t &offset;
 
-  Context(HttpRequest &r) : req(r) {};
+  Context(HttpRequest &r, const StringView &view, size_t &o)
+      : req(r), buf(view), offset(o) {};
 };
 
-typedef State (*StateFunction)(const char *buf, Context &ctx);
+typedef State (*StateFunction)(Context &ctx);
 
 struct State {
   StateFunction next;
@@ -43,12 +49,7 @@ struct State {
 };
 
 // Forward declration
-State stateStart(const char *buf, Context &ctx);
-State stateMethod(const char *buf, Context &ctx);
-State stateURI(const char *buf, Context &ctx);
-State stateVersion(const char *buf, Context &ctx);
-
-
-State stateStart(const char *buf, Context &ctx) {
-  return stateMethod;
-}
+State stateStart(Context &ctx);
+State stateMethod(Context &ctx);
+State stateURI(Context &ctx);
+State stateVersion(Context &ctx);

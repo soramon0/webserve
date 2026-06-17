@@ -9,23 +9,17 @@ HttpRequest::HttpRequest() : state(stateStart), status(0) {}
 HttpRequest::~HttpRequest() {}
 
 bool HttpRequest::feedChunk(const char *buf, size_t len) {
+  // TODO: grow arena
   if (!arena.setup(KIB(1))) {
     status = 1; // OOM
     return false;
   }
 
-  char *chunk = (char *)arena.alloc(len);
-  if (!chunk) {
-    status = 1; // OOM
-    return false;
-  }
-  std::memmove(chunk, buf, len);
-
   size_t offset = 0;
+  Context ctx(*this, StringView(buf, len), offset);
 
-  while (offset < len) {
-    state = state.next(chunk, len);
-    offset++;
+  while (offset++ < len) {
+    state = state.next(ctx);
   }
 
   return true;
