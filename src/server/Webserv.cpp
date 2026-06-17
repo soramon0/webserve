@@ -1,5 +1,6 @@
 #include "Webserv.hpp"
-#include "../logger/log.hpp"
+#include "lib/arena.hpp"
+#include "logger/log.hpp"
 #include "utils.hpp"
 #include <cstring>
 #include <iostream>
@@ -7,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <sys/epoll.h>
+#include <sys/types.h>
 
 static int running = true;
 
@@ -15,15 +17,17 @@ Webserv::Webserv(Config _conf) : config(_conf) {}
 Webserv::~Webserv() {
   close(epoll_fd);
   // close all sockets before
-  std::map<SOCKET, Client>::iterator it_cl = clients.begin();
+  std::map<SOCKET, Client *>::iterator it_cl = clients.begin();
   std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
   while (it_cl != clients.end()) {
     close(it_cl->first);
+    delete it_cl->second;
     ++it_cl;
   }
   clients.clear();
   while (it_srv != servers.end()) {
     close(it_srv->first);
+    delete it_srv->second;
     ++it_srv;
   }
   servers.clear();
@@ -108,7 +112,9 @@ SOCKET Webserv::createSocket(int id) {
   std::string host = config.servers[id].interface;
 
   struct addrinfo *addr;
-  getaddrinfo(host.c_str(), port.c_str(), &hints, &addr);
+  if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr)) {
+    Logger::fatal("getaddrinfo failed");
+  }
 
   int socket_listen =
       socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
@@ -135,47 +141,59 @@ void Webserv::handleNewConnection(SOCKET srv) {
   int max_accepts = 32;
 
   while (max_accepts-- > 0) {
-    Client c;
-    c.socket = accept(srv, &c.addr, &c.addrlen);
-    c.received = 0;
+    Client *c = new Client();
+    c->socket = accept(srv, &c->addr, &c->addrlen);
+    c->received = 0;
 
-    if (c.socket == -1) {
+    if (c->socket == -1) {
       if (errno == EAGAIN || errno == EWOULDBLOCK)
         break;
       Logger::error("accept failed");
       break;
     }
-    if (set_nonblocking(c.socket) == -1) {
+    if (set_nonblocking(c->socket) == -1) {
       Logger::error("fcntl failed");
-      close(c.socket);
+      close(c->socket);
       continue;
     }
-    if (add_to_epoll(epoll_fd, c.socket, EPOLLIN) == -1)
+    if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1)
       continue;
-    c.srv = servers[srv];
-    clients[c.socket] = c;
+    c->srv = servers[srv];
+    clients[c->socket] = c;
     Logger::info("client Connected...");
   }
 }
 
 void Webserv::handleClientData(SOCKET c) {
-  Client &cl = clients[c];
+  Client *cl = clients[c];
 
-  if (cl.received >= cl.getMaxSize()) {
-    // send error page 413, remove client
+  if (!cl->req_arena.setup(KIB(1))) {
+    // we could not allocate memory
+    // return 500;
     removeClient(c);
     return;
   }
 
-  char buffer[MAX_REQUEST_SIZE];
-  int bytes = recv(cl.socket, buffer, sizeof(buffer), 0);
+  // TODO: Check total_max_size
+  // request line and heders shouldn't exceed 4 * 8kib
+  // request body shouldn't exceed client_max_body_size
 
+  ssize_t max_read = 512;
+  void *chunk = cl->req_arena.alloc(max_read);
+  if (!chunk) {
+    // NOTE: we either exeeded total_max_size or OOM error
+    removeClient(c);
+    return;
+  }
+
+  ssize_t bytes = recv(cl->socket, chunk, max_read, 0);
   if (bytes <= 0) {
     removeClient(c);
     return;
   }
-  cl.request_buffer.append(buffer, bytes);
-  cl.received += bytes;
+
+  cl->req_arena.resize(chunk, max_read, bytes);
+
   handleHttpRequest(c);
 }
 
@@ -188,11 +206,11 @@ void Webserv::removeClient(SOCKET c) {
 }
 
 void Webserv::handleHttpRequest(SOCKET c) {
-  Client &cl = clients[c];
+  Client *cl = clients[c];
 
-  cl.parseRequest();
-  if (cl.is_complete) {
-    cl.request.printRequest();
+  cl->parseRequest();
+  if (cl->is_complete) {
+    cl->request.printRequest();
     modify_epoll(epoll_fd, c, EPOLLOUT);
   }
 }

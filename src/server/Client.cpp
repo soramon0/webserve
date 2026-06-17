@@ -12,7 +12,9 @@ Client::Client() : received(0), is_complete(0), offset(0),
 	addrlen = sizeof(addr);
 }
 
-Client::~Client() {}
+Client::~Client() {
+	req_arena.deinit();
+}
 
 void	Client::parseHeaders(std::string head)
 {

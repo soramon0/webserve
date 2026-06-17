@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../../include/common.h"
+#include "common.h"
 #include "request.hpp"
-#include "../config/server.hpp"
+#include "config/server.hpp"
+#include "lib/arena.hpp"
 
 #define MAX_REQUEST_SIZE 2047
 
@@ -15,6 +16,7 @@ class Client
 	Request			request;
 	Server*			srv;
 	std::string		request_buffer;
+	Arena req_arena;
 
 	//attributes for the complete requecst checker
 	bool			is_complete;
