@@ -14,7 +14,7 @@ bool HttpRequest::feedChunk(const char *buf, size_t len) {
     return false;
   }
 
-  void *chunk = arena.alloc(len);
+  char *chunk = (char *)arena.alloc(len);
   if (!chunk) {
     status = 1; // OOM
     return false;
@@ -24,6 +24,7 @@ bool HttpRequest::feedChunk(const char *buf, size_t len) {
   size_t offset = 0;
 
   while (offset < len) {
+    state = state.next(chunk, len);
     offset++;
   }
 

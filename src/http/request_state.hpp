@@ -47,3 +47,8 @@ State stateStart(const char *buf, Context &ctx);
 State stateMethod(const char *buf, Context &ctx);
 State stateURI(const char *buf, Context &ctx);
 State stateVersion(const char *buf, Context &ctx);
+
+
+State stateStart(const char *buf, Context &ctx) {
+  return stateMethod;
+}
