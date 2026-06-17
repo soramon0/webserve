@@ -20,6 +20,7 @@ public:
   Arena() : buf(NULL), capacity(0), prev_offset(0), curr_offset(0) {};
   ~Arena();
 
+  bool setup(size_t cap);
   bool init(size_t cap);
   bool deinit();
   bool reinit(size_t cap);
@@ -29,4 +30,7 @@ public:
   void *resize_align(void *old_memory, size_t old_size, size_t new_size,
                      size_t align);
   void *resize(void *old_memory, size_t old_size, size_t new_size);
+
+  bool usable() const;
+  size_t consumed() const;
 };

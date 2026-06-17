@@ -21,6 +21,16 @@ static uintptr_t align_forward(uintptr_t ptr, size_t align) {
   return p;
 }
 
+bool Arena::usable() const { return buf != NULL && capacity != 0; }
+
+size_t Arena::consumed() const { return curr_offset; };
+
+bool Arena::setup(size_t cap) {
+  if (usable())
+    return true;
+  return reinit(cap);
+}
+
 // call deinit() before re-initializing.
 bool Arena::init(size_t cap) {
   if (buf != NULL || cap == 0) {
