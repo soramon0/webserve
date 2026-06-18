@@ -7,14 +7,12 @@
 #define BLANKLINE "\r\n\r\n"
 
 Client::Client() : received(0), is_complete(0), offset(0),
-					is_header_parsed(0)
+					is_header_parsed(0), machine()
 {
 	addrlen = sizeof(addr);
 }
 
-Client::~Client() {
-	req_arena.deinit();
-}
+Client::~Client() {}
 
 void	Client::parseHeaders(std::string head)
 {

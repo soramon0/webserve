@@ -12,14 +12,18 @@ private:
   size_t capacity;
   size_t prev_offset;
   size_t curr_offset;
+  size_t alignment;
 
   Arena(const Arena &other);
   Arena &operator=(const Arena &other);
 
 public:
-  Arena() : buf(NULL), capacity(0), prev_offset(0), curr_offset(0) {};
+  Arena()
+      : buf(NULL), capacity(0), prev_offset(0), curr_offset(0),
+        alignment(DEFAULT_ALIGNMENT) {};
   ~Arena();
 
+  void setAlignment(size_t align);
   bool setup(size_t cap);
   bool init(size_t cap);
   bool deinit();

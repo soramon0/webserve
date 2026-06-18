@@ -7,20 +7,15 @@
 typedef int STATUS;
 
 class HttpRequest {
-  State state;
-
 public:
   StringView method;
   StringView uri;
   StringView version;
   STATUS status;
-  Arena arena;
+  Arena *arena;
 
   HttpRequest();
   ~HttpRequest();
 
   void printRequest() const;
-
-  bool feedChunk(const char *buf, size_t len);
-  bool finish() const;
 };

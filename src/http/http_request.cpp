@@ -1,34 +1,13 @@
 #include "http_request.hpp"
-#include "common.h"
 #include "logger/log.hpp"
 #include "request_state.hpp"
-#include <cstddef>
 
-HttpRequest::HttpRequest() : state(stateStart), status(0) {}
-
-HttpRequest::~HttpRequest() {}
-
-bool HttpRequest::feedChunk(const char *buf, size_t len) {
-  // TODO: grow arena
-  if (!arena.setup(KIB(1))) {
-    status = 1; // OOM
-    return false;
-  }
-
-  Context ctx(*this, buf, len, 0);
-
-  while (ctx.offset < ctx.len) {
-    state = state.next(ctx);
-
-    if (ctx.hasError) {
-      return false;
-    }
-  }
-
-  return true;
+HttpRequest::HttpRequest() : status(0) {
+  arena = new Arena();
+  arena->setAlignment(1);
 }
 
-bool HttpRequest::finish() const { return true; }
+HttpRequest::~HttpRequest() { delete arena; }
 
 void HttpRequest::printRequest() const {
   Logger::debug("-------------------");

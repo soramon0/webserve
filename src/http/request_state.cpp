@@ -23,7 +23,7 @@ State stateMethod(Context &ctx) {
   }
 
   size_t size = (ctx.offset - foundSpace) - start;
-  char *data = static_cast<char *>(ctx.req.arena.alloc(size));
+  char *data = static_cast<char *>(ctx.req.arena->alloc(size));
   if (!data) {
     ctx.req.status = 1; // OOM
     return stateError;

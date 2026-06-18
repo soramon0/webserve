@@ -174,7 +174,7 @@ void Webserv::handleClientData(SOCKET c) {
     return;
   }
 
-  if (!cl->req.feedChunk(buf, bytes)) {
+  if (!cl->machine.feedChunk(buf, bytes)) {
     // check request state for why request malformed
     removeClient(c);
     return;
