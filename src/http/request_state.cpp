@@ -40,12 +40,11 @@ State stateMethod(Context &ctx) {
     return stateError;
   }
 
-  if (ctx.req.method.empty()) {
-    ctx.req.method = StringView(data, size);
-  } else {
-    size_t newSize = ctx.req.method.length() + size;
-    ctx.req.method = StringView(ctx.req.method.data(), newSize);
+  size_t method_size = ctx.req.method.length();
+  if (!ctx.req.method.empty()) {
+    method_size += size;
   }
+  ctx.req.method = StringView(data, method_size);
 
   if (foundSpace == 0) {
     return stateMethod;
