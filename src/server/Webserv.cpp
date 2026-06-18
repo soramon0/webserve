@@ -1,5 +1,4 @@
 #include "Webserv.hpp"
-#include "lib/arena.hpp"
 #include "logger/log.hpp"
 #include "utils.hpp"
 #include <cstring>
@@ -176,7 +175,7 @@ void Webserv::handleClientData(SOCKET c) {
 
   HttpRequest *req = cl->machine.getRequest();
   if (!cl->machine.feedChunk(buf, bytes)) {
-    Logger::error("request error: %d", req->status);
+    Logger::error("request error: %d", req->http_status.asInt());
     // check request state for why request malformed
     removeClient(c);
     return;

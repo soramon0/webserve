@@ -4,17 +4,19 @@
 
 // Forward declration
 class HttpRequest;
+class FSM;
 struct State;
 
 struct Context {
+  FSM &fsm;
   HttpRequest *req;
   const char *buf;
   size_t len;
   size_t offset;
   bool hasError;
 
-  Context(HttpRequest *r, const char *b, size_t l, size_t o)
-      : req(r), buf(b), len(l), offset(o), hasError(false) {};
+  Context(FSM &f, HttpRequest *r, const char *b, size_t l, size_t o)
+      : fsm(f), req(r), buf(b), len(l), offset(o), hasError(false) {};
 };
 
 typedef State (*StateFunction)(Context &ctx);

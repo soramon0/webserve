@@ -2,7 +2,9 @@
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
-HttpRequest::HttpRequest() : status(0), arena() { arena.setAlignment(1); }
+HttpRequest::HttpRequest() : arena(), http_status(HttpStatus::OK) {
+  arena.setAlignment(1);
+}
 
 HttpRequest::~HttpRequest() {}
 

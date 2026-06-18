@@ -1,4 +1,6 @@
 #include "request_state.hpp"
+#include "fsm.hpp"
+#include "http/status_code.hpp"
 #include "http_request.hpp"
 #include "logger/log.hpp"
 #include <cctype>
@@ -8,7 +10,7 @@ State stateStart(Context &ctx) {
   Logger::debug("state: start");
 
   if (!std::isalpha(static_cast<unsigned char>(ctx.buf[ctx.offset]))) {
-    ctx.req->status = 400; // Bad Request
+    ctx.req->http_status = HttpStatus::BAD_REQUEST;
     return stateError;
   }
   return stateMethod;
@@ -35,14 +37,14 @@ State stateMethod(Context &ctx) {
   }
 
   if (!hasChar && ctx.req->method.empty()) {
-    ctx.req->status = 400; // Bad Request
+    ctx.req->http_status = HttpStatus::BAD_REQUEST;
     return stateError;
   }
 
   size_t size = (ctx.offset - foundSpace) - start;
   char *data = ctx.req->arena.append_str(&ctx.buf[start], size);
   if (!data) {
-    ctx.req->status = 1; // OOM
+    ctx.fsm.status = FSMStatus::OOM;
     return stateError;
   }
 
@@ -75,6 +77,10 @@ State stateError(Context &ctx) {
   Logger::debug("state: error");
   // skip to end of buffer
   ctx.offset = ctx.len;
+  // only update if previous call did not change status from OK
+  if (ctx.fsm.status.isOk()) {
+    ctx.fsm.status = FSMStatus::MALFORMED;
+  }
   ctx.hasError = true;
   return stateError;
 }

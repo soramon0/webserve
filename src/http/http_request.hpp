@@ -1,18 +1,18 @@
 #pragma once
 
+#include "http/status_code.hpp"
 #include "lib/arena.hpp"
 #include "lib/string_view.hpp"
 #include "request_state.hpp"
 
-typedef int STATUS;
-
 class HttpRequest {
 public:
+  Arena arena;
+  HttpStatus http_status;
+
   StringView method;
   StringView uri;
   StringView version;
-  STATUS status;
-  Arena arena;
 
   HttpRequest();
   ~HttpRequest();
