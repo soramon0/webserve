@@ -4,8 +4,10 @@
 #include <cstddef>
 
 State stateStart(Context &ctx) {
-  (void)ctx;
-  // TODO: to method state or to error State;
+  if (!std::isalpha(static_cast<unsigned char>(ctx.buf[ctx.offset]))) {
+    ctx.req.status = 400; // Bad Request
+    return stateError;
+  }
   return stateMethod;
 }
 
