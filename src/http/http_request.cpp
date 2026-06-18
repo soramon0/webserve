@@ -15,11 +15,14 @@ bool HttpRequest::feedChunk(const char *buf, size_t len) {
     return false;
   }
 
-  size_t offset = 0;
-  Context ctx(*this, StringView(buf, len), offset);
+  Context ctx(*this, buf, len, 0);
 
-  while (offset++ < len) {
+  while (ctx.offset < ctx.len) {
     state = state.next(ctx);
+
+    if (ctx.hasError) {
+      return false;
+    }
   }
 
   return true;

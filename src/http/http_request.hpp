@@ -3,19 +3,18 @@
 #include "lib/arena.hpp"
 #include "lib/string_view.hpp"
 #include "request_state.hpp"
-#include <cstddef>
 
 typedef int STATUS;
 
 class HttpRequest {
   State state;
-  Arena arena;
 
 public:
   StringView method;
   StringView uri;
   StringView version;
   STATUS status;
+  Arena arena;
 
   HttpRequest();
   ~HttpRequest();
