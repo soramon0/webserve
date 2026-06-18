@@ -12,7 +12,7 @@ public:
   StringView uri;
   StringView version;
   STATUS status;
-  Arena *arena;
+  Arena arena;
 
   HttpRequest();
   ~HttpRequest();

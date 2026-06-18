@@ -26,6 +26,7 @@ void Arena::setAlignment(size_t align) { alignment = align; }
 bool Arena::usable() const { return buf != NULL && capacity != 0; }
 
 size_t Arena::consumed() const { return curr_offset; };
+size_t Arena::available() const { return capacity - curr_offset; };
 
 bool Arena::setup(size_t cap) {
   if (usable())

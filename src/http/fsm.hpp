@@ -6,14 +6,16 @@
 
 class FSM {
 private:
-  HttpRequest req;
+  HttpRequest *req;
   State state;
   bool hasError;
   bool done;
 
 public:
-  FSM() : req(), state(stateStart), hasError(false), done(false) {};
+  FSM();
+  ~FSM();
 
   bool feedChunk(const char *buf, std::size_t len);
   bool finish() const;
+  HttpRequest *getRequest() const { return req; };
 };

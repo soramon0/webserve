@@ -174,11 +174,15 @@ void Webserv::handleClientData(SOCKET c) {
     return;
   }
 
+  HttpRequest *req = cl->machine.getRequest();
   if (!cl->machine.feedChunk(buf, bytes)) {
+    Logger::error("request error: %d", req->status);
     // check request state for why request malformed
     removeClient(c);
     return;
   }
+  Logger::debug("buffered method: %.*s", (int)req->method.length(),
+                req->method.data());
 }
 
 void Webserv::removeClient(SOCKET c) {

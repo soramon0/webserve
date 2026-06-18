@@ -7,13 +7,13 @@ class HttpRequest;
 struct State;
 
 struct Context {
-  HttpRequest &req;
+  HttpRequest *req;
   const char *buf;
   size_t len;
   size_t offset;
   bool hasError;
 
-  Context(HttpRequest &r, const char *b, size_t l, size_t o)
+  Context(HttpRequest *r, const char *b, size_t l, size_t o)
       : req(r), buf(b), len(l), offset(o), hasError(false) {};
 };
 

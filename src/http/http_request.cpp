@@ -2,12 +2,9 @@
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
-HttpRequest::HttpRequest() : status(0) {
-  arena = new Arena();
-  arena->setAlignment(1);
-}
+HttpRequest::HttpRequest() : status(0), arena() { arena.setAlignment(1); }
 
-HttpRequest::~HttpRequest() { delete arena; }
+HttpRequest::~HttpRequest() {}
 
 void HttpRequest::printRequest() const {
   Logger::debug("-------------------");
