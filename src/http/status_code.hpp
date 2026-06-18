@@ -24,7 +24,10 @@ public:
   int asInt() const { return static_cast<int>(value_); }
   bool isError() const { return asInt() >= 400; }
 
-  HttpStatus operator=(Code v) { return HttpStatus(v); }
+  HttpStatus &operator=(Code v) {
+    value_ = v;
+    return *this;
+  }
   bool operator==(HttpStatus other) const { return value_ == other.value_; }
   bool operator==(Code v) const { return value_ == v; }
   bool operator!=(HttpStatus other) const { return value_ != other.value_; }

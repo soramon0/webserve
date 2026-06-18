@@ -45,6 +45,7 @@ State stateMethod(Context &ctx) {
   char *data = ctx.req->arena.append_str(&ctx.buf[start], size);
   if (!data) {
     ctx.fsm.status = FSMStatus::OOM;
+    ctx.req->http_status = HttpStatus::INTERNAL_SERVER_ERROR;
     return stateError;
   }
 
@@ -77,7 +78,6 @@ State stateError(Context &ctx) {
   Logger::debug("state: error");
   // skip to end of buffer
   ctx.offset = ctx.len;
-  // only update if previous call did not change status from OK
   if (ctx.fsm.status.isOk()) {
     ctx.fsm.status = FSMStatus::MALFORMED;
   }

@@ -19,7 +19,10 @@ public:
   bool isOk() const { return value_ == OK; }
   bool isMalformed() const { return value_ == MALFORMED; }
 
-  FSMStatus operator=(Code v) { return FSMStatus(v); }
+  FSMStatus &operator=(Code v) {
+    value_ = v;
+    return *this;
+  }
   bool operator==(FSMStatus other) const { return value_ == other.value_; }
   bool operator==(Code v) const { return value_ == v; }
   bool operator!=(FSMStatus other) const { return value_ != other.value_; }

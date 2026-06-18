@@ -15,6 +15,7 @@ bool FSM::feedChunk(const char *buf, size_t len) {
   // TODO: grow arena
   if (!req->arena.setup(KIB(1))) {
     status = FSMStatus::OOM;
+    req->http_status = HttpStatus::INTERNAL_SERVER_ERROR;
     return false;
   }
 
