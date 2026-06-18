@@ -23,12 +23,11 @@ State stateMethod(Context &ctx) {
   }
 
   size_t size = (ctx.offset - foundSpace) - start;
-  char *data = static_cast<char *>(ctx.req.arena->alloc(size));
+  char *data = ctx.req.arena->append_str(ctx.buf + start, size);
   if (!data) {
     ctx.req.status = 1; // OOM
     return stateError;
   }
-  std::memcpy(data, ctx.buf + start, size);
 
   if (foundSpace == 0) {
     return stateMethod;

@@ -37,4 +37,6 @@ public:
 
   bool usable() const;
   size_t consumed() const;
+
+  char *append_str(const char *str, size_t len);
 };

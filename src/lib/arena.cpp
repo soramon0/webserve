@@ -133,3 +133,12 @@ void Arena::free_all() {
   curr_offset = 0;
   prev_offset = 0;
 }
+
+char *Arena::append_str(const char *str, size_t len) {
+  char *data = static_cast<char *>(alloc(len));
+  if (!data) {
+    return NULL;
+  }
+  std::memcpy(data, str, len);
+  return data;
+}
