@@ -13,13 +13,24 @@ State stateMethod(Context &ctx) {
   size_t start = ctx.offset;
 
   int foundSpace = 0;
+  bool hasChar = false;
   while (ctx.offset < ctx.len) {
     if (std::isspace(static_cast<unsigned char>(ctx.buf[ctx.offset]))) {
       foundSpace = 1;
       ctx.offset++;
       break;
     }
+
+    hasChar = std::isalpha(static_cast<unsigned char>(ctx.buf[ctx.offset]));
+    if (!hasChar) {
+      break;
+    }
     ctx.offset++;
+  }
+
+  if (!hasChar && ctx.req.method.empty()) {
+    ctx.req.status = 400; // Bad Request
+    return stateError;
   }
 
   size_t size = (ctx.offset - foundSpace) - start;
@@ -29,14 +40,16 @@ State stateMethod(Context &ctx) {
     return stateError;
   }
 
+  if (ctx.req.method.empty()) {
+    ctx.req.method = StringView(data, size);
+  } else {
+    size_t newSize = ctx.req.method.length() + size;
+    ctx.req.method = StringView(ctx.req.method.data(), newSize);
+  }
+
   if (foundSpace == 0) {
     return stateMethod;
   }
-
-  // TODO: fix need to keep track of alloc between calls
-  // iter 1: GE
-  // iter 2: T /api HTTP/1.1
-  ctx.req.method = StringView(data, size);
 
   return stateURI;
 }
