@@ -18,6 +18,8 @@ private:
   Arena(const Arena &other);
   Arena &operator=(const Arena &other);
 
+  size_t next_offset(size_t align) const;
+
 public:
   Arena()
       : buf(NULL), capacity(0), prev_offset(0), curr_offset(0),

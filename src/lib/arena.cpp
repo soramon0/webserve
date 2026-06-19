@@ -32,9 +32,7 @@ size_t Arena::available() const {
   if (!buf || curr_offset > capacity)
     return 0;
 
-  uintptr_t curr_ptr = reinterpret_cast<uintptr_t>(buf + curr_offset);
-  uintptr_t aligned = align_forward(curr_ptr, alignment);
-  size_t offset = aligned - reinterpret_cast<uintptr_t>(buf);
+  size_t offset = next_offset(alignment);
   if (offset >= capacity)
     return 0;
   return capacity - offset;
@@ -85,10 +83,7 @@ void *Arena::alloc_align(size_t size, size_t align) {
   if (!buf)
     return NULL;
 
-  uintptr_t curr_ptr = reinterpret_cast<uintptr_t>(buf + curr_offset);
-  uintptr_t offset = align_forward(curr_ptr, align);
-  offset -= reinterpret_cast<uintptr_t>(buf); // relative offset
-
+  size_t offset = next_offset(align);
   if (offset + size > capacity)
     return NULL;
 
@@ -99,6 +94,12 @@ void *Arena::alloc_align(size_t size, size_t align) {
     std::memset(ptr, 0, size);
 
   return ptr;
+}
+
+size_t Arena::next_offset(size_t align) const {
+  uintptr_t curr_ptr = reinterpret_cast<uintptr_t>(buf + curr_offset);
+  uintptr_t aligned = align_forward(curr_ptr, align);
+  return aligned - reinterpret_cast<uintptr_t>(buf);
 }
 
 void *Arena::alloc(size_t size) { return alloc_align(size, alignment); }
