@@ -25,8 +25,20 @@ void Arena::setAlignment(size_t align) { alignment = align; }
 void Arena::setZeroout(bool val) { zeroout = val; }
 
 bool Arena::usable() const { return buf != NULL && capacity != 0; }
+
 size_t Arena::consumed() const { return curr_offset; };
-size_t Arena::available() const { return capacity - curr_offset; };
+
+size_t Arena::available() const {
+  if (!buf || curr_offset > capacity)
+    return 0;
+
+  uintptr_t curr_ptr = reinterpret_cast<uintptr_t>(buf + curr_offset);
+  uintptr_t aligned = align_forward(curr_ptr, alignment);
+  size_t offset = aligned - reinterpret_cast<uintptr_t>(buf);
+  if (offset >= capacity)
+    return 0;
+  return capacity - offset;
+};
 
 bool Arena::setup(size_t cap) {
   if (usable())
