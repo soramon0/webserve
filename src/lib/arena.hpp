@@ -13,6 +13,7 @@ private:
   size_t prev_offset;
   size_t curr_offset;
   size_t alignment;
+  bool zeroout;
 
   Arena(const Arena &other);
   Arena &operator=(const Arena &other);
@@ -20,10 +21,11 @@ private:
 public:
   Arena()
       : buf(NULL), capacity(0), prev_offset(0), curr_offset(0),
-        alignment(DEFAULT_ALIGNMENT) {};
+        alignment(DEFAULT_ALIGNMENT), zeroout(true) {};
   ~Arena();
 
   void setAlignment(size_t align);
+  void setZeroout(bool val);
   bool setup(size_t cap);
   bool init(size_t cap);
   bool deinit();

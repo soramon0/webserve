@@ -4,6 +4,7 @@
 
 HttpRequest::HttpRequest() : arena(), http_status(HttpStatus::OK) {
   arena.setAlignment(1);
+  arena.setZeroout(false);
 }
 
 HttpRequest::~HttpRequest() {}

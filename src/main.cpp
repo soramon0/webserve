@@ -7,6 +7,10 @@
 
 int main(int ac, char *av[]) {
   try {
+    if (DEBUG) {
+      Logger::setLevel(Logger::LOG_DEBUG);
+    }
+
     if (ac < 2)
       Logger::fatal("Usage: %s <configuration_file>", av[0]);
 

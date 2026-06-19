@@ -22,9 +22,9 @@ static uintptr_t align_forward(uintptr_t ptr, size_t align) {
 }
 
 void Arena::setAlignment(size_t align) { alignment = align; }
+void Arena::setZeroout(bool val) { zeroout = val; }
 
 bool Arena::usable() const { return buf != NULL && capacity != 0; }
-
 size_t Arena::consumed() const { return curr_offset; };
 size_t Arena::available() const { return capacity - curr_offset; };
 
@@ -83,7 +83,8 @@ void *Arena::alloc_align(size_t size, size_t align) {
   void *ptr = &buf[offset];
   prev_offset = offset;
   curr_offset = offset + size;
-  std::memset(ptr, 0, size);
+  if (zeroout)
+    std::memset(ptr, 0, size);
 
   return ptr;
 }
@@ -114,7 +115,7 @@ void *Arena::resize_align(void *old_memory, size_t old_size, size_t new_size,
     }
 
     curr_offset = prev_offset + new_size;
-    if (new_size > old_size) {
+    if (new_size > old_size && zeroout) {
       std::memset(&buf[prev_offset + old_size], 0, new_size - old_size);
     }
     return old_memory;
