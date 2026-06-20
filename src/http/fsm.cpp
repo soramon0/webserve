@@ -5,7 +5,7 @@
 
 FSM::FSM()
     : req(NULL), state(stateStart), hasError(false), done(false),
-      status(FSMStatus::OK) {
+      status(FSMStatus::PENDING) {
   req = new HttpRequest();
 };
 
@@ -14,8 +14,7 @@ FSM::~FSM() {};
 bool FSM::feedChunk(const char *buf, size_t len) {
   // TODO: grow arena
   if (!req->arena.setup(KIB(1))) {
-    status = FSMStatus::OOM;
-    req->http_status = HttpStatus::INTERNAL_SERVER_ERROR;
+    setMalformed500();
     return false;
   }
 
@@ -35,4 +34,19 @@ bool FSM::feedChunk(const char *buf, size_t len) {
   return true;
 }
 
-bool FSM::finish() const { return status == FSMStatus::OK; }
+bool FSM::finish() const { return status.isDone(); }
+
+void FSM::setMalformed(const HttpStatus s) {
+  status = FSMStatus::MALFORMED;
+  this->req->status = s;
+}
+
+void FSM::setMalformed500() {
+  status = FSMStatus::MALFORMED;
+  this->req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+}
+
+void FSM::setMalformed400() {
+  status = FSMStatus::MALFORMED;
+  this->req->status = HttpStatus::BAD_REQUEST;
+}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "http/status_code.hpp"
 #include "http_request.hpp"
 #include "request_state.hpp"
 #include <cstddef>
@@ -7,17 +8,18 @@
 class FSMStatus {
 public:
   enum Code {
-    OK = 0,
+    PENDING = 0,
     MALFORMED,
-    OOM,
+    DONE,
   };
 
-  FSMStatus() : value_(OK) {}
+  FSMStatus() : value_(PENDING) {}
   explicit FSMStatus(Code v) : value_(v) {}
 
   Code value() const { return value_; }
-  bool isOk() const { return value_ == OK; }
+  bool isPending() const { return value_ == PENDING; }
   bool isMalformed() const { return value_ == MALFORMED; }
+  bool isDone() const { return value_ == DONE; }
 
   FSMStatus &operator=(Code v) {
     value_ = v;
@@ -48,4 +50,8 @@ public:
   bool feedChunk(const char *buf, std::size_t len);
   bool finish() const;
   HttpRequest *getRequest() const { return req; };
+
+  void setMalformed(const HttpStatus status);
+  void setMalformed500();
+  void setMalformed400();
 };

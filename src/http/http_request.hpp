@@ -8,7 +8,7 @@
 class HttpRequest {
 public:
   Arena arena;
-  HttpStatus http_status;
+  HttpStatus status;
 
   StringView method;
   StringView uri;
