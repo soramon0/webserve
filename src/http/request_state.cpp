@@ -19,11 +19,11 @@ State stateMethod(Context &ctx) {
   Logger::debug("state: method");
   size_t start = ctx.offset;
 
-  int foundSpace = 0;
+  int sp = 0;
   bool hasChar = false;
   while (ctx.offset < ctx.len) {
     if (ctx.buf[ctx.offset] == ' ') {
-      foundSpace = 1;
+      sp = 1;
       ctx.offset++;
       break;
     }
@@ -40,7 +40,7 @@ State stateMethod(Context &ctx) {
     return stateError;
   }
 
-  size_t size = ctx.offset - foundSpace - start;
+  size_t size = ctx.offset - sp - start;
   if (ctx.req->method.empty()) {
     char *data = ctx.req->arena.str_append(&ctx.buf[start], size);
     if (!data) {
@@ -60,7 +60,7 @@ State stateMethod(Context &ctx) {
     ctx.req->method = StringView(buf, total);
   }
 
-  if (foundSpace == 0) {
+  if (!sp) {
     return stateMethod;
   }
 
@@ -71,11 +71,46 @@ State stateURI(Context &ctx) {
   Logger::debug("state: URI");
 
   size_t start = ctx.offset;
-  if (!ctx.req->arena.str_append(&ctx.buf[start], ctx.len)) {
-    ctx.fsm.setMalformed500();
+  int sp = 0;
+  while (ctx.offset < ctx.len) {
+    if (ctx.buf[ctx.offset] == ' ') {
+      sp = 1;
+      ctx.offset++;
+      break;
+    }
+    // TODO: add uri validation
+    ctx.offset++;
+  }
+
+  size_t size = ctx.offset - sp - start;
+  if (ctx.req->uri.empty()) {
+    char *data = ctx.req->arena.str_append(&ctx.buf[start], size);
+    if (!data) {
+      ctx.fsm.setMalformed500();
+      return stateError;
+    }
+    ctx.req->uri = StringView(data, size);
+  } else {
+    size_t prev_size = ctx.req->uri.length();
+    size_t total = ctx.req->uri.length() + size;
+    char *buf = ctx.req->arena.str_resize(ctx.req->uri.data(), prev_size,
+                                          &ctx.buf[start], total);
+    if (!buf) {
+      ctx.fsm.setMalformed500();
+      return stateError;
+    }
+    ctx.req->uri = StringView(buf, total);
+  }
+
+  if (sp && ctx.req->uri.empty()) {
+    ctx.fsm.setMalformed400();
     return stateError;
   }
-  ctx.offset++;
+
+  if (!sp) {
+    return stateURI;
+  }
+
   return stateVersion;
 }
 
