@@ -43,5 +43,7 @@ public:
   size_t consumed() const;
   size_t available() const;
 
-  char *append_str(const char *str, size_t len);
+  char *str_append(const char *str, size_t len);
+  char *str_resize(const char *old_memory, size_t old_size, const char *src,
+                   size_t new_size);
 };

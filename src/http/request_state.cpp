@@ -22,7 +22,7 @@ State stateMethod(Context &ctx) {
   int foundSpace = 0;
   bool hasChar = false;
   while (ctx.offset < ctx.len) {
-    if (std::isspace(static_cast<unsigned char>(ctx.buf[ctx.offset]))) {
+    if (ctx.buf[ctx.offset] == ' ') {
       foundSpace = 1;
       ctx.offset++;
       break;
@@ -40,18 +40,25 @@ State stateMethod(Context &ctx) {
     return stateError;
   }
 
-  size_t size = (ctx.offset - foundSpace) - start;
-  char *data = ctx.req->arena.append_str(&ctx.buf[start], size);
-  if (!data) {
-    ctx.fsm.setMalformed500();
-    return stateError;
+  size_t size = ctx.offset - foundSpace - start;
+  if (ctx.req->method.empty()) {
+    char *data = ctx.req->arena.str_append(&ctx.buf[start], size);
+    if (!data) {
+      ctx.fsm.setMalformed500();
+      return stateError;
+    }
+    ctx.req->method = StringView(data, size);
+  } else {
+    size_t prev_size = ctx.req->method.length();
+    size_t total = ctx.req->method.length() + size;
+    char *buf = ctx.req->arena.str_resize(ctx.req->method.data(), prev_size,
+                                          &ctx.buf[start], total);
+    if (!buf) {
+      ctx.fsm.setMalformed500();
+      return stateError;
+    }
+    ctx.req->method = StringView(buf, total);
   }
-
-  size_t str_size = size;
-  if (!ctx.req->method.empty()) {
-    str_size += ctx.req->method.length();
-  };
-  ctx.req->method = StringView(data, str_size);
 
   if (foundSpace == 0) {
     return stateMethod;
@@ -64,7 +71,7 @@ State stateURI(Context &ctx) {
   Logger::debug("state: URI");
 
   size_t start = ctx.offset;
-  if (!ctx.req->arena.append_str(&ctx.buf[start], ctx.len)) {
+  if (!ctx.req->arena.str_append(&ctx.buf[start], ctx.len)) {
     ctx.fsm.setMalformed500();
     return stateError;
   }
@@ -76,7 +83,7 @@ State stateVersion(Context &ctx) {
   Logger::debug("state: version");
   size_t start = ctx.offset;
   Logger::debug("alloc size: %zu", ctx.len);
-  if (!ctx.req->arena.append_str(&ctx.buf[start], ctx.len)) {
+  if (!ctx.req->arena.str_append(&ctx.buf[start], ctx.len)) {
     ctx.fsm.setMalformed500();
     return stateError;
   }

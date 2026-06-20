@@ -149,11 +149,25 @@ void Arena::free_all() {
   prev_offset = 0;
 }
 
-char *Arena::append_str(const char *str, size_t len) {
+char *Arena::str_append(const char *str, size_t len) {
   char *data = static_cast<char *>(alloc(len));
   if (!data) {
     return NULL;
   }
   std::memcpy(data, str, len);
   return data;
+}
+
+char *Arena::str_resize(const char *old_memory, size_t old_size,
+                        const char *src, size_t new_size) {
+  if (!src || new_size == 0) {
+    return NULL;
+  }
+
+  void *buf = resize(const_cast<char *>(old_memory), old_size, new_size);
+  if (!buf) {
+    return NULL;
+  }
+  std::memcpy(static_cast<char *>(buf) + old_size, src, new_size - old_size);
+  return static_cast<char *>(buf);
 }
