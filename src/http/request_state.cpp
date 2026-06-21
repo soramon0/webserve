@@ -77,7 +77,6 @@ State stateURI(Context &ctx) {
       ctx.offset++;
       break;
     }
-    // TODO: add uri validation
     ctx.offset++;
   }
 
@@ -96,7 +95,45 @@ State stateURI(Context &ctx) {
     return stateURI;
   }
 
-  return stateVersion;
+  // Origin-from
+  if (ctx.req->uri[0] == '/') {
+    return stateVersion;
+  }
+
+  // Absolute-form
+  size_t scheme_offset = 0;
+  if (ctx.req->uri.startsWith("https://")) {
+    scheme_offset = 8;
+  } else if (ctx.req->uri.startsWith("http://")) {
+    scheme_offset = 7;
+  }
+
+  if (scheme_offset > 0) {
+    const char *domain = ctx.req->uri.data() + scheme_offset;
+    size_t remaining_len = ctx.req->uri.length() - scheme_offset;
+
+    // Reject missing domains (e.g., just "http://")
+    if (remaining_len == 0) {
+      ctx.fsm.setMalformed400();
+      return stateError;
+    }
+
+    const char *path =
+        static_cast<const char *>(std::memchr(domain, '/', remaining_len));
+
+    if (!path) {
+      // e.g., "https://example.com"|"https://e" -> defaults to "/"
+      ctx.req->uri = StringView("/", 1);
+    } else {
+      size_t new_len = (ctx.req->uri.data() + ctx.req->uri.length()) - path;
+      ctx.req->uri = StringView(path, new_len);
+    }
+
+    return stateVersion;
+  }
+
+  ctx.fsm.setMalformed400();
+  return stateError;
 }
 
 State stateVersion(Context &ctx) {

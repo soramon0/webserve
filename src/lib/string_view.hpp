@@ -19,6 +19,9 @@ public:
   bool empty() const { return len == 0; }
 
   char operator[](std::size_t index) const { return buf[index]; }
+
+  const char *startsWith(const char *target) const;
+  const char *endsWith(const char *target) const;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const StringView &sv) {
