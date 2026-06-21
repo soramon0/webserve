@@ -3,9 +3,7 @@
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
-FSM::FSM()
-    : req(NULL), state(stateStart), hasError(false), done(false),
-      status(FSMStatus::PENDING) {
+FSM::FSM() : req(NULL), state(stateStart), status(FSMStatus::PENDING) {
   req = new HttpRequest();
 };
 
@@ -24,14 +22,14 @@ bool FSM::feedChunk(const char *buf, size_t len) {
   Context ctx(*this, req, buf, len, 0);
 
   while (ctx.offset < ctx.len) {
-    state = state.next(ctx);
-
-    if (ctx.hasError) {
-      return false;
+    if (finish()) {
+      break;
     }
+
+    state = state.next(ctx);
   }
 
-  return true;
+  return !status.isMalformed();
 }
 
 bool FSM::finish() const { return status.isDone() || status.isMalformed(); }

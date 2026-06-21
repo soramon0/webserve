@@ -1,6 +1,7 @@
 #pragma once
 
 #include "http/http_method.hpp"
+#include "http/http_version.hpp"
 #include "http/status_code.hpp"
 #include "lib/arena.hpp"
 #include "lib/string_view.hpp"
@@ -11,10 +12,11 @@ public:
   Arena arena;
   HttpStatus status;
   HttpMethod method;
+  HttpVersion version;
 
   StringView method_view;
   StringView uri;
-  StringView version;
+  StringView version_view;
 
 
   HttpRequest();

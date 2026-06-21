@@ -13,10 +13,9 @@ struct Context {
   const char *buf;
   size_t len;
   size_t offset;
-  bool hasError;
 
   Context(FSM &f, HttpRequest *r, const char *b, size_t l, size_t o)
-      : fsm(f), req(r), buf(b), len(l), offset(o), hasError(false) {};
+      : fsm(f), req(r), buf(b), len(l), offset(o) {};
 };
 
 typedef State (*StateFunction)(Context &ctx);

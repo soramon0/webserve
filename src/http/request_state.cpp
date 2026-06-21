@@ -1,6 +1,7 @@
 #include "request_state.hpp"
 #include "fsm.hpp"
 #include "http/http_method.hpp"
+#include "http/http_version.hpp"
 #include "http/status_code.hpp"
 #include "http_request.hpp"
 #include "logger/log.hpp"
@@ -138,13 +139,50 @@ State stateURI(Context &ctx) {
 
 State stateVersion(Context &ctx) {
   Logger::debug("state: version");
+
   size_t start = ctx.offset;
-  Logger::debug("alloc size: %zu", ctx.len);
-  if (!ctx.req->arena.str_append(&ctx.buf[start], ctx.len)) {
+  int end = 0;
+  while (ctx.offset < ctx.len) {
+    unsigned char c = static_cast<unsigned char>(ctx.buf[ctx.offset]);
+    if (c == '\r' || c == '\n') {
+      end = 1;
+      break;
+    }
+    ctx.offset++;
+  }
+
+  size_t size = ctx.offset - start;
+  if (!ctx.req->updateField(ctx.req->version_view, &ctx.buf[start], size)) {
     ctx.fsm.setMalformed500();
     return stateError;
   }
-  ctx.offset++;
+
+  if (!end) {
+    return stateVersion;
+  }
+
+  if (ctx.buf[ctx.offset] == '\r') {
+    ctx.offset++;
+    if (ctx.offset < ctx.len && ctx.buf[ctx.offset] == '\n') {
+      ctx.offset++;
+    }
+  } else if (ctx.buf[ctx.offset] == '\n') {
+    ctx.offset++;
+  }
+
+  if (ctx.req->version_view.empty()) {
+    ctx.fsm.setMalformed400();
+    return stateError;
+  }
+
+  ctx.req->version = HttpVersion(ctx.req->version_view);
+  if (ctx.req->version.isUnknown() || !ctx.req->version.isSupported()) {
+    ctx.fsm.setMalformed400();
+    return stateError;
+  }
+
+  // TODO: remove once we add header parsing
+  ctx.fsm.status = FSMStatus::DONE;
   return stateVersion;
 }
 
@@ -155,6 +193,5 @@ State stateError(Context &ctx) {
   if (ctx.fsm.status.isPending()) {
     ctx.fsm.status = FSMStatus::MALFORMED;
   }
-  ctx.hasError = true;
   return stateError;
 }

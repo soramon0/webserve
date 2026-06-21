@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lib/string_view.hpp"
+#include <cctype>
 #include <cstring>
 #include <ostream>
 #include <string>
@@ -60,22 +61,29 @@ private:
   Method value_;
 
   void parse(const char *method, size_t len) {
-    if (!method) {
+    char buf[8] = {0};
+
+    if (!method || len == 0 || len > 7) {
       value_ = UNKNOWN;
       return;
     }
+    std::memcpy(buf, method, len);
+    buf[len] = '\0';
+    for (size_t i = 0; i < len; i++) {
+      buf[i] = std::toupper(static_cast<unsigned char>(buf[i]));
+    }
 
-    if (len == 3 && std::memcmp(method, "GET", len) == 0) {
+    if (std::strcmp(buf, "GET") == 0) {
       value_ = GET;
-    } else if (len == 4 && std::memcmp(method, "POST", len) == 0) {
+    } else if (std::strcmp(buf, "POST") == 0) {
       value_ = POST;
-    } else if (len == 6 && std::memcmp(method, "DELETE", len) == 0) {
+    } else if (std::strcmp(buf, "DELETE") == 0) {
       value_ = DELETE;
-    } else if (len == 3 && std::memcmp(method, "PUT", len) == 0) {
+    } else if (std::strcmp(buf, "PUT") == 0) {
       value_ = PUT;
-    } else if (len == 4 && std::memcmp(method, "HEAD", len) == 0) {
+    } else if (std::strcmp(buf, "HEAD") == 0) {
       value_ = HEAD;
-    } else if (len == 7 && std::memcmp(method, "OPTIONS", len) == 0) {
+    } else if (std::strcmp(buf, "OPTIONS") == 0) {
       value_ = OPTIONS;
     } else {
       value_ = UNKNOWN;

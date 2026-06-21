@@ -16,8 +16,8 @@ void HttpRequest::printRequest() const {
   Logger::debug("Method:\t%.*s", static_cast<int>(method_view.length()),
                 method_view.data());
   Logger::debug("URI:\t%.*s", static_cast<int>(uri.length()), uri.data());
-  Logger::debug("Protocal:\t%.*s", static_cast<int>(version.length()),
-                version.data());
+  Logger::debug("Protocal:\t%.*s", static_cast<int>(version_view.length()),
+                version_view.data());
 
   Logger::debug("--- Headers ---");
 

@@ -38,8 +38,6 @@ class FSM {
 private:
   HttpRequest *req;
   State state;
-  bool hasError;
-  bool done;
 
 public:
   FSMStatus status;
