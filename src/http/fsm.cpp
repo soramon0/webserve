@@ -34,9 +34,9 @@ bool FSM::feedChunk(const char *buf, size_t len) {
   return true;
 }
 
-bool FSM::finish() const { return status.isDone(); }
+bool FSM::finish() const { return status.isDone() || status.isMalformed(); }
 
-void FSM::setMalformed(const HttpStatus s) {
+void FSM::setMalformed(HttpStatus::Code s) {
   status = FSMStatus::MALFORMED;
   this->req->status = s;
 }

@@ -174,7 +174,7 @@ void Webserv::handleClientData(SOCKET c) {
   }
 
   HttpRequest *req = cl->machine.getRequest();
-  if (!cl->machine.feedChunk(buf, bytes)) {
+  if (cl->machine.status.isPending() && !cl->machine.feedChunk(buf, bytes)) {
     Logger::error("request error: %d", req->status.asInt());
     removeClient(c);
     return;

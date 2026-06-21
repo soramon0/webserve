@@ -1,5 +1,7 @@
 #include "request_state.hpp"
 #include "fsm.hpp"
+#include "http/http_method.hpp"
+#include "http/status_code.hpp"
 #include "http_request.hpp"
 #include "logger/log.hpp"
 #include <cctype>
@@ -35,19 +37,30 @@ State stateMethod(Context &ctx) {
     ctx.offset++;
   }
 
-  if (!hasChar && ctx.req->method.empty()) {
+  if (!hasChar && ctx.req->method_view.empty()) {
     ctx.fsm.setMalformed400();
     return stateError;
   }
 
   size_t size = ctx.offset - sp - start;
-  if (!ctx.req->updateField(ctx.req->method, &ctx.buf[start], size)) {
+  if (!ctx.req->updateField(ctx.req->method_view, &ctx.buf[start], size)) {
     ctx.fsm.setMalformed500();
     return stateError;
   }
 
   if (!sp) {
     return stateMethod;
+  }
+
+  ctx.req->method = HttpMethod(ctx.req->method_view);
+  if (ctx.req->method.isUnknown()) {
+    ctx.fsm.setMalformed(HttpStatus::NOT_IMPLEMENTED);
+    return stateError;
+  }
+
+  if (!ctx.req->method.isSupported()) {
+    ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED);
+    return stateError;
   }
 
   return stateURI;

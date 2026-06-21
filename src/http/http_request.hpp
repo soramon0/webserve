@@ -1,5 +1,6 @@
 #pragma once
 
+#include "http/http_method.hpp"
 #include "http/status_code.hpp"
 #include "lib/arena.hpp"
 #include "lib/string_view.hpp"
@@ -9,10 +10,12 @@ class HttpRequest {
 public:
   Arena arena;
   HttpStatus status;
+  HttpMethod method;
 
-  StringView method;
+  StringView method_view;
   StringView uri;
   StringView version;
+
 
   HttpRequest();
   ~HttpRequest();

@@ -51,7 +51,7 @@ public:
   bool finish() const;
   HttpRequest *getRequest() const { return req; };
 
-  void setMalformed(const HttpStatus status);
+  void setMalformed(HttpStatus::Code status);
   void setMalformed500();
   void setMalformed400();
 };
