@@ -41,23 +41,9 @@ State stateMethod(Context &ctx) {
   }
 
   size_t size = ctx.offset - sp - start;
-  if (ctx.req->method.empty()) {
-    char *data = ctx.req->arena.str_append(&ctx.buf[start], size);
-    if (!data) {
-      ctx.fsm.setMalformed500();
-      return stateError;
-    }
-    ctx.req->method = StringView(data, size);
-  } else {
-    size_t prev_size = ctx.req->method.length();
-    size_t total = ctx.req->method.length() + size;
-    char *buf = ctx.req->arena.str_resize(ctx.req->method.data(), prev_size,
-                                          &ctx.buf[start], total);
-    if (!buf) {
-      ctx.fsm.setMalformed500();
-      return stateError;
-    }
-    ctx.req->method = StringView(buf, total);
+  if (!ctx.req->updateField(ctx.req->method, &ctx.buf[start], size)) {
+    ctx.fsm.setMalformed500();
+    return stateError;
   }
 
   if (!sp) {
@@ -83,23 +69,9 @@ State stateURI(Context &ctx) {
   }
 
   size_t size = ctx.offset - sp - start;
-  if (ctx.req->uri.empty()) {
-    char *data = ctx.req->arena.str_append(&ctx.buf[start], size);
-    if (!data) {
-      ctx.fsm.setMalformed500();
-      return stateError;
-    }
-    ctx.req->uri = StringView(data, size);
-  } else {
-    size_t prev_size = ctx.req->uri.length();
-    size_t total = ctx.req->uri.length() + size;
-    char *buf = ctx.req->arena.str_resize(ctx.req->uri.data(), prev_size,
-                                          &ctx.buf[start], total);
-    if (!buf) {
-      ctx.fsm.setMalformed500();
-      return stateError;
-    }
-    ctx.req->uri = StringView(buf, total);
+  if (!ctx.req->updateField(ctx.req->uri, &ctx.buf[start], size)) {
+    ctx.fsm.setMalformed500();
+    return stateError;
   }
 
   if (sp && ctx.req->uri.empty()) {

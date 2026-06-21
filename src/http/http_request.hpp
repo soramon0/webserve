@@ -18,4 +18,5 @@ public:
   ~HttpRequest();
 
   void printRequest() const;
+  bool updateField(StringView &field, const char *buf, size_t size);
 };

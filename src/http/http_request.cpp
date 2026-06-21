@@ -23,3 +23,22 @@ void HttpRequest::printRequest() const {
 
   Logger::debug("-------------------");
 }
+
+bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
+  if (field.empty()) {
+    char *data = arena.str_append(buf, size);
+    if (!data) {
+      return false;
+    }
+    field = StringView(data, size);
+  } else {
+    size_t prev_size = field.length();
+    size_t total = field.length() + size;
+    char *str = arena.str_resize(field.data(), prev_size, buf, total);
+    if (!str) {
+      return false;
+    }
+    field = StringView(str, total);
+  }
+  return true;
+}

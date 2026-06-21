@@ -179,8 +179,7 @@ void Webserv::handleClientData(SOCKET c) {
     removeClient(c);
     return;
   }
-  Logger::debug("buffered method: %.*s", (int)req->method.length(),
-                req->method.data());
+  req->printRequest();
 }
 
 void Webserv::removeClient(SOCKET c) {
