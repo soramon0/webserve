@@ -30,4 +30,5 @@ State stateStart(Context &ctx);
 State stateMethod(Context &ctx);
 State stateURI(Context &ctx);
 State stateVersion(Context &ctx);
+State stateDone(Context &ctx);
 State stateError(Context &ctx);

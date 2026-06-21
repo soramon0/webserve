@@ -181,9 +181,15 @@ State stateVersion(Context &ctx) {
     return stateError;
   }
 
-  // TODO: remove once we add header parsing
-  ctx.fsm.status = FSMStatus::DONE;
-  return stateVersion;
+  ctx.fsm.setDone();
+  return stateDone;
+}
+
+State stateDone(Context &ctx) {
+  Logger::debug("state: done");
+  // skip to end of buffer
+  ctx.offset = ctx.len;
+  return stateDone;
 }
 
 State stateError(Context &ctx) {
