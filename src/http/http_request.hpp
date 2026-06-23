@@ -18,7 +18,6 @@ public:
   StringView uri;
   StringView version_view;
 
-
   HttpRequest();
   ~HttpRequest();
 
