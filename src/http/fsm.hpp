@@ -20,6 +20,7 @@ public:
   bool isPending() const { return value_ == PENDING; }
   bool isMalformed() const { return value_ == MALFORMED; }
   bool isDone() const { return value_ == DONE; }
+  int asInt() const { return static_cast<int>(value_); }
 
   FSMStatus &operator=(Code v) {
     value_ = v;

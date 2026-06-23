@@ -22,6 +22,17 @@ public:
   bool operator!=(HttpVersion other) const { return value_ != other.value_; }
   bool operator!=(Version v) const { return value_ != v; }
 
+  std::string toString() const {
+    switch (value_) {
+    case V1_1:
+      return "HTTP/1.1";
+    case V1_0:
+      return "HTTP/1.0";
+    default:
+      return "UNKNOWN";
+    }
+  }
+
 private:
   Version value_;
 

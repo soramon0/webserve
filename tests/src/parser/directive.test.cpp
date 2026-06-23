@@ -1,6 +1,7 @@
 #include "../utils.hpp"
 #include "config/config.hpp"
 #include "logger/log.hpp"
+#include "parser.test.hpp"
 #include "parser/parser.hpp"
 
 void testDirective_index(bool skip) {
