@@ -3,11 +3,6 @@
 #include <fstream>
 #include <string>
 
-void assertStrEquals(const std::string &wanted, const std::string &got,
-                     const std::string &msg);
-
-void assertStrEquals(const std::string &wanted, const std::string &got);
-
 std::string make_temp_path(const char *prefix);
 
 struct ScopedFile {

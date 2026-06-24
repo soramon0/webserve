@@ -1,0 +1,5 @@
+If:
+  PathMatch: tests/.*\.cpp
+CompileFlags:
+  Add: [-std=c++11, -Itests/src, -Isrc, -Iinclude]
+  Remove: [-std=c++98]
