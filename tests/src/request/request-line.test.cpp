@@ -5,7 +5,6 @@ TEST_CASE("FSM parses complete HTTP request line") {
   FSM fsm;
   std::string input = "GET /api/products HTTP/1.1\r\n";
 
-  // Added semicolons to all assertions
   REQUIRE(fsm.feedChunk(input.c_str(), input.length()) == true);
   REQUIRE(fsm.status.isDone());
 
