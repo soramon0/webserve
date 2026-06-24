@@ -48,7 +48,7 @@ DEPS := $(OBJS:.o=.d)
 # Safety Net
 .DELETE_ON_ERROR:
 
-.PHONY: all clean fclean re run release help nginx_t
+.PHONY: all clean fclean re run release help nginx_t test
 
 all: $(NAME)
 
@@ -90,6 +90,9 @@ re: fclean all
 nginx_t:
 	$(Q)docker compose run --rm web nginx -t
 
+test:
+	@printf "$(BLUE)Building and running tests...$(RESET)\n"
+	@$(MAKE) -C tests run
 
 help:
 	@printf "$(MAGENTA)Available targets:$(RESET)\n"
