@@ -157,7 +157,6 @@ State stateVersion(Context &ctx) {
     return stateError(ctx);
   }
 
-  Logger::info("GOT here");
   if (!end) {
     return stateVersion;
   }

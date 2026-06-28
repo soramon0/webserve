@@ -76,7 +76,7 @@ bool FSM::isCRLF(unsigned char c) const { return c == '\r' || c == '\n'; }
 bool FSM::consumeCRLF(const char *buf, size_t len, size_t &offset) const {
   if (buf[offset] == '\r') {
     offset++;
-    if (offset < len) {
+    if (offset >= len) {
       // buffer too small
       return true;
     }
