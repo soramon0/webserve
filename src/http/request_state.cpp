@@ -13,7 +13,7 @@ State stateStart(Context &ctx) {
 
   if (!std::isalpha(static_cast<unsigned char>(ctx.buf[ctx.offset]))) {
     ctx.fsm.setMalformed400("malformed request-line");
-    return stateError;
+    return stateError(ctx);
   }
   return stateMethod;
 }
@@ -40,13 +40,13 @@ State stateMethod(Context &ctx) {
 
   if (!hasChar && ctx.req->method_view.empty()) {
     ctx.fsm.setMalformed400("invalid request method");
-    return stateError;
+    return stateError(ctx);
   }
 
   size_t size = ctx.offset - sp - start;
   if (!ctx.req->updateField(ctx.req->method_view, &ctx.buf[start], size)) {
     ctx.fsm.setMalformed500();
-    return stateError;
+    return stateError(ctx);
   }
 
   if (!sp) {
@@ -56,12 +56,12 @@ State stateMethod(Context &ctx) {
   ctx.req->method = HttpMethod(ctx.req->method_view);
   if (ctx.req->method.isUnknown()) {
     ctx.fsm.setMalformed(HttpStatus::NOT_IMPLEMENTED, "method not implemented");
-    return stateError;
+    return stateError(ctx);
   }
 
   if (!ctx.req->method.isSupported()) {
     ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED, "method not allowed");
-    return stateError;
+    return stateError(ctx);
   }
 
   return stateURI;
@@ -84,12 +84,12 @@ State stateURI(Context &ctx) {
   size_t size = ctx.offset - sp - start;
   if (!ctx.req->updateField(ctx.req->uri, &ctx.buf[start], size)) {
     ctx.fsm.setMalformed500();
-    return stateError;
+    return stateError(ctx);
   }
 
   if (sp && ctx.req->uri.empty()) {
     ctx.fsm.setMalformed400("uri is required");
-    return stateError;
+    return stateError(ctx);
   }
 
   if (!sp) {
@@ -116,7 +116,7 @@ State stateURI(Context &ctx) {
     // Reject missing domains (e.g., just "http://")
     if (remaining_len == 0) {
       ctx.fsm.setMalformed400("uri is invalid");
-      return stateError;
+      return stateError(ctx);
     }
 
     const char *path =
@@ -134,7 +134,7 @@ State stateURI(Context &ctx) {
   }
 
   ctx.fsm.setMalformed400("invalid uri in request-line");
-  return stateError;
+  return stateError(ctx);
 }
 
 State stateVersion(Context &ctx) {
@@ -161,26 +161,24 @@ State stateVersion(Context &ctx) {
   size_t size = ctx.offset - start;
   if (!ctx.req->updateField(ctx.req->version_view, &ctx.buf[start], size)) {
     ctx.fsm.setMalformed500();
-    return stateError;
+    return stateError(ctx);
   }
 
+  Logger::info("GOT here");
   if (!end) {
     return stateVersion;
   }
 
-  Logger::info("got here 2 '%*.s'", (int)ctx.req->version_view.length(),
-               ctx.req->version_view.data());
-
   ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset);
   if (ctx.req->version_view.empty()) {
     ctx.fsm.setMalformed400("http version is required");
-    return stateError;
+    return stateError(ctx);
   }
 
   ctx.req->version = HttpVersion(ctx.req->version_view);
   if (ctx.req->version.isUnknown() || !ctx.req->version.isSupported()) {
     ctx.fsm.setMalformed400("http version is not supported");
-    return stateError;
+    return stateError(ctx);
   }
 
   return stateHeaderKey;
@@ -188,20 +186,19 @@ State stateVersion(Context &ctx) {
 
 State stateHeaderKey(Context &ctx) {
   ctx.offset = ctx.len;
-  ctx.fsm.setDone();
-  return stateDone;
+  return stateDone(ctx);
 }
 
 State stateHeaderValue(Context &ctx) {
   ctx.offset = ctx.len;
-  ctx.fsm.setDone();
-  return stateDone;
+  return stateDone(ctx);
 }
 
 State stateDone(Context &ctx) {
   Logger::debug("state: done");
   // skip to end of buffer
   ctx.offset = ctx.len;
+  ctx.fsm.setDone();
   return stateDone;
 }
 

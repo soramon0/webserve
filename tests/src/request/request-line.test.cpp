@@ -1,14 +1,16 @@
 #include "doctest.h"
 #include "http/fsm.hpp"
-#include <iostream>
 
 TEST_CASE("FSM parses complete HTTP request line") {
   FSM fsm;
-  std::string input = "GET /api/products HTTP/1.1 \r\n";
+  std::string input = "GET /api/products HTTP/1.1\r\n";
 
   HttpRequest *req = fsm.getRequest();
-  CHECK(fsm.feedChunk(input.c_str(), input.length()) == true);
-  std::cout << "http status: " << req->status.asInt() << std::endl;
+  bool done = fsm.feedChunk(input.c_str(), input.length());
+  CHECK(done == true);
+  if (!done) {
+    fsm.dumpState();
+  }
   REQUIRE(fsm.status.isDone());
 
   CHECK(req->status == HttpStatus::OK);

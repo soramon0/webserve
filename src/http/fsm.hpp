@@ -2,6 +2,7 @@
 
 #include "http/status_code.hpp"
 #include "http_request.hpp"
+#include "logger/log.hpp"
 #include "request_state.hpp"
 #include <cstddef>
 
@@ -21,6 +22,13 @@ public:
   bool isMalformed() const { return value_ == MALFORMED; }
   bool isDone() const { return value_ == DONE; }
   int asInt() const { return static_cast<int>(value_); }
+  const char *asStr() const {
+    if (value_ == MALFORMED)
+      return "MALFORMED";
+    if (value_ == DONE)
+      return "DONE";
+    return "PENDING";
+  };
 
   FSMStatus &operator=(Code v) {
     value_ = v;
@@ -59,4 +67,9 @@ public:
   void setMalformed500();
   void setMalformed400();
   bool consumeCRLF(const char *buf, size_t len, size_t &offset) const;
+
+  void dumpState() const {
+    Logger::info("fsm.status = %s", status.asStr());
+    this->req->dumpState();
+  }
 };
