@@ -51,6 +51,10 @@ public:
   HttpRequest *getRequest() const { return req; };
 
   void setDone();
+  void setMalformed(HttpStatus::Code status, const char *msg);
+  void setMalformed500(const char *msg);
+  void setMalformed400(const char *msg);
+
   void setMalformed(HttpStatus::Code status);
   void setMalformed500();
   void setMalformed400();

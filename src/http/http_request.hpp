@@ -17,6 +17,7 @@ public:
   StringView method_view;
   StringView uri;
   StringView version_view;
+  StringView error;
 
   HttpRequest();
   ~HttpRequest();
