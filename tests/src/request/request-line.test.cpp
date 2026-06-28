@@ -1,17 +1,19 @@
 #include "doctest.h"
 #include "http/fsm.hpp"
+#include <vector>
 
-TEST_CASE("FSM parses complete HTTP request line") {
+TEST_CASE("FSM parses complete HTTP request line across arbitrary chunks") {
   FSM fsm;
-  std::string input = "GET /api/products HTTP/1.1\r\n";
+
+  std::vector<std::string> chunks = {"GE", "T /api/pr", "oducts HTTP/1.1",
+                                     "\r\n"};
+  for (const auto &chunk : chunks) {
+    CHECK(fsm.feedChunk(chunk.data(), chunk.length()));
+    REQUIRE(fsm.status.isPending());
+  }
 
   HttpRequest *req = fsm.getRequest();
-  bool done = fsm.feedChunk(input.c_str(), input.length());
-  CHECK(done == true);
-  if (!done) {
-    fsm.dumpState();
-  }
-  REQUIRE(fsm.status.isDone());
+  REQUIRE(req != nullptr);
 
   CHECK(req->status == HttpStatus::OK);
   CHECK(req->method.toString() == "GET");
