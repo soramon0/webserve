@@ -66,6 +66,7 @@ public:
   void setMalformed(HttpStatus::Code status);
   void setMalformed500();
   void setMalformed400();
+  bool isCRLF(unsigned char c) const;
   bool consumeCRLF(const char *buf, size_t len, size_t &offset) const;
 
   void dumpState() const {
