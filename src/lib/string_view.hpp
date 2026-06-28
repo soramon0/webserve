@@ -19,14 +19,17 @@ public:
   bool empty() const { return len == 0; }
 
   char operator[](std::size_t index) const { return buf[index]; }
+  bool operator==(const StringView &other) const;
+  bool operator<(const StringView &other) const;
 
   const char *startsWith(const char *target) const;
   const char *endsWith(const char *target) const;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const StringView &sv) {
-  for (std::size_t i = 0; i < sv.length(); ++i) {
-    os << sv[i];
+  if (sv.data()) {
+    os.write(sv.data(), sv.length());
   }
+
   return os;
 }
