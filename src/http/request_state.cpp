@@ -31,6 +31,11 @@ State stateMethod(Context &ctx) {
       break;
     }
 
+    if (ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
+      ctx.fsm.setMalformed400("missing http version");
+      return stateError(ctx);
+    }
+
     hasChar = std::isalpha(static_cast<unsigned char>(ctx.buf[ctx.offset]));
     if (!hasChar) {
       break;
@@ -78,6 +83,12 @@ State stateURI(Context &ctx) {
       ctx.offset++;
       break;
     }
+
+    if (ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
+      ctx.fsm.setMalformed400("missing http version");
+      return stateError(ctx);
+    }
+
     ctx.offset++;
   }
 
