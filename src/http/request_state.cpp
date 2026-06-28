@@ -188,11 +188,13 @@ State stateVersion(Context &ctx) {
 }
 
 State stateHeaderKey(Context &ctx) {
+  // parse request header and save it in fsm.current_key
   ctx.offset = ctx.len;
   return stateDone(ctx);
 }
 
 State stateHeaderValue(Context &ctx) {
+  // parse request value and save value and key from fsm.current_key
   ctx.offset = ctx.len;
   return stateDone(ctx);
 }

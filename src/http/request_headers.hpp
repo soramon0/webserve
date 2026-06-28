@@ -60,4 +60,7 @@ public:
   bool has(const StringView &key) const {
     return store.find(key) != store.end();
   }
+
+  static bool isValidKey(const StringView &key);
+  static bool isValidValue(const StringView &);
 };

@@ -50,6 +50,7 @@ private:
 
 public:
   FSMStatus status;
+  StringView current_header;
 
   FSM();
   ~FSM();
