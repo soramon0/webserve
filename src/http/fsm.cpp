@@ -19,6 +19,11 @@ bool FSM::feedChunk(const char *buf, size_t len) {
   Logger::debug("arena available space: %zu", req->arena.available());
   Logger::debug("socket recieved: %.*s", (int)len, buf);
 
+  if (len == 0) {
+    this->setMalformed400();
+    return false;
+  }
+
   Context ctx(*this, req, buf, len, 0);
 
   while (ctx.offset < ctx.len) {
