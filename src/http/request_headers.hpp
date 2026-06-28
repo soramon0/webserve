@@ -7,6 +7,9 @@ private:
   typedef std::multimap<StringView, StringView> HStore;
   HStore store;
 
+  Headers(const Headers &);
+  Headers &operator=(const Headers &);
+
 public:
   typedef std::pair<HStore::const_iterator, HStore::const_iterator> Range;
 
