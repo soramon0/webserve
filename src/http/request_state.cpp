@@ -143,17 +143,10 @@ State stateVersion(Context &ctx) {
   size_t start = ctx.offset;
   bool end = false;
   while (ctx.offset < ctx.len) {
-    unsigned char c = static_cast<unsigned char>(ctx.buf[ctx.offset]);
-    if (c == '\r' || c == '\n') {
+    if (ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
       end = true;
       break;
     }
-
-    // if (std::isalnum(static_cast<unsigned char>(ctx.buf[ctx.offset])) ||
-    //     ctx.buf[ctx.offset] == '/') {
-    //   ctx.offset++;
-    //   continue;
-    // }
 
     ctx.offset++;
   }
