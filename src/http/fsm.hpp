@@ -54,4 +54,5 @@ public:
   void setMalformed(HttpStatus::Code status);
   void setMalformed500();
   void setMalformed400();
+  bool consumeCRLF(const char *buf, size_t len, size_t &offset) const;
 };

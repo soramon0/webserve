@@ -141,13 +141,20 @@ State stateVersion(Context &ctx) {
   Logger::debug("state: version");
 
   size_t start = ctx.offset;
-  int end = 0;
+  bool end = false;
   while (ctx.offset < ctx.len) {
     unsigned char c = static_cast<unsigned char>(ctx.buf[ctx.offset]);
     if (c == '\r' || c == '\n') {
-      end = 1;
+      end = true;
       break;
     }
+
+    // if (std::isalnum(static_cast<unsigned char>(ctx.buf[ctx.offset])) ||
+    //     ctx.buf[ctx.offset] == '/') {
+    //   ctx.offset++;
+    //   continue;
+    // }
+
     ctx.offset++;
   }
 
@@ -161,15 +168,10 @@ State stateVersion(Context &ctx) {
     return stateVersion;
   }
 
-  if (ctx.buf[ctx.offset] == '\r') {
-    ctx.offset++;
-    if (ctx.offset < ctx.len && ctx.buf[ctx.offset] == '\n') {
-      ctx.offset++;
-    }
-  } else if (ctx.buf[ctx.offset] == '\n') {
-    ctx.offset++;
-  }
+  Logger::info("got here 2 '%*.s'", (int)ctx.req->version_view.length(),
+               ctx.req->version_view.data());
 
+  ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset);
   if (ctx.req->version_view.empty()) {
     ctx.fsm.setMalformed400();
     return stateError;
@@ -181,6 +183,17 @@ State stateVersion(Context &ctx) {
     return stateError;
   }
 
+  return stateHeaderKey;
+}
+
+State stateHeaderKey(Context &ctx) {
+  ctx.offset = ctx.len;
+  ctx.fsm.setDone();
+  return stateDone;
+}
+
+State stateHeaderValue(Context &ctx) {
+  ctx.offset = ctx.len;
   ctx.fsm.setDone();
   return stateDone;
 }

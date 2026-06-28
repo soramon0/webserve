@@ -50,3 +50,21 @@ void FSM::setMalformed400() {
   status = FSMStatus::MALFORMED;
   this->req->status = HttpStatus::BAD_REQUEST;
 }
+
+bool FSM::consumeCRLF(const char *buf, size_t len, size_t &offset) const {
+  if (buf[offset] == '\r') {
+    offset++;
+    if (offset < len) {
+      // buffer too small
+      return true;
+    }
+    if (buf[offset] == '\n') {
+      offset++;
+      return true;
+    }
+  } else if (buf[offset] == '\n') {
+    offset++;
+    return true;
+  }
+  return false;
+}
