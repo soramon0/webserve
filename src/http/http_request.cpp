@@ -42,3 +42,9 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
   }
   return true;
 }
+
+void HttpRequest::dumpState() {
+  Logger::info("req.status = %d", this->status.asInt());
+  Logger::info("req.error = %*.s", (int)error.length(), error.data());
+  printRequest();
+};
