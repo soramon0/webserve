@@ -12,7 +12,7 @@ State stateStart(Context &ctx) {
   Logger::debug("state: start");
 
   if (!std::isalpha(static_cast<unsigned char>(ctx.buf[ctx.offset]))) {
-    ctx.fsm.setMalformed400();
+    ctx.fsm.setMalformed400("malformed request-line");
     return stateError;
   }
   return stateMethod;
@@ -39,7 +39,7 @@ State stateMethod(Context &ctx) {
   }
 
   if (!hasChar && ctx.req->method_view.empty()) {
-    ctx.fsm.setMalformed400();
+    ctx.fsm.setMalformed400("invalid request method");
     return stateError;
   }
 
@@ -55,12 +55,12 @@ State stateMethod(Context &ctx) {
 
   ctx.req->method = HttpMethod(ctx.req->method_view);
   if (ctx.req->method.isUnknown()) {
-    ctx.fsm.setMalformed(HttpStatus::NOT_IMPLEMENTED);
+    ctx.fsm.setMalformed(HttpStatus::NOT_IMPLEMENTED, "method not implemented");
     return stateError;
   }
 
   if (!ctx.req->method.isSupported()) {
-    ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED);
+    ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED, "method not allowed");
     return stateError;
   }
 
@@ -88,7 +88,7 @@ State stateURI(Context &ctx) {
   }
 
   if (sp && ctx.req->uri.empty()) {
-    ctx.fsm.setMalformed400();
+    ctx.fsm.setMalformed400("uri is required");
     return stateError;
   }
 
@@ -115,7 +115,7 @@ State stateURI(Context &ctx) {
 
     // Reject missing domains (e.g., just "http://")
     if (remaining_len == 0) {
-      ctx.fsm.setMalformed400();
+      ctx.fsm.setMalformed400("uri is invalid");
       return stateError;
     }
 
@@ -133,7 +133,7 @@ State stateURI(Context &ctx) {
     return stateVersion;
   }
 
-  ctx.fsm.setMalformed400();
+  ctx.fsm.setMalformed400("invalid uri in request-line");
   return stateError;
 }
 
@@ -173,13 +173,13 @@ State stateVersion(Context &ctx) {
 
   ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset);
   if (ctx.req->version_view.empty()) {
-    ctx.fsm.setMalformed400();
+    ctx.fsm.setMalformed400("http version is required");
     return stateError;
   }
 
   ctx.req->version = HttpVersion(ctx.req->version_view);
   if (ctx.req->version.isUnknown() || !ctx.req->version.isSupported()) {
-    ctx.fsm.setMalformed400();
+    ctx.fsm.setMalformed400("http version is not supported");
     return stateError;
   }
 
