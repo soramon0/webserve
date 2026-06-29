@@ -83,7 +83,7 @@ bool FSM::consumeCRLF(const char *buf, size_t len, size_t &offset) const {
     offset++;
     if (offset >= len) {
       // buffer too small
-      return true;
+      return false;
     }
     if (buf[offset] == '\n') {
       offset++;
