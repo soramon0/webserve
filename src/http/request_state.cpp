@@ -166,7 +166,7 @@ State stateVersion(Context &ctx) {
     return stateVersion;
   }
 
-  if (!ctx.req->version.isSupported()) {
+  if (ctx.req->version.isUnknown()) {
     if (ctx.req->version_view.empty()) {
       ctx.fsm.setMalformed400("http version is required");
       return stateError(ctx);
