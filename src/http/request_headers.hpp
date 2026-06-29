@@ -13,6 +13,8 @@ private:
 public:
   typedef std::pair<HStore::const_iterator, HStore::const_iterator> Range;
 
+  size_t size() const { return store.size(); }
+
   Headers() {};
 
   /**
