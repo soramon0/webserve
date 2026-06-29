@@ -25,6 +25,9 @@ void HttpRequest::printRequest() const {
 }
 
 bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
+  if (size == 0)
+    return true;
+
   if (field.empty()) {
     char *data = arena.str_append(buf, size);
     if (!data) {
