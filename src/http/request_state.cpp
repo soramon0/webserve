@@ -152,13 +152,7 @@ State stateVersion(Context &ctx) {
   Logger::debug("state: version");
 
   size_t start = ctx.offset;
-  bool end = false;
-  while (ctx.offset < ctx.len) {
-    if (ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
-      end = true;
-      break;
-    }
-
+  while (ctx.offset < ctx.len && !ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
     ctx.offset++;
   }
 
@@ -168,27 +162,21 @@ State stateVersion(Context &ctx) {
     return stateError(ctx);
   }
 
-  if (!end) {
+  if (ctx.offset == ctx.len) {
     return stateVersion;
   }
 
-  if (ctx.req->version.isSupported()) {
-    if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
-      return stateVersion;
+  if (!ctx.req->version.isSupported()) {
+    if (ctx.req->version_view.empty()) {
+      ctx.fsm.setMalformed400("http version is required");
+      return stateError(ctx);
     }
 
-    return stateHeaderKey;
-  }
-
-  if (ctx.req->version_view.empty()) {
-    ctx.fsm.setMalformed400("http version is required");
-    return stateError(ctx);
-  }
-
-  ctx.req->version = HttpVersion(ctx.req->version_view);
-  if (ctx.req->version.isUnknown() || !ctx.req->version.isSupported()) {
-    ctx.fsm.setMalformed400("http version is not supported");
-    return stateError(ctx);
+    ctx.req->version = HttpVersion(ctx.req->version_view);
+    if (ctx.req->version.isUnknown() || !ctx.req->version.isSupported()) {
+      ctx.fsm.setMalformed400("http version is not supported");
+      return stateError(ctx);
+    }
   }
 
   if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
