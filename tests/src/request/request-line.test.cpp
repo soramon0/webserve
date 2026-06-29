@@ -65,6 +65,24 @@ TEST_CASE("FSM handles absolute URI with missing trailing path") {
   CHECK(std::string(req->uri.data(), req->uri.length()) == "/");
 }
 
+TEST_CASE("FSM handles incomplete CRLF") {
+  FSM fsm;
+  std::string input = "GET / HTTP/1.0\r";
+
+  CHECK(fsm.feedChunk(input.data(), input.length()));
+  REQUIRE(fsm.status.isPending());
+  CHECK(fsm.feedChunk("\n", 1));
+  REQUIRE(fsm.status.isPending());
+  CHECK(fsm.feedChunk("\r\n", 2));
+  REQUIRE(fsm.status.isDone());
+
+  HttpRequest *req = fsm.getRequest();
+  REQUIRE(req != nullptr);
+  CHECK(req->status == HttpStatus::OK);
+  CHECK(req->version == HttpVersion::V1_0);
+  CHECK(std::string(req->uri.data(), req->uri.length()) == "/");
+}
+
 TEST_CASE("FSM rejects missing uri") {
   FSM fsm;
   std::string bad_input = "GET\r\n";

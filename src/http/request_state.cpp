@@ -172,7 +172,14 @@ State stateVersion(Context &ctx) {
     return stateVersion;
   }
 
-  ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset);
+  if (ctx.req->version.isSupported()) {
+    if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
+      return stateVersion;
+    }
+
+    return stateHeaderKey;
+  }
+
   if (ctx.req->version_view.empty()) {
     ctx.fsm.setMalformed400("http version is required");
     return stateError(ctx);
@@ -184,18 +191,47 @@ State stateVersion(Context &ctx) {
     return stateError(ctx);
   }
 
+  if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
+    return stateVersion;
+  }
+
   return stateHeaderKey;
 }
 
 State stateHeaderKey(Context &ctx) {
+  Logger::debug("state: headerKey");
+
   // parse request header and save it in fsm.current_key
-  ctx.offset = ctx.len;
-  return stateDone(ctx);
+  size_t start = ctx.offset;
+  if (ctx.fsm.isCRLF(ctx.buf[start])) {
+    if (ctx.req->version == HttpVersion::V1_1) {
+      const StringView *host = ctx.req->headers.get("host");
+      if (!host) {
+        ctx.fsm.setMalformed400("missing host header");
+        return stateError(ctx);
+      }
+    }
+    if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
+      return stateHeaderKey;
+    }
+    return stateDone(ctx);
+  }
+
+  return stateBody(ctx);
 }
 
 State stateHeaderValue(Context &ctx) {
   // parse request value and save value and key from fsm.current_key
   ctx.offset = ctx.len;
+  return stateDone(ctx);
+}
+
+State stateBody(Context &ctx) {
+  Logger::debug("state: body");
+  if (ctx.req->method != HttpMethod::POST) {
+    return stateDone(ctx);
+  }
+  // parse body
   return stateDone(ctx);
 }
 
