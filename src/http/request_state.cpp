@@ -195,7 +195,7 @@ State stateHeaderKey(Context &ctx) {
     if (ctx.req->version == HttpVersion::V1_1) {
       const StringView *host = ctx.req->headers.get("host");
       if (!host) {
-        ctx.fsm.setMalformed400("missing host header");
+        ctx.fsm.setMalformed400();
         return stateError(ctx);
       }
     }
@@ -205,7 +205,34 @@ State stateHeaderKey(Context &ctx) {
     return stateDone(ctx);
   }
 
-  return stateBody(ctx);
+  // :
+  while (ctx.offset < ctx.len && ctx.buf[ctx.offset] != ':') {
+    if (!Headers::isValidKeyChar(ctx.buf[ctx.offset])) {
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+    }
+
+    ctx.offset++;
+  }
+
+  size_t size = ctx.offset - start;
+  if (!ctx.req->updateField(ctx.fsm.current_header, &ctx.buf[start], size)) {
+    ctx.fsm.setMalformed500();
+    return stateError(ctx);
+  }
+
+  if (ctx.fsm.current_header.empty()) {
+    ctx.fsm.setMalformed400("header key invalid");
+    return stateError(ctx);
+  }
+
+  if (ctx.offset == ctx.len) {
+    return stateHeaderKey;
+  }
+
+  // consume `:`
+  ctx.offset++;
+  return stateHeaderValue;
 }
 
 State stateHeaderValue(Context &ctx) {
