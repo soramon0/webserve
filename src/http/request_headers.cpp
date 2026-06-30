@@ -5,20 +5,25 @@
  * A valid key must contain at least one character and consist only of
  * visible alphanumeric characters or specific allowed symbols.
  */
+
+bool Headers::isValidKeyChar(unsigned char c) {
+  // Catch spaces, controls, and DEL
+  if (c <= 0x20 || c == 0x7F)
+    return false;
+
+  return !(c == '(' || c == ')' || c == '<' || c == '>' || c == '@' ||
+          c == ',' || c == ';' || c == ':' || c == '\\' || c == '"' ||
+          c == '/' || c == '[' || c == ']' || c == '?' || c == '=' ||
+          c == '{' || c == '}');
+}
+
 bool Headers::isValidKey(const StringView &key) {
   if (key.empty())
     return false;
 
   for (std::size_t i = 0; i < key.length(); ++i) {
     unsigned char c = static_cast<unsigned char>(key[i]);
-
-    // Catch spaces, controls, and DEL
-    if (c <= 0x20 || c == 0x7F)
-      return false;
-
-    if (c == '(' || c == ')' || c == '<' || c == '>' || c == '@' || c == ',' ||
-        c == ';' || c == ':' || c == '\\' || c == '"' || c == '/' || c == '[' ||
-        c == ']' || c == '?' || c == '=' || c == '{' || c == '}') {
+    if (!isValidKeyChar(c)) {
       return false;
     }
   }
@@ -48,5 +53,6 @@ bool Headers::isValidValue(const StringView &value) {
       return false;
     }
   }
+
   return true;
 }
