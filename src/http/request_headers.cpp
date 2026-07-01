@@ -84,6 +84,8 @@ void Headers::normalizeValue(StringView &value) {
   }
 
   if (start > end) {
+    // empty header values allowed
+    value = StringView(str, 0);
     return;
   }
 
