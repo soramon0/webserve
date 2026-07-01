@@ -24,7 +24,8 @@ void HttpRequest::printRequest() const {
     Headers::AllRange range = headers.all();
     for (Headers::AllRange::first_type it = range.first; it != range.second;
          ++it) {
-      std::cout << it->first << ": " << it->second << "\n";
+      Logger::debug("%.*s: %.*s", (int)it->first.length(), it->first.data(),
+                    (int)it->second.length(), it->second.data());
     }
   }
 
