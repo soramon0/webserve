@@ -202,7 +202,8 @@ State stateHeaderKey(Context &ctx) {
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderKey;
     }
-    return stateBody(ctx);
+    // force done state until we implment body state
+    return stateDone(ctx);
   }
 
   // header-field   = field-name ":" OWS field-value OWS
@@ -250,7 +251,7 @@ State stateHeaderValue(Context &ctx) {
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderValue;
     }
-    return stateHeaderKey(ctx);
+    return stateHeaderKey;
   }
 
   size_t start = ctx.offset;
@@ -287,7 +288,7 @@ State stateHeaderValue(Context &ctx) {
   key.clear();
   value.clear();
 
-  return stateHeaderKey(ctx);
+  return stateHeaderKey;
 }
 
 State stateBody(Context &ctx) {
