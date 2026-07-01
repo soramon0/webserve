@@ -1,23 +1,5 @@
 #include "string_view.hpp"
 
-bool StringView::operator==(const StringView &other) const {
-  if (this->len != other.len)
-    return false;
-  if (this->buf == other.buf)
-    return true;
-  return std::memcmp(this->buf, other.buf, this->len) == 0;
-}
-
-bool StringView::operator<(const StringView &other) const {
-  std::size_t min_len = (this->len < other.len) ? this->len : other.len;
-  int cmp = std::memcmp(this->buf, other.buf, min_len);
-
-  if (cmp != 0) {
-    return cmp < 0;
-  }
-  return this->len < other.len;
-}
-
 const char *StringView::startsWith(const char *target) const {
   if (!target || len == 0)
     return NULL;
