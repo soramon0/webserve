@@ -194,7 +194,7 @@ State stateHeaderKey(Context &ctx) {
   if (ctx.fsm.isCRLF(ctx.buf[start])) {
     if (ctx.req->version == HttpVersion::V1_1) {
       const StringView *host = ctx.req->headers.get("host");
-      if (!host) {
+      if (!host || host->empty()) {
         ctx.fsm.setMalformed400();
         return stateError(ctx);
       }
