@@ -71,3 +71,111 @@ TEST_CASE("FSM handles complex header value spaces") {
     CHECK(empty_space->empty());
   }
 }
+
+TEST_CASE("FSM rejects malformed header keys") {
+  FSM fsm;
+  std::string bad_input;
+
+  SUBCASE("Space before colon is illegal") {
+    bad_input = "GET / HTTP/1.1\r\nHost : example.com\r\n\r\n";
+    CHECK(!fsm.feedChunk(bad_input.data(), bad_input.length()));
+  }
+
+  SUBCASE("Space inside header key is illegal") {
+    bad_input = "GET / HTTP/1.1\r\nX-My Header: value\r\n\r\n";
+    CHECK(!fsm.feedChunk(bad_input.data(), bad_input.length()));
+  }
+
+  SUBCASE("Control characters in key are illegal") {
+    bad_input = "GET / HTTP/1.1\r\nHost\x01: example.com\r\n\r\n";
+    CHECK(!fsm.feedChunk(bad_input.data(), bad_input.length()));
+  }
+
+  REQUIRE(fsm.status.isMalformed());
+  HttpRequest *req = fsm.getRequest();
+  REQUIRE(req != nullptr);
+  CHECK(req->status == HttpStatus::BAD_REQUEST);
+}
+
+TEST_CASE("FSM normalizes case-insensitive header lookup") {
+  FSM fsm;
+  std::string input = "GET / HTTP/1.0\r\n"
+                      "coNTenT-tYPe: text/html\r\n\r\n";
+
+  CHECK(fsm.feedChunk(input.data(), input.length()));
+  REQUIRE(fsm.status.isDone());
+
+  HttpRequest *req = fsm.getRequest();
+  REQUIRE(req != nullptr);
+
+  CHECK(req->headers.get("content-type") != nullptr);
+  CHECK(req->headers.get("coNTenT-tYPe") == nullptr);
+  CHECK(req->headers.get("Content-Type") == nullptr);
+  CHECK(req->headers.get("CONTENT-TYPE") == nullptr);
+}
+
+TEST_CASE("FSM handles repeated headers using multimap range") {
+  FSM fsm;
+  std::string input = "GET / HTTP/1.0\r\n"
+                      "Accept: text/html\r\n"
+                      "Accept: application/xhtml+xml\r\n"
+                      "Accept:   application/xml;q=0.9   \r\n"
+                      "\r\n";
+
+  CHECK(fsm.feedChunk(input.data(), input.length()));
+  REQUIRE(fsm.status.isDone());
+
+  HttpRequest *req = fsm.getRequest();
+  REQUIRE(req != nullptr);
+
+  // Total distinct keys might be 1, but total values stored will be 3
+  CHECK(req->headers.size() == 3);
+
+  auto range = req->headers.get_all("accept");
+
+  // Verify we actually found the sequence
+  REQUIRE(range.first != range.second);
+
+  auto it = range.first;
+
+  REQUIRE(it != range.second);
+  CHECK(it->second == StringView("text/html"));
+
+  ++it;
+  REQUIRE(it != range.second);
+  CHECK(it->second == StringView("application/xhtml+xml"));
+
+  ++it;
+  REQUIRE(it != range.second);
+  CHECK(it->second == StringView("application/xml;q=0.9"));
+
+  ++it;
+  CHECK(it == range.second); // we got to end
+}
+
+TEST_CASE("FSM enforces mandatory Host header for HTTP/1.1") {
+  FSM fsm;
+
+  SUBCASE("Reject HTTP/1.1 request when Host header is missing") {
+    std::string input = "GET / HTTP/1.1\r\n"
+                        "Content-Length: 0\r\n\r\n";
+
+    fsm.feedChunk(input.data(), input.length());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Accept HTTP/1.1 request when Host header is present") {
+    std::string input = "GET / HTTP/1.1\r\n"
+                        "Host: localhost\r\n\r\n";
+
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isDone());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::OK);
+  }
+}
