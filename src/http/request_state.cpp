@@ -246,8 +246,10 @@ State stateHeaderKey(Context &ctx) {
 // field-vchar    = VCHAR / obs-text
 State stateHeaderValue(Context &ctx) {
   Logger::debug("state: headerValue");
+  StringView &key = ctx.fsm.curr_header_key;
+  StringView &value = ctx.fsm.curr_header_value;
 
-  if (ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
+  if (ctx.fsm.isCRLF(ctx.buf[ctx.offset]) && key.empty() && value.empty()) {
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderValue;
     }
@@ -260,35 +262,35 @@ State stateHeaderValue(Context &ctx) {
   }
 
   size_t size = ctx.offset - start;
-  if (!ctx.req->updateField(ctx.fsm.curr_header_value, &ctx.buf[start], size)) {
+  if (!ctx.req->updateField(value, &ctx.buf[start], size)) {
     ctx.fsm.setMalformed500();
     return stateError(ctx);
   }
 
-  if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
-    return stateHeaderValue;
+  if (ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
+    Headers::normalizeKey(const_cast<char *>(key.data()), key.length());
+    if (!Headers::isValidKey(key)) {
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+    }
+
+    Headers::normalizeValue(value);
+    if (!Headers::isValidValue(value)) {
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+    }
+
+    ctx.req->headers.set(key, value);
+    key.clear();
+    value.clear();
+
+    if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
+      return stateHeaderValue;
+    }
+    return stateHeaderKey;
   }
 
-  StringView &key = ctx.fsm.curr_header_key;
-  StringView &value = ctx.fsm.curr_header_value;
-
-  Headers::normalizeKey(const_cast<char *>(key.data()), key.length());
-  if (!Headers::isValidKey(key)) {
-    ctx.fsm.setMalformed400();
-    return stateError(ctx);
-  }
-
-  Headers::normalizeValue(value);
-  if (!Headers::isValidValue(value)) {
-    ctx.fsm.setMalformed400();
-    return stateError(ctx);
-  }
-
-  ctx.req->headers.set(key, value);
-  key.clear();
-  value.clear();
-
-  return stateHeaderKey;
+  return stateHeaderValue;
 }
 
 State stateBody(Context &ctx) {
