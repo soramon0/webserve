@@ -20,6 +20,13 @@ void HttpRequest::printRequest() const {
                 version_view.data());
 
   Logger::debug("--- Headers ---");
+  if (headers.size() > 0) {
+    Headers::AllRange range = headers.all();
+    for (Headers::AllRange::first_type it = range.first; it != range.second;
+         ++it) {
+      std::cout << it->first << ": " << it->second << "\n";
+    }
+  }
 
   Logger::debug("-------------------");
 }

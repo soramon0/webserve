@@ -12,6 +12,7 @@ private:
 
 public:
   typedef std::pair<HStore::const_iterator, HStore::const_iterator> Range;
+  typedef std::pair<HStore::const_iterator, HStore::const_iterator> AllRange;
 
   size_t size() const { return store.size(); }
 
@@ -41,6 +42,13 @@ public:
    * @return A Range pair of const_iterators to safely loop through the values.
    */
   Range get_all(const StringView &key) const { return store.equal_range(key); }
+
+  /**
+   * @brief Retrieves an iterator range covering every header in the store.
+   * @return An AllRange pair containing const_iterators to the beginning and
+   * end.
+   */
+  AllRange all() const { return std::make_pair(store.begin(), store.end()); }
 
   /**
    * @brief Inserts a new header key-value pair.
