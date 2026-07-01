@@ -63,13 +63,10 @@ TEST_CASE("FSM handles complex header value spaces") {
   REQUIRE(ua != nullptr);
   CHECK(*ua == StringView("Mozilla/5.0 (Windows)"));
 
-  // An empty space header value should evaluate cleanly or be removed safely
+  // An empty space header value should evaluate cleanly
   const StringView *empty_space = req->headers.get("x-empty-space");
-  // Depending on your design, this should either be an empty view or invalid.
-  // If your validation rejects empty values, check for bad request instead.
-  if (empty_space) {
-    CHECK(empty_space->empty());
-  }
+  REQUIRE(empty_space != nullptr);
+  CHECK(empty_space->empty());
 }
 
 TEST_CASE("FSM rejects malformed header keys") {
@@ -177,5 +174,16 @@ TEST_CASE("FSM enforces mandatory Host header for HTTP/1.1") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->status == HttpStatus::OK);
+  }
+
+  SUBCASE("Reject HTTP/1.1 request when Host header is empty") {
+    std::string input = "GET / HTTP/1.1\r\n"
+                        "Host:  \t\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
   }
 }
