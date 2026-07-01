@@ -76,9 +76,11 @@ void FSM::setMalformed400(const char *msg) {
 
 void FSM::setMalformed400() { setMalformed400(NULL); }
 
-bool FSM::isCRLF(unsigned char c) const { return c == '\r' || c == '\n'; }
-
 bool FSM::consumeCRLF(const char *buf, size_t len, size_t &offset) const {
+  if (offset >= len) {
+    return false;
+  }
+
   if (buf[offset] == '\r') {
     offset++;
     if (offset >= len) {
@@ -94,4 +96,12 @@ bool FSM::consumeCRLF(const char *buf, size_t len, size_t &offset) const {
     return true;
   }
   return false;
+}
+
+bool FSM::consumeOWS(const char *buf, size_t len, size_t &offset) const {
+  while (offset < len && isOWS(buf[offset])) {
+    offset++;
+  }
+
+  return true;
 }

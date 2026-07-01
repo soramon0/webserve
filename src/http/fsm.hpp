@@ -50,7 +50,8 @@ private:
 
 public:
   FSMStatus status;
-  StringView current_header;
+  StringView curr_header_key;
+  StringView curr_header_value;
 
   FSM();
   ~FSM();
@@ -67,8 +68,10 @@ public:
   void setMalformed(HttpStatus::Code status);
   void setMalformed500();
   void setMalformed400();
-  bool isCRLF(unsigned char c) const;
   bool consumeCRLF(const char *buf, size_t len, size_t &offset) const;
+  bool isCRLF(unsigned char c) const { return c == '\r' || c == '\n'; }
+  bool isOWS(unsigned char c) const { return c == ' ' || c == '\t'; }
+  bool consumeOWS(const char *buf, size_t len, size_t &offset) const;
 
   void dumpState() const {
     Logger::info("fsm.status = %s", status.asStr());
