@@ -202,10 +202,15 @@ State stateHeaderKey(Context &ctx) {
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderKey;
     }
-    return stateDone(ctx);
+    return stateBody(ctx);
   }
 
-  // :
+  // header-field   = field-name ":" OWS field-value OWS
+  // field-name     = token
+  // token          = 1*tchar
+  // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+  //                / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+  //                DIGIT / ALPHA
   while (ctx.offset < ctx.len && ctx.buf[ctx.offset] != ':') {
     if (!Headers::isValidKeyChar(ctx.buf[ctx.offset])) {
       ctx.fsm.setMalformed400();
@@ -216,13 +221,8 @@ State stateHeaderKey(Context &ctx) {
   }
 
   size_t size = ctx.offset - start;
-  if (!ctx.req->updateField(ctx.fsm.current_header, &ctx.buf[start], size)) {
+  if (!ctx.req->updateField(ctx.fsm.curr_header_key, &ctx.buf[start], size)) {
     ctx.fsm.setMalformed500();
-    return stateError(ctx);
-  }
-
-  if (ctx.fsm.current_header.empty()) {
-    ctx.fsm.setMalformed400("header key invalid");
     return stateError(ctx);
   }
 
@@ -230,15 +230,64 @@ State stateHeaderKey(Context &ctx) {
     return stateHeaderKey;
   }
 
-  // consume `:`
+  if (ctx.fsm.curr_header_key.empty()) {
+    ctx.fsm.setMalformed400("header key invalid");
+    return stateError(ctx);
+  }
+
   ctx.offset++;
   return stateHeaderValue;
 }
 
+// header-field   = field-name ":" OWS field-value OWS
+// field-value    = *field-content
+// field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+// field-vchar    = VCHAR / obs-text
 State stateHeaderValue(Context &ctx) {
-  // parse request value and save value and key from fsm.current_key
-  ctx.offset = ctx.len;
-  return stateDone(ctx);
+  Logger::debug("state: headerValue");
+
+  if (ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
+    if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
+      return stateHeaderValue;
+    }
+    return stateHeaderKey(ctx);
+  }
+
+  size_t start = ctx.offset;
+  while (ctx.offset < ctx.len && !ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
+    ctx.offset++;
+  }
+
+  size_t size = ctx.offset - start;
+  if (!ctx.req->updateField(ctx.fsm.curr_header_value, &ctx.buf[start], size)) {
+    ctx.fsm.setMalformed500();
+    return stateError(ctx);
+  }
+
+  if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
+    return stateHeaderValue;
+  }
+
+  StringView &key = ctx.fsm.curr_header_key;
+  StringView &value = ctx.fsm.curr_header_value;
+
+  Headers::normalizeKey(const_cast<char *>(key.data()), key.length());
+  if (!Headers::isValidKey(key)) {
+    ctx.fsm.setMalformed400();
+    return stateError(ctx);
+  }
+
+  Headers::normalizeValue(value);
+  if (!Headers::isValidValue(value)) {
+    ctx.fsm.setMalformed400();
+    return stateError(ctx);
+  }
+
+  ctx.req->headers.set(key, value);
+  key.clear();
+  value.clear();
+
+  return stateHeaderKey(ctx);
 }
 
 State stateBody(Context &ctx) {
