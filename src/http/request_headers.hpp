@@ -63,6 +63,8 @@ public:
     return store.find(key) != store.end();
   }
 
+  static void normalizeKey(char *buf, size_t len);
+  static void normalizeValue(StringView &value);
   static bool isValidKey(const StringView &key);
   static bool isValidKeyChar(unsigned char);
   static bool isValidValue(const StringView &);

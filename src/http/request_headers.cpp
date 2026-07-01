@@ -1,4 +1,5 @@
 #include "request_headers.hpp"
+#include <cctype>
 
 /**
  * @brief Validates if a header key follows the RFC 7230 'token' grammar.
@@ -12,9 +13,9 @@ bool Headers::isValidKeyChar(unsigned char c) {
     return false;
 
   return !(c == '(' || c == ')' || c == '<' || c == '>' || c == '@' ||
-          c == ',' || c == ';' || c == ':' || c == '\\' || c == '"' ||
-          c == '/' || c == '[' || c == ']' || c == '?' || c == '=' ||
-          c == '{' || c == '}');
+           c == ',' || c == ';' || c == ':' || c == '\\' || c == '"' ||
+           c == '/' || c == '[' || c == ']' || c == '?' || c == '=' ||
+           c == '{' || c == '}');
 }
 
 bool Headers::isValidKey(const StringView &key) {
@@ -55,4 +56,37 @@ bool Headers::isValidValue(const StringView &value) {
   }
 
   return true;
+}
+
+void Headers::normalizeKey(char *buf, size_t len) {
+  size_t i = 0;
+  while (i < len) {
+    buf[i] = std::tolower(static_cast<unsigned char>(buf[i]));
+    i++;
+  }
+}
+
+void Headers::normalizeValue(StringView &value) {
+  if (value.empty()) {
+    return;
+  }
+
+  const char *str = value.data();
+  int start = 0;
+  int end = static_cast<int>(value.length()) - 1;
+
+  while (start <= end && (str[start] == ' ' || str[start] == '\t')) {
+    start++;
+  }
+
+  while (end >= start && (str[end] == ' ' || str[end] == '\t')) {
+    end--;
+  }
+
+  if (start > end) {
+    return;
+  }
+
+  std::size_t new_len = static_cast<std::size_t>(end - start + 1);
+  value = StringView(str + start, new_len);
 }
