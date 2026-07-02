@@ -10,7 +10,7 @@
 
 class HttpRequest {
 public:
-  Arena arena;
+  ArenaBlock arena;
   HttpStatus status;
   HttpMethod method;
   HttpVersion version;
