@@ -6,7 +6,7 @@
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
 #endif
 
-class Arena {
+class ArenaBlock {
 private:
   unsigned char *buf;
   size_t capacity;
@@ -15,16 +15,16 @@ private:
   size_t alignment;
   bool zeroout;
 
-  Arena(const Arena &other);
-  Arena &operator=(const Arena &other);
+  ArenaBlock(const ArenaBlock &other);
+  ArenaBlock &operator=(const ArenaBlock &other);
 
   size_t next_offset(size_t align) const;
 
 public:
-  Arena()
+  ArenaBlock()
       : buf(NULL), capacity(0), prev_offset(0), curr_offset(0),
         alignment(DEFAULT_ALIGNMENT), zeroout(true) {};
-  ~Arena();
+  ~ArenaBlock();
 
   void setAlignment(size_t align);
   void setZeroout(bool val);
@@ -47,3 +47,8 @@ public:
   char *str_resize(const char *old_memory, size_t old_size, const char *src,
                    size_t new_size);
 };
+
+// class Arena {
+//   ArenaBlock *head;
+//   ArenaBlock *current;
+// };

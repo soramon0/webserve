@@ -21,14 +21,14 @@ static uintptr_t align_forward(uintptr_t ptr, size_t align) {
   return p;
 }
 
-void Arena::setAlignment(size_t align) { alignment = align; }
-void Arena::setZeroout(bool val) { zeroout = val; }
+void ArenaBlock::setAlignment(size_t align) { alignment = align; }
+void ArenaBlock::setZeroout(bool val) { zeroout = val; }
 
-bool Arena::usable() const { return buf != NULL && capacity != 0; }
+bool ArenaBlock::usable() const { return buf != NULL && capacity != 0; }
 
-size_t Arena::consumed() const { return curr_offset; };
+size_t ArenaBlock::consumed() const { return curr_offset; };
 
-size_t Arena::available() const {
+size_t ArenaBlock::available() const {
   if (!buf || curr_offset > capacity)
     return 0;
 
@@ -38,14 +38,14 @@ size_t Arena::available() const {
   return capacity - offset;
 };
 
-bool Arena::setup(size_t cap) {
+bool ArenaBlock::setup(size_t cap) {
   if (usable())
     return true;
   return reinit(cap);
 }
 
 // call deinit() before re-initializing.
-bool Arena::init(size_t cap) {
+bool ArenaBlock::init(size_t cap) {
   if (buf != NULL || cap == 0) {
     return false;
   }
@@ -59,12 +59,12 @@ bool Arena::init(size_t cap) {
   return true;
 }
 
-bool Arena::reinit(size_t cap) {
+bool ArenaBlock::reinit(size_t cap) {
   deinit();
   return init(cap);
 }
 
-bool Arena::deinit() {
+bool ArenaBlock::deinit() {
   if (buf == NULL) {
     return false;
   }
@@ -77,9 +77,9 @@ bool Arena::deinit() {
   return true;
 }
 
-Arena::~Arena() { deinit(); }
+ArenaBlock::~ArenaBlock() { deinit(); }
 
-void *Arena::alloc_align(size_t size, size_t align) {
+void *ArenaBlock::alloc_align(size_t size, size_t align) {
   if (!buf)
     return NULL;
 
@@ -96,16 +96,16 @@ void *Arena::alloc_align(size_t size, size_t align) {
   return ptr;
 }
 
-size_t Arena::next_offset(size_t align) const {
+size_t ArenaBlock::next_offset(size_t align) const {
   uintptr_t curr_ptr = reinterpret_cast<uintptr_t>(buf + curr_offset);
   uintptr_t aligned = align_forward(curr_ptr, align);
   return aligned - reinterpret_cast<uintptr_t>(buf);
 }
 
-void *Arena::alloc(size_t size) { return alloc_align(size, alignment); }
+void *ArenaBlock::alloc(size_t size) { return alloc_align(size, alignment); }
 
-void *Arena::resize_align(void *old_memory, size_t old_size, size_t new_size,
-                          size_t align) {
+void *ArenaBlock::resize_align(void *old_memory, size_t old_size,
+                               size_t new_size, size_t align) {
   if (!buf)
     return NULL;
 
@@ -140,16 +140,16 @@ void *Arena::resize_align(void *old_memory, size_t old_size, size_t new_size,
   }
 }
 
-void *Arena::resize(void *old_memory, size_t old_size, size_t new_size) {
+void *ArenaBlock::resize(void *old_memory, size_t old_size, size_t new_size) {
   return resize_align(old_memory, old_size, new_size, alignment);
 }
 
-void Arena::free_all() {
+void ArenaBlock::free_all() {
   curr_offset = 0;
   prev_offset = 0;
 }
 
-char *Arena::str_append(const char *str, size_t len) {
+char *ArenaBlock::str_append(const char *str, size_t len) {
   char *data = static_cast<char *>(alloc(len));
   if (!data) {
     return NULL;
@@ -158,8 +158,8 @@ char *Arena::str_append(const char *str, size_t len) {
   return data;
 }
 
-char *Arena::str_resize(const char *old_memory, size_t old_size,
-                        const char *src, size_t new_size) {
+char *ArenaBlock::str_resize(const char *old_memory, size_t old_size,
+                             const char *src, size_t new_size) {
   if (!src || new_size == 0) {
     return NULL;
   }
