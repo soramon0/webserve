@@ -1,5 +1,4 @@
 #include "fsm.hpp"
-#include "common.h"
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
@@ -11,12 +10,12 @@ FSM::~FSM() {};
 
 bool FSM::feedChunk(const char *buf, size_t len) {
   // TODO: grow arena
-  if (!req->arena.setup(KIB(1))) {
+  if (!req->getStateReady()) {
     setMalformed500();
     return false;
   }
 
-  Logger::debug("arena available space: %zu", req->arena.available());
+  // Logger::debug("arena available space: %zu", req->arena.available());
   Logger::debug("socket recieved: %.*s", (int)len, buf);
 
   if (len == 0) {

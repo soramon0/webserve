@@ -1,10 +1,14 @@
 #include "http_request.hpp"
+#include "common.h"
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
-HttpRequest::HttpRequest() : status(HttpStatus::OK) {
+HttpRequest::HttpRequest() : ready(true), status(HttpStatus::OK) {
   arena.setAlignment(1);
   arena.setZeroout(false);
+  if (!arena.init(KIB(1), KIB(8))) {
+    ready = false;
+  }
 }
 
 HttpRequest::~HttpRequest() {}
