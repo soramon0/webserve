@@ -12,8 +12,6 @@ ArenaList::~ArenaList() {
     curr->~ArenaBlock();
     delete[] reinterpret_cast<unsigned char *>(curr);
 
-    // Animal
-
     curr = next_block;
   }
   head = NULL;
@@ -28,7 +26,7 @@ ArenaBlock *ArenaList::createBlock(size_t cap) {
     return NULL;
   }
 
-  ArenaBlock *block = new (mem) ArenaBlock(cap, alignment, false);
+  ArenaBlock *block = new (mem) ArenaBlock(cap, alignment, zeroout);
   uintptr_t curr_ptr = reinterpret_cast<uintptr_t>(mem + sizeof(ArenaBlock));
   block->buf =
       reinterpret_cast<unsigned char *>(align_forward(curr_ptr, alignment));
