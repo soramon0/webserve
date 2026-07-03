@@ -1,12 +1,19 @@
 #pragma once
 
 #include <cstdio>
+#include <stdint.h>
 
 #ifndef DEFAULT_ALIGNMENT
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
 #endif
 
+class ArenaList;
+
+uintptr_t align_forward(uintptr_t ptr, size_t align);
+
 class ArenaBlock {
+  friend class ArenaList;
+
 private:
   unsigned char *buf;
   ArenaBlock *next;
@@ -15,6 +22,7 @@ private:
   size_t curr_offset;
   size_t alignment;
   bool zeroout;
+  bool owns_memory;
 
   ArenaBlock(const ArenaBlock &other);
   ArenaBlock &operator=(const ArenaBlock &other);
@@ -24,7 +32,10 @@ private:
 public:
   ArenaBlock()
       : buf(NULL), next(NULL), capacity(0), prev_offset(0), curr_offset(0),
-        alignment(DEFAULT_ALIGNMENT), zeroout(true) {};
+        alignment(DEFAULT_ALIGNMENT), zeroout(true), owns_memory(false) {};
+  ArenaBlock(size_t cap, size_t align, bool zeroout)
+      : buf(NULL), next(NULL), capacity(cap), prev_offset(0), curr_offset(0),
+        alignment(align), zeroout(zeroout), owns_memory(false) {};
   ~ArenaBlock();
 
   void setAlignment(size_t align);

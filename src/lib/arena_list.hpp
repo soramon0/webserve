@@ -1,37 +1,30 @@
 #pragma once
 
+#include "arena.hpp"
 #include <cstdio>
-
-#ifndef DEFAULT_ALIGNMENT
-#define DEFAULT_ALIGNMENT (2 * sizeof(void *))
-#endif
 
 class ArenaList {
 private:
-  struct Block {
-    unsigned char *buf;
-    Block *next;
-    size_t capacity;
-    size_t prev_offset;
-    size_t curr_offset;
-    size_t alignment;
-    bool zeroout;
-  };
-
-  Block *head;
-  Block *current;
+  ArenaBlock *head;
+  ArenaBlock *current;
   size_t count;
   size_t max_cap;
+  size_t alignment;
 
   ArenaList(const ArenaList &other);
   ArenaList &operator=(const ArenaList &other);
 
+  ArenaBlock *createBlock(size_t cap);
   void *grow(size_t size);
 
 public:
-  ArenaList() : head(NULL), current(NULL), count(0), max_cap(0) {};
+  ArenaList()
+      : head(NULL), current(NULL), count(0), max_cap(0),
+        alignment(DEFAULT_ALIGNMENT) {};
+  ~ArenaList();
 
   size_t getBlockCount() const { return count; }
+  size_t getMaxCap() const { return max_cap; }
   void setMaxCap(size_t cap) { max_cap = cap; }
 
   bool init(size_t capacity, size_t max_capacity);
