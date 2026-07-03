@@ -7,7 +7,7 @@
 
 static bool is_power_of_two(uintptr_t x) { return (x & (x - 1)) == 0; }
 
-static uintptr_t align_forward(uintptr_t ptr, size_t align) {
+uintptr_t align_forward(uintptr_t ptr, size_t align) {
   uintptr_t p, a, modulo;
 
   assert(is_power_of_two(align));
@@ -55,6 +55,7 @@ bool ArenaBlock::init(size_t cap) {
     return false;
   }
 
+  owns_memory = true;
   capacity = cap;
   return true;
 }
@@ -69,11 +70,14 @@ bool ArenaBlock::deinit() {
     return false;
   }
 
-  delete[] buf;
+  if (owns_memory) {
+    delete[] buf;
+  }
   buf = NULL;
   capacity = 0;
   prev_offset = 0;
   curr_offset = 0;
+  owns_memory = false;
   return true;
 }
 

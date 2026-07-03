@@ -1,28 +1,50 @@
 #include "arena_list.hpp"
+#include "arena.hpp"
+#include <cassert>
 #include <new>
+#include <stdint.h>
+
+ArenaList::~ArenaList() {
+  ArenaBlock *curr = head;
+  while (curr != NULL) {
+    ArenaBlock *next_block = curr->next;
+
+    curr->~ArenaBlock();
+    delete[] reinterpret_cast<unsigned char *>(curr);
+
+    // Animal
+
+    curr = next_block;
+  }
+  head = NULL;
+  current = NULL;
+  count = 0;
+}
+
+ArenaBlock *ArenaList::createBlock(size_t cap) {
+  size_t total = sizeof(ArenaBlock) + cap + (alignment - 1);
+  unsigned char *mem = new (std::nothrow) unsigned char[total];
+  if (mem == NULL) {
+    return NULL;
+  }
+
+  ArenaBlock *block = new (mem) ArenaBlock(cap, alignment, false);
+  uintptr_t curr_ptr = reinterpret_cast<uintptr_t>(mem + sizeof(ArenaBlock));
+  block->buf =
+      reinterpret_cast<unsigned char *>(align_forward(curr_ptr, alignment));
+  return block;
+}
 
 bool ArenaList::init(size_t capacity, size_t max_capacity) {
   if (capacity == 0 || capacity > max_capacity)
     return false;
 
-  Block *block = reinterpret_cast<Block *>(
-      new (std::nothrow) unsigned char[(sizeof(Block) + capacity)]);
-
-  if (block == NULL) {
+  ArenaBlock *block = createBlock(capacity);
+  if (!block)
     return false;
-  }
-
-  this->max_cap = max_capacity;
-  block->next = NULL;
-  block->buf = reinterpret_cast<unsigned char *>(block) + sizeof(Block);
-  block->capacity = capacity;
-  block->curr_offset = 0;
-  block->prev_offset = 0;
-  block->alignment = DEFAULT_ALIGNMENT;
-  block->zeroout = false;
-
   head = block;
   current = block;
+  max_cap = max_capacity;
   count = 1;
   return true;
 };
@@ -31,37 +53,20 @@ void *ArenaList::grow(size_t size) {
   if (size > max_cap)
     return NULL;
 
-  size_t total_size = (sizeof(Block) + max_cap);
-  unsigned char *mem = new (std::nothrow) unsigned char[total_size];
-  Block *block = reinterpret_cast<Block *>(mem);
-
-  if (block == NULL) {
+  ArenaBlock *block = createBlock(max_cap);
+  if (!block)
     return NULL;
-  }
-
-  block->next = NULL;
-  block->buf = reinterpret_cast<unsigned char *>(block) + sizeof(Block);
-  block->capacity = max_cap;
-  block->curr_offset = 0;
-  block->prev_offset = 0;
-  block->alignment = head->alignment;
-  block->zeroout = head->zeroout;
 
   current->next = block;
   current = block;
   count++;
-
-  // return block->alloc(size);
-  return NULL;
+  return block->alloc(size);
 }
 
 void *ArenaList::alloc(size_t size) {
-  (void)size;
-  return NULL;
-  // void *data = current->alloc(size);
-  // if (!data) {
-  // return grow(size);
-  //}
-
-  // return data;
+  void *data = current->alloc(size);
+  if (!data) {
+    return grow(size);
+  }
+  return data;
 }
