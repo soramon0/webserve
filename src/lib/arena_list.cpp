@@ -58,13 +58,15 @@ void *ArenaList::grow(size_t size) {
   current->next = block;
   current = block;
   count++;
-  return block->alloc(size);
+  return block;
 }
 
 void *ArenaList::alloc(size_t size) {
   void *data = current->alloc(size);
   if (!data) {
-    return grow(size);
+    if (grow(size)) {
+      return current->alloc(size);
+    }
   }
   return data;
 }

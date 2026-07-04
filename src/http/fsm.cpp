@@ -9,13 +9,12 @@ FSM::FSM() : req(NULL), state(stateStart), status(FSMStatus::PENDING) {
 FSM::~FSM() {};
 
 bool FSM::feedChunk(const char *buf, size_t len) {
-  // TODO: grow arena
   if (!req->getStateReady()) {
     setMalformed500();
     return false;
   }
 
-  // Logger::debug("arena available space: %zu", req->arena.available());
+  Logger::debug("arena available space: %zu", req->arena.getBlockLeftSpace());
   Logger::debug("socket recieved: %.*s", (int)len, buf);
 
   if (len == 0) {
