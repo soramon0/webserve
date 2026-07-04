@@ -144,18 +144,23 @@ void Webserv::handleNewConnection(SOCKET srv) {
     c->received = 0;
 
     if (c->socket == -1) {
+      delete c;
       if (errno == EAGAIN || errno == EWOULDBLOCK)
         break;
+
       Logger::error("accept failed");
       break;
     }
     if (set_nonblocking(c->socket) == -1) {
       Logger::error("fcntl failed");
+      delete c;
       close(c->socket);
       continue;
     }
-    if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1)
+    if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1) {
+      delete c;
       continue;
+    }
     c->srv = servers[srv];
     clients[c->socket] = c;
     Logger::info("client Connected...");
@@ -186,10 +191,10 @@ void Webserv::removeClient(SOCKET c) {
   if (!clients.count(c))
     return;
   Client *cl = clients[c];
-  cl->machine.clear();
   epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
   close(c);
   clients.erase(c);
+  delete cl;
 }
 
 void Webserv::handleHttpRequest(SOCKET c) {

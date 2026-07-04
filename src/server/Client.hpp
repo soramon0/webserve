@@ -2,7 +2,6 @@
 
 #include "common.h"
 #include "request.hpp"
-#include "http/http_request.hpp"
 #include "config/server.hpp"
 #include "http/fsm.hpp"
 
