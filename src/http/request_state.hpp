@@ -20,11 +20,6 @@ struct Context {
 
 typedef State (*StateFunction)(Context &ctx);
 
-struct State {
-  StateFunction next;
-  State(StateFunction transition) : next(transition) {}
-};
-
 // Forward declration
 State stateStart(Context &ctx);
 State stateMethod(Context &ctx);
@@ -35,3 +30,48 @@ State stateHeaderValue(Context &ctx);
 State stateBody(Context &ctx);
 State stateDone(Context &ctx);
 State stateError(Context &ctx);
+
+struct State {
+  StateFunction next;
+  State(StateFunction transition) : next(transition) {}
+
+  enum Progression {
+    START = 0,
+    METHOD,
+    URI,
+    VERSION,
+    HEADER_KEY,
+    HEADER_VALUE,
+    BODY,
+    DONE,
+    ERROR,
+    COUNT,
+    UNKNOWN,
+  };
+
+  struct Mapping {
+    StateFunction fn;
+    Progression progression;
+  };
+
+  Progression getProgression(StateFunction func) {
+    static const Mapping table[] = {{stateStart, START},
+                                    {stateMethod, METHOD},
+                                    {stateURI, URI},
+                                    {stateVersion, VERSION},
+                                    {stateHeaderKey, HEADER_KEY},
+                                    {stateHeaderValue, HEADER_VALUE},
+                                    {stateBody, BODY},
+                                    {stateDone, DONE},
+                                    {stateError, ERROR}};
+
+    size_t tableSize = sizeof(table) / sizeof(table[0]);
+
+    for (size_t i = 0; i < tableSize; ++i) {
+      if (table[i].fn == func) {
+        return table[i].progression;
+      }
+    }
+    return UNKNOWN;
+  }
+};

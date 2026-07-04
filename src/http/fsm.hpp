@@ -62,6 +62,7 @@ public:
 
   void setDone();
   void setMalformed(HttpStatus::Code status, const char *msg);
+  void setMalformed(HttpStatus::Code s, const StringView &error);
   void setMalformed500(const char *msg);
   void setMalformed400(const char *msg);
 
