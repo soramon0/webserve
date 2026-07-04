@@ -16,7 +16,6 @@ private:
   ArenaList &operator=(const ArenaList &other);
 
   ArenaBlock *createBlock(size_t cap);
-  void *grow(size_t size);
 
 public:
   ArenaList()
@@ -25,6 +24,9 @@ public:
   ~ArenaList();
 
   size_t getBlockCount() const { return count; }
+  size_t getBlockLeftSpace() const {
+    return current ? current->available() : 0;
+  }
   size_t getMaxCap() const { return max_cap; }
   void setMaxCap(size_t cap) { max_cap = cap; }
   void setAlignment(size_t align) {
@@ -41,6 +43,7 @@ public:
   };
 
   bool init(size_t capacity, size_t max_capacity);
+  void *grow(size_t size);
   void *alloc(size_t size);
 
   char *str_append(const char *str, size_t len) {

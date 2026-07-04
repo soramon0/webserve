@@ -11,6 +11,7 @@
 class HttpRequest {
 private:
   bool ready;
+  size_t max_arena_blocks;
 
 public:
   ArenaList arena;

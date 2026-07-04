@@ -187,3 +187,84 @@ TEST_CASE("FSM enforces mandatory Host header for HTTP/1.1") {
     CHECK(req->status == HttpStatus::BAD_REQUEST);
   }
 }
+
+TEST_CASE("FSM handles arena growth, 8KB field limit, and max block counts") {
+  FSM fsm;
+
+  // HttpRequest configuration:
+  // initial block = 1KB
+  // max blocks = 5 (1KB + 4 * 8KB) -> Max total capacity ~33KB
+  // Arena chunks are 8KB, so a single continuous field cannot exceed 8KB
+
+  SUBCASE(
+      "Arena grows correctly for a large field within the 8KB chunk limit") {
+    // 6KB is well under the 8KB single-chunk limit, but forces the 1KB arena to
+    // grow
+    std::string large_val(6000, 'a');
+    std::string input = "GET / HTTP/1.1\r\n"
+                        "Host: localhost\r\n"
+                        "X-Large-Header: " +
+                        large_val + "\r\n\r\n";
+
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isDone());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::OK);
+
+    const StringView *lh = req->headers.get("x-large-header");
+    REQUIRE(lh != nullptr);
+    CHECK(lh->length() == 6000);
+    CHECK(lh->data()[0] == 'a');
+    CHECK(lh->data()[5999] == 'a');
+  }
+
+  SUBCASE(
+      "FSM rejects request when a single header exceeds the 8KB chunk limit") {
+    // 9KB exceeds the maximum capacity of a single 8KB arena growth chunk
+    std::string huge_val(9000, 'b');
+    std::string input = "GET / HTTP/1.1\r\n"
+                        "Host: localhost\r\n"
+                        "X-Huge-Header: " +
+                        huge_val + "\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+  }
+
+  SUBCASE("FSM rejects request when URI exceeds the 8KB chunk limit") {
+    // 9KB URI exceeds the maximum capacity of a single 8KB arena growth chunk
+    std::string huge_uri(9000, 'c');
+    std::string input = "GET /" + huge_uri +
+                        " HTTP/1.1\r\n"
+                        "Host: localhost\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+  }
+
+  SUBCASE("FSM enforces the max block count across multiple valid headers") {
+    // We send multiple 6KB headers. Each header is valid (< 8KB),
+    // but 6 headers * 6KB = 36KB total, which exceeds the max 5 blocks (~33KB
+    // limit).
+
+    std::string chunk_start = "GET / HTTP/1.1\r\nHost: localhost\r\n";
+    fsm.feedChunk(chunk_start.data(), chunk_start.length());
+
+    std::string header_val(6000, 'd');
+    bool failed = false;
+
+    for (int i = 0; i < 6; ++i) {
+      std::string header_line =
+          "X-Header-" + std::to_string(i) + ": " + header_val + "\r\n";
+      if (!fsm.feedChunk(header_line.data(), header_line.length())) {
+        failed = true;
+        break; // It should fail before processing all 6 headers
+      }
+    }
+
+    CHECK(failed);
+    REQUIRE(fsm.status.isMalformed());
+  }
+}

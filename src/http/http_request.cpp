@@ -3,9 +3,11 @@
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
-HttpRequest::HttpRequest() : ready(true), status(HttpStatus::OK) {
+HttpRequest::HttpRequest()
+    : ready(true), max_arena_blocks(5), status(HttpStatus::OK) {
   arena.setAlignment(1);
   arena.setZeroout(false);
+  // max_arena_blocks(5) -> 1kb + 4x8kb
   if (!arena.init(KIB(1), KIB(8))) {
     ready = false;
   }
@@ -41,6 +43,13 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
     return true;
 
   if (field.empty()) {
+    if (size > arena.getBlockLeftSpace()) {
+      if (arena.getBlockCount() > max_arena_blocks)
+        return false;
+      if (!arena.grow(size))
+        return false;
+    }
+
     char *data = arena.str_append(buf, size);
     if (!data) {
       return false;
@@ -49,6 +58,19 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
   } else {
     size_t prev_size = field.length();
     size_t total = field.length() + size;
+    if (total > arena.getBlockLeftSpace()) {
+      if (arena.getBlockCount() > max_arena_blocks)
+        return false;
+      if (!arena.grow(total))
+        return false;
+
+      char *data = arena.str_append(field.data(), field.length());
+      if (!data) {
+        return false;
+      }
+      field = StringView(data, size);
+    }
+
     char *str = arena.str_resize(field.data(), prev_size, buf, total);
     if (!str) {
       return false;
