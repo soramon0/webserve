@@ -26,7 +26,6 @@ Webserv::~Webserv() {
   clients.clear();
   while (it_srv != servers.end()) {
     close(it_srv->first);
-    delete it_srv->second;
     ++it_srv;
   }
   servers.clear();
