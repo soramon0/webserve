@@ -85,10 +85,11 @@ bool HttpRequest::expandArena(size_t size) {
   }
 
   if (size > arena.getMaxCap()) {
-    status = HttpStatus::REQUEST_ENTITY_TOO_LARGE;
     if (version_view.empty()) {
+      status = HttpStatus::URI_TOO_LONG;
       error = StringView("request-line too large");
     } else {
+      status = HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE;
       error = StringView("header too large");
     }
     return false;
