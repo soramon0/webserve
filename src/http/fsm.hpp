@@ -60,6 +60,8 @@ public:
   bool finish() const;
   HttpRequest *getRequest() const { return req; };
 
+  void clear();
+  void restart();
   void setDone();
   void setMalformed(HttpStatus::Code status, const char *msg);
   void setMalformed(HttpStatus::Code s, const StringView &error);

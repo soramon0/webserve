@@ -182,8 +182,12 @@ void Webserv::handleClientData(SOCKET c) {
 }
 
 void Webserv::removeClient(SOCKET c) {
+  Logger::debug("dropping client(%d)", c);
+
   if (!clients.count(c))
     return;
+  Client *cl = clients[c];
+  cl->machine.clear();
   epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
   close(c);
   clients.erase(c);

@@ -8,6 +8,21 @@ FSM::FSM() : req(NULL), state(stateStart), status(FSMStatus::PENDING) {
 
 FSM::~FSM() {};
 
+void FSM::clear() {
+  if (req) {
+    delete req;
+  }
+  state = stateStart;
+  status = FSMStatus::PENDING;
+  curr_header_value.clear();
+  curr_header_key.clear();
+}
+
+void FSM::restart() {
+  clear();
+  req = new HttpRequest();
+}
+
 bool FSM::feedChunk(const char *buf, size_t len) {
   if (!req->getStateReady()) {
     setMalformed500();
