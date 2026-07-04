@@ -65,7 +65,7 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
       if (!data) {
         return false;
       }
-      field = StringView(data, size);
+      field = StringView(data, field.length());
     }
 
     char *str = arena.str_resize(field.data(), prev_size, buf, total);
