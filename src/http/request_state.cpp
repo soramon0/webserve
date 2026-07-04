@@ -50,7 +50,7 @@ State stateMethod(Context &ctx) {
 
   size_t size = ctx.offset - sp - start;
   if (!ctx.req->updateField(ctx.req->method_view, &ctx.buf[start], size)) {
-    ctx.fsm.setMalformed500();
+    ctx.fsm.setMalformed(ctx.req->status.value(), ctx.req->error);
     return stateError(ctx);
   }
 
@@ -94,7 +94,7 @@ State stateURI(Context &ctx) {
 
   size_t size = ctx.offset - sp - start;
   if (!ctx.req->updateField(ctx.req->uri, &ctx.buf[start], size)) {
-    ctx.fsm.setMalformed500();
+    ctx.fsm.setMalformed(ctx.req->status.value(), ctx.req->error);
     return stateError(ctx);
   }
 
@@ -158,7 +158,7 @@ State stateVersion(Context &ctx) {
 
   size_t size = ctx.offset - start;
   if (!ctx.req->updateField(ctx.req->version_view, &ctx.buf[start], size)) {
-    ctx.fsm.setMalformed500();
+    ctx.fsm.setMalformed(ctx.req->status.value(), ctx.req->error);
     return stateError(ctx);
   }
 
@@ -223,7 +223,7 @@ State stateHeaderKey(Context &ctx) {
 
   size_t size = ctx.offset - start;
   if (!ctx.req->updateField(ctx.fsm.curr_header_key, &ctx.buf[start], size)) {
-    ctx.fsm.setMalformed500();
+    ctx.fsm.setMalformed(ctx.req->status.value(), ctx.req->error);
     return stateError(ctx);
   }
 
@@ -263,7 +263,7 @@ State stateHeaderValue(Context &ctx) {
 
   size_t size = ctx.offset - start;
   if (!ctx.req->updateField(value, &ctx.buf[start], size)) {
-    ctx.fsm.setMalformed500();
+    ctx.fsm.setMalformed(ctx.req->status.value(), ctx.req->error);
     return stateError(ctx);
   }
 

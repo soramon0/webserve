@@ -43,11 +43,8 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
     return true;
 
   if (field.empty()) {
-    if (size > arena.getBlockLeftSpace()) {
-      if (arena.getBlockCount() > max_arena_blocks)
-        return false;
-      if (!arena.grow(size))
-        return false;
+    if (size > arena.getBlockLeftSpace() && !expandArena(size)) {
+      return false;
     }
 
     char *data = arena.str_append(buf, size);
@@ -58,11 +55,11 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
   } else {
     size_t prev_size = field.length();
     size_t total = field.length() + size;
+
     if (total > arena.getBlockLeftSpace()) {
-      if (arena.getBlockCount() > max_arena_blocks)
+      if (!expandArena(total)) {
         return false;
-      if (!arena.grow(total))
-        return false;
+      }
 
       char *data = arena.str_append(field.data(), field.length());
       if (!data) {
@@ -77,6 +74,32 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
     }
     field = StringView(str, total);
   }
+  return true;
+}
+
+bool HttpRequest::expandArena(size_t size) {
+  if (arena.getBlockCount() > max_arena_blocks) {
+    status = HttpStatus::REQUEST_ENTITY_TOO_LARGE;
+    error = StringView("request is too large");
+    return false;
+  }
+
+  if (size > arena.getMaxCap()) {
+    status = HttpStatus::REQUEST_ENTITY_TOO_LARGE;
+    if (version_view.empty()) {
+      error = StringView("request-line too large");
+    } else {
+      error = StringView("header too large");
+    }
+    return false;
+  }
+
+  if (!arena.grow(size)) {
+    status = HttpStatus::INTERNAL_SERVER_ERROR;
+    error = StringView("internal server error");
+    return false;
+  }
+
   return true;
 }
 

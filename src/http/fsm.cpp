@@ -39,6 +39,12 @@ bool FSM::finish() const { return status.isDone() || status.isMalformed(); }
 
 void FSM::setDone() { status = FSMStatus::DONE; }
 
+void FSM::setMalformed(HttpStatus::Code s, const StringView &error) {
+  status = FSMStatus::MALFORMED;
+  this->req->status = s;
+  this->req->error = error;
+}
+
 void FSM::setMalformed(HttpStatus::Code s, const char *msg) {
   status = FSMStatus::MALFORMED;
   this->req->status = s;
@@ -51,6 +57,14 @@ void FSM::setMalformed(HttpStatus::Code s) { setMalformed(s, NULL); }
 
 void FSM::setMalformed500(const char *msg) {
   status = FSMStatus::MALFORMED;
+
+  // State::Progression progress = state.getProgression(stateMethod);
+  // if (progress < State::HEADER_KEY) {
+  //  if (req->arena.getBlockCount() > 1) {
+  //   this->req->status = HttpStatus::REQUEST_ENTITY_TOO_LARGE;
+  //    this->req->error = StringView("request-line too large");
+  //  }
+  //}
 
   if (msg) {
     this->req->error = StringView(msg);

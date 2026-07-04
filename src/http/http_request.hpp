@@ -13,6 +13,8 @@ private:
   bool ready;
   size_t max_arena_blocks;
 
+  bool expandArena(size_t size);
+
 public:
   ArenaList arena;
   HttpStatus status;
