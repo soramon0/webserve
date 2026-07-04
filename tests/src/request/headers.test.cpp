@@ -233,7 +233,7 @@ TEST_CASE("FSM handles arena growth, 8KB field limit, and max block counts") {
     REQUIRE(fsm.status.isMalformed());
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
-    REQUIRE(req->status == HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+    REQUIRE(req->status == HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
   }
 
   SUBCASE("FSM rejects request when URI exceeds the 8KB chunk limit") {
@@ -247,7 +247,7 @@ TEST_CASE("FSM handles arena growth, 8KB field limit, and max block counts") {
     REQUIRE(fsm.status.isMalformed());
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
-    REQUIRE(req->status == HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+    REQUIRE(req->status == HttpStatus::URI_TOO_LONG);
   }
 
   SUBCASE("FSM enforces the max block count across multiple valid headers") {
