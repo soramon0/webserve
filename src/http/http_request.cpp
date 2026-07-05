@@ -78,7 +78,7 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
 }
 
 bool HttpRequest::expandArena(size_t size) {
-  if (arena.getBlockCount() > max_arena_blocks) {
+  if (arena.getBlockCount() >= max_arena_blocks) {
     status = HttpStatus::REQUEST_ENTITY_TOO_LARGE;
     error = StringView("request is too large");
     return false;
