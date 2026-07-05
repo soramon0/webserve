@@ -183,6 +183,7 @@ State stateVersion(Context &ctx) {
     return stateVersion;
   }
 
+  ctx.req->finishRequestLine();
   return stateHeaderKey;
 }
 

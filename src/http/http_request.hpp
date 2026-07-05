@@ -11,6 +11,7 @@
 class HttpRequest {
 private:
   bool ready;
+  bool request_line_complete;
   static const size_t MaxArenaBlocks;
 
   bool expandArena(size_t size);
@@ -33,6 +34,7 @@ public:
 
   void printRequest() const;
   bool updateField(StringView &field, const char *buf, size_t size);
+  void finishRequestLine();
   void dumpState();
   bool getStateReady() const { return ready; }
 };

@@ -236,9 +236,43 @@ TEST_CASE("FSM handles arena growth, 8KB field limit, and max block counts") {
     REQUIRE(req->status == HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
   }
 
-  SUBCASE("FSM rejects request when URI exceeds the 8KB chunk limit") {
-    // 9KB URI exceeds the maximum capacity of a single 8KB arena growth chunk
-    std::string huge_uri(9000, 'c');
+  SUBCASE("FSM accepts header value at exactly 8KB") {
+    std::string exact_val(8192, 'e');
+    std::string input = "GET / HTTP/1.1\r\n"
+                        "Host: localhost\r\n"
+                        "X-Exact:" +
+                        exact_val + "\r\n\r\n";
+
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isDone());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::OK);
+
+    const StringView *exact = req->headers.get("x-exact");
+    REQUIRE(exact != nullptr);
+    CHECK(exact->length() == 8192);
+  }
+
+  SUBCASE("FSM rejects header value at 8KB plus one byte") {
+    std::string over_val(8193, 'f');
+    std::string input = "GET / HTTP/1.1\r\n"
+                        "Host: localhost\r\n"
+                        "X-Exact:" +
+                        over_val + "\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    REQUIRE(req->status == HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE);
+  }
+
+  SUBCASE("FSM rejects request when URI exceeds the 1KB request-line block") {
+    // Request line must fit in the initial 1KB arena block without growing
+    std::string huge_uri(1013, 'c');
     std::string input = "GET /" + huge_uri +
                         " HTTP/1.1\r\n"
                         "Host: localhost\r\n\r\n";

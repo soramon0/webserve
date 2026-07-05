@@ -5,7 +5,8 @@
 
 const size_t HttpRequest::MaxArenaBlocks = 5;
 
-HttpRequest::HttpRequest() : ready(true), status(HttpStatus::OK) {
+HttpRequest::HttpRequest()
+    : ready(true), request_line_complete(false), status(HttpStatus::OK) {
   arena.setAlignment(1);
   arena.setZeroout(false);
   // MaxArenaBlocks(5) -> 1kb + 4x8kb
@@ -38,6 +39,8 @@ void HttpRequest::printRequest() const {
 
   Logger::debug("-------------------");
 }
+
+void HttpRequest::finishRequestLine() { request_line_complete = true; }
 
 bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
   if (size == 0)
@@ -80,6 +83,12 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
 }
 
 bool HttpRequest::expandArena(size_t size) {
+  if (!request_line_complete) {
+    status = HttpStatus::URI_TOO_LONG;
+    error = StringView("request-line too large");
+    return false;
+  }
+
   if (arena.getBlockCount() >= MaxArenaBlocks) {
     status = HttpStatus::REQUEST_ENTITY_TOO_LARGE;
     error = StringView("request too large");
@@ -87,13 +96,8 @@ bool HttpRequest::expandArena(size_t size) {
   }
 
   if (size > arena.getMaxCap()) {
-    if (version_view.empty()) {
-      status = HttpStatus::URI_TOO_LONG;
-      error = StringView("request-line too large");
-    } else {
-      status = HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE;
-      error = StringView("header too large");
-    }
+    status = HttpStatus::REQUEST_HEADER_FIELDS_TOO_LARGE;
+    error = StringView("header too large");
     return false;
   }
 
