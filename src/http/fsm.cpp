@@ -2,14 +2,11 @@
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
-FSM::FSM()
-    : req(NULL), state(stateStart), status(FSMStatus::PENDING) {
+FSM::FSM() : req(NULL), state(stateStart), status(FSMStatus::PENDING) {
   req = new HttpRequest();
 }
 
-FSM::~FSM() {
-  clear();
-}
+FSM::~FSM() { clear(); }
 
 void FSM::clear() {
   if (req) {
@@ -75,14 +72,6 @@ void FSM::setMalformed(HttpStatus::Code s) { setMalformed(s, NULL); }
 
 void FSM::setMalformed500(const char *msg) {
   status = FSMStatus::MALFORMED;
-
-  // State::Progression progress = state.getProgression(stateMethod);
-  // if (progress < State::HEADER_KEY) {
-  //  if (req->arena.getBlockCount() > 1) {
-  //   this->req->status = HttpStatus::REQUEST_ENTITY_TOO_LARGE;
-  //    this->req->error = StringView("request-line too large");
-  //  }
-  //}
 
   if (msg) {
     this->req->error = StringView(msg);
