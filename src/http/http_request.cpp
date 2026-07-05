@@ -57,7 +57,8 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
     size_t prev_size = field.length();
     size_t total = field.length() + size;
 
-    if (total > arena.getBlockLeftSpace()) {
+    char *str = arena.str_resize(field.data(), prev_size, buf, total);
+    if (!str) {
       if (!expandArena(total)) {
         return false;
       }
@@ -67,11 +68,11 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
         return false;
       }
       field = StringView(data, field.length());
-    }
 
-    char *str = arena.str_resize(field.data(), prev_size, buf, total);
-    if (!str) {
-      return false;
+      str = arena.str_resize(field.data(), prev_size, buf, total);
+      if (!str) {
+        return false;
+      }
     }
     field = StringView(str, total);
   }
