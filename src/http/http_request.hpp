@@ -13,11 +13,11 @@ private:
   bool ready;
   bool request_line_complete;
   static const size_t MaxArenaBlocks;
+  ArenaList arena;
 
   bool expandArena(size_t size);
 
 public:
-  ArenaList arena;
   HttpStatus status;
   HttpMethod method;
   HttpVersion version;

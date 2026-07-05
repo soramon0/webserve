@@ -30,7 +30,6 @@ TEST_CASE("FSM parses large header split into single-byte chunks") {
   HttpRequest *req = fsm.getRequest();
   REQUIRE(req != nullptr);
   CHECK(req->status == HttpStatus::OK);
-  CHECK(req->arena.getBlockCount() >= 2);
 
   const StringView *lh = req->headers.get("x-large");
   REQUIRE(lh != nullptr);
@@ -85,7 +84,7 @@ TEST_CASE("FSM parses large request using production-like 512-byte chunks") {
   CHECK(lh->length() == 6000);
 }
 
-TEST_CASE("FSM restart resets parser state and arena") {
+TEST_CASE("FSM restart resets parser state") {
   FSM fsm;
 
   CHECK(fsm.feedChunk("GET /part", 9));
@@ -101,10 +100,9 @@ TEST_CASE("FSM restart resets parser state and arena") {
   REQUIRE(req != nullptr);
   CHECK(req->status == HttpStatus::OK);
   CHECK(std::string(req->uri.data(), req->uri.length()) == "/");
-  CHECK(req->arena.getBlockCount() == 1);
 }
 
-TEST_CASE("FSM rejects request at exact max arena block count") {
+TEST_CASE("FSM rejects request when total header storage exceeds limit") {
   FSM fsm;
 
   std::string chunk_start = "GET / HTTP/1.1\r\nHost: localhost\r\n";
@@ -128,5 +126,4 @@ TEST_CASE("FSM rejects request at exact max arena block count") {
   HttpRequest *req = fsm.getRequest();
   REQUIRE(req != nullptr);
   CHECK(req->status == HttpStatus::REQUEST_ENTITY_TOO_LARGE);
-  CHECK(req->arena.getBlockCount() == 5);
 }

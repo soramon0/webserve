@@ -180,7 +180,6 @@ TEST_CASE("FSM keeps request line within the initial 1KB arena block") {
     REQUIRE(req != nullptr);
     CHECK(req->status == HttpStatus::OK);
     CHECK(req->uri.length() == 1013);
-    CHECK(req->arena.getBlockCount() == 2);
   }
 
   SUBCASE("FSM rejects request line that exceeds the 1KB block") {
@@ -193,6 +192,5 @@ TEST_CASE("FSM keeps request line within the initial 1KB arena block") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->status == HttpStatus::URI_TOO_LONG);
-    CHECK(req->arena.getBlockCount() == 1);
   }
 }

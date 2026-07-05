@@ -33,7 +33,6 @@ bool FSM::feedChunk(const char *buf, size_t len) {
     return false;
   }
 
-  Logger::debug("arena available space: %zu", req->arena.getBlockLeftSpace());
   Logger::debug("socket recieved: %.*s", (int)len, buf);
 
   if (len == 0) {
