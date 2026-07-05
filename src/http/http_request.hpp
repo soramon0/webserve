@@ -11,7 +11,7 @@
 class HttpRequest {
 private:
   bool ready;
-  size_t max_arena_blocks;
+  static const size_t MaxArenaBlocks;
 
   bool expandArena(size_t size);
 

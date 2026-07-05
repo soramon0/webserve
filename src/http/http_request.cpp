@@ -3,11 +3,12 @@
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
-HttpRequest::HttpRequest()
-    : ready(true), max_arena_blocks(5), status(HttpStatus::OK) {
+const size_t HttpRequest::MaxArenaBlocks = 5;
+
+HttpRequest::HttpRequest() : ready(true), status(HttpStatus::OK) {
   arena.setAlignment(1);
   arena.setZeroout(false);
-  // max_arena_blocks(5) -> 1kb + 4x8kb
+  // MaxArenaBlocks(5) -> 1kb + 4x8kb
   if (!arena.init(KIB(1), KIB(8))) {
     ready = false;
   }
@@ -78,7 +79,7 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
 }
 
 bool HttpRequest::expandArena(size_t size) {
-  if (arena.getBlockCount() >= max_arena_blocks) {
+  if (arena.getBlockCount() >= MaxArenaBlocks) {
     status = HttpStatus::REQUEST_ENTITY_TOO_LARGE;
     error = StringView("request is too large");
     return false;
