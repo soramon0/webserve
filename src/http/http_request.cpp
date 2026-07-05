@@ -95,7 +95,7 @@ bool HttpRequest::expandArena(size_t size) {
     return false;
   }
 
-  if (!arena.grow(size)) {
+  if (!arena.assignBlock()) {
     status = HttpStatus::INTERNAL_SERVER_ERROR;
     error = StringView("internal server error");
     return false;

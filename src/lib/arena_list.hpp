@@ -43,7 +43,7 @@ public:
   };
 
   bool init(size_t capacity, size_t max_capacity);
-  void *grow(size_t size);
+  void *assignBlock();
   void *alloc(size_t size);
 
   char *str_append(const char *str, size_t len) {
