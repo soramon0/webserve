@@ -2,15 +2,19 @@
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
-FSM::FSM() : req(NULL), state(stateStart), status(FSMStatus::PENDING) {
+FSM::FSM()
+    : req(NULL), state(stateStart), status(FSMStatus::PENDING) {
   req = new HttpRequest();
-};
+}
 
-FSM::~FSM() {};
+FSM::~FSM() {
+  clear();
+}
 
 void FSM::clear() {
   if (req) {
     delete req;
+    req = NULL;
   }
   state = stateStart;
   status = FSMStatus::PENDING;

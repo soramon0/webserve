@@ -12,9 +12,7 @@ Client::Client() : received(0), is_complete(0), offset(0),
 	addrlen = sizeof(addr);
 }
 
-Client::~Client() {
-	this->machine.clear();
-}
+Client::~Client() {}
 
 void	Client::parseHeaders(std::string head)
 {
