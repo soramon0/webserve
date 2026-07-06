@@ -59,6 +59,18 @@ inline bool operator==(const char *lhs, const StringView &rhs) {
   return StringView(lhs) == rhs;
 }
 
+inline bool operator!=(const StringView &lhs, const StringView &rhs) {
+  return !(operator==(lhs, rhs));
+}
+
+inline bool operator!=(const StringView &lhs, const char *rhs) {
+  return lhs != StringView(rhs);
+}
+
+inline bool operator!=(const char *lhs, const StringView &rhs) {
+  return StringView(lhs) != rhs;
+}
+
 inline std::ostream &operator<<(std::ostream &os, const StringView &sv) {
   if (sv.data()) {
     os.write(sv.data(), sv.length());

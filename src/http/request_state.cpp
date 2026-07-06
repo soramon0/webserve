@@ -285,7 +285,7 @@ State stateHeaderValue(Context &ctx) {
 
     if (key == "content-length") {
       if (ctx.req->headers.has("transfer-encoding")) {
-        ctx.fsm.setMalformed400("content-length forbidden");
+        ctx.fsm.setMalformed400("bad content-length");
         return stateError(ctx);
       }
       if (ctx.req->headers.has(key)) {
@@ -301,6 +301,25 @@ State stateHeaderValue(Context &ctx) {
           ctx.fsm.setMalformed400("content-length invalid");
           return stateError(ctx);
         }
+      }
+    }
+
+    if (key == "transfer-encoding") {
+      if (ctx.req->headers.has("content-length")) {
+        ctx.fsm.setMalformed400("bad transfer-encoding");
+        return stateError(ctx);
+      }
+      if (ctx.req->headers.has(key)) {
+        ctx.fsm.setMalformed400("duplicate transfer-encoding header");
+        return stateError(ctx);
+      }
+      if (value.empty()) {
+        ctx.fsm.setMalformed400("transfer-encoding cannot be empty");
+        return stateError(ctx);
+      }
+      if (value != "chunked") {
+        ctx.fsm.setMalformed400("transfer-encoding only support chunked");
+        return stateError(ctx);
       }
     }
 
