@@ -203,8 +203,9 @@ State stateHeaderKey(Context &ctx) {
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderKey;
     }
+
     // force done state until we implment body state
-    return stateDone(ctx);
+    return stateBody(ctx);
   }
 
   // header-field   = field-name ":" OWS field-value OWS
@@ -279,6 +280,23 @@ State stateHeaderValue(Context &ctx) {
     if (!Headers::isValidValue(value)) {
       ctx.fsm.setMalformed400();
       return stateError(ctx);
+    }
+
+    if (key == "content-length") {
+      if (ctx.req->headers.has(key)) {
+        ctx.fsm.setMalformed400("duplicate content-length header");
+        return stateError(ctx);
+      }
+      if (value.empty()) {
+        ctx.fsm.setMalformed400("content-length cannot be empty");
+        return stateError(ctx);
+      }
+      for (size_t i = 0; i < value.length(); i++) {
+        if (!std::isdigit(static_cast<unsigned char>(value[i]))) {
+          ctx.fsm.setMalformed400("content-length invalid");
+          return stateError(ctx);
+        }
+      }
     }
 
     ctx.req->headers.set(key, value);
