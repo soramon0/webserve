@@ -251,7 +251,8 @@ State stateHeaderValue(Context &ctx) {
   StringView &key = ctx.fsm.curr_header_key;
   StringView &value = ctx.fsm.curr_header_value;
 
-  if (ctx.fsm.isCRLF(ctx.buf[ctx.offset]) && key.empty() && value.empty()) {
+  if (ctx.offset < ctx.len && ctx.fsm.isCRLF(ctx.buf[ctx.offset]) &&
+      key.empty() && value.empty()) {
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderValue;
     }
@@ -269,7 +270,7 @@ State stateHeaderValue(Context &ctx) {
     return stateError(ctx);
   }
 
-  if (ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
+  if (ctx.offset < ctx.len && ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
     Headers::normalizeKey(const_cast<char *>(key.data()), key.length());
     if (!Headers::isValidKey(key)) {
       ctx.fsm.setMalformed400();
@@ -283,6 +284,10 @@ State stateHeaderValue(Context &ctx) {
     }
 
     if (key == "content-length") {
+      if (ctx.req->headers.has("transfer-encoding")) {
+        ctx.fsm.setMalformed400("content-length forbidden");
+        return stateError(ctx);
+      }
       if (ctx.req->headers.has(key)) {
         ctx.fsm.setMalformed400("duplicate content-length header");
         return stateError(ctx);
