@@ -16,6 +16,7 @@ private:
 	int pipe_in[2];
 	int pipe_out[2];
 	pid_t pid;
+	int exit_status;
 
 	const char *body; //until it's parsed
 	size_t body_len;
@@ -30,9 +31,19 @@ private:
 	CgiHandler& operator=(const CgiHandler& other);
 
 public:
-	CgiHandler();
 	CgiHandler(const HttpRequest* request,const char *body, size_t body_len);
 	~CgiHandler();
+
+	bool start();
+	void writeBody();
+	void readOutput();
+	bool waitChild();
+
+	CgiState getCgiState() const;
+	std::string getCgiOutput() const;
+	int getWriteFd() const;
+	int getReadFd() const;
+	int getExitStatus() const;
 };
 
 #endif
