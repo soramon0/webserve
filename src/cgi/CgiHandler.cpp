@@ -3,9 +3,55 @@
 #include <cstring>
 #include <unistd.h>
 #include <iostream>
+#include <signal.h>
+#include <fcntl.h>
 #include <sstream>
 
+CgiHandler::CgiHandler(const HttpRequest* request, const char *body, size_t body_len)
+	: pid(-1), exit_status(0), body(body), body_len(body_len), body_written(0), cgi_output(""),
+	state(WRITING_BODY), request(request)
+{
+	pipe_in[0] = -1; pipe_in[1] = -1;
+	pipe_out[0] = -1; pipe_out[1] = -1;
+}
 
+CgiHandler::~CgiHandler() 
+{
+	if (pipe_in[0] >= 0) close(pipe_in[0]);
+	if (pipe_in[1] >= 0) close(pipe_in[1]);
+	if (pipe_out[0] >= 0) close(pipe_out[0]);
+	if (pipe_out[1] >= 0) close(pipe_out[1]);
+
+	if (pid > 0 && state != CGI_DONE)
+	{
+		kill(pid, SIGKILL);
+		waitpid(pid, NULL, 0);
+	}
+}
+
+bool CgiHandler::start()
+{
+	if (pipe(pipe_in) == -1) {state = CGI_ERROR; return (false);}
+	if (pipe(pipe_out) == -1) {close(pipe_in[0]); close(pipe_in[1]); state = CGI_ERROR; return (false);}
+
+	if (fcntl(pipe_in[0], F_SETFD, FD_CLOEXEC) == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
+	if (fcntl(pipe_in[1], F_SETFD, FD_CLOEXEC) == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
+	if (fcntl(pipe_out[0], F_SETFD, FD_CLOEXEC) == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
+	if (fcntl(pipe_out[1], F_SETFD, FD_CLOEXEC) == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
+
+	pid = fork();
+	if (pid == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
+	else if (pid == 0)
+	{
+		close(pipe_in[1]); close(pipe_out[0]);
+
+		if (dup2(pipe_in[0], STDIN_FILENO) == -1) {state = CGI_ERROR; _exit(1);}
+		if (dup2(pipe_out[1], STDOUT_FILENO) == -1) {state = CGI_ERROR; _exit(1);}
+
+		close(pipe_in[0]); close(pipe_out[1]);
+	}
+	else {}
+}
 
 // void CgiHandler::childProcess()
 // {
