@@ -283,6 +283,27 @@ State stateHeaderValue(Context &ctx) {
       return stateError(ctx);
     }
 
+    if (key == "host") {
+      if (ctx.req->headers.has(key)) {
+        ctx.fsm.setMalformed400("duplicate host header");
+        return stateError(ctx);
+      }
+      if (value.empty()) {
+        ctx.fsm.setMalformed400("host cannot be empty");
+        return stateError(ctx);
+      }
+    }
+
+    if (key == "connection") {
+      if (value.empty()) {
+        ctx.fsm.setMalformed400("connection cannot be empty");
+        return stateError(ctx);
+      }
+      // future feature
+      // TODO: Store connection state on the request context for quick access
+      // later
+    }
+
     if (key == "content-length") {
       if (ctx.req->headers.has("transfer-encoding")) {
         ctx.fsm.setMalformed400("bad content-length");
@@ -319,6 +340,17 @@ State stateHeaderValue(Context &ctx) {
       }
       if (value != "chunked") {
         ctx.fsm.setMalformed400("transfer-encoding only support chunked");
+        return stateError(ctx);
+      }
+    }
+
+    if (key == "content-type") {
+      if (ctx.req->headers.has(key)) {
+        ctx.fsm.setMalformed400("duplicate content-type header");
+        return stateError(ctx);
+      }
+      if (value.empty()) {
+        ctx.fsm.setMalformed400("content-type cannot be empty");
         return stateError(ctx);
       }
     }
