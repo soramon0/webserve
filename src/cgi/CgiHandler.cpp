@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <sstream>
+#include <vector>
 
 CgiHandler::CgiHandler(const HttpRequest* request, const char *body, size_t body_len)
 	: pid(-1), exit_status(0), body(body), body_len(body_len), body_written(0), cgi_output(""),
@@ -27,6 +28,13 @@ CgiHandler::~CgiHandler()
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
 	}
+}
+
+char **CgiHandler::buildEnvp() const
+{
+	std::vector<std::string> vect_envp;
+
+
 }
 
 bool CgiHandler::start(const std::string& interpreter_path, const std::string& script_path,
