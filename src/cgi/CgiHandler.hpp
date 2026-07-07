@@ -34,7 +34,7 @@ public:
 	CgiHandler(const HttpRequest* request,const char *body, size_t body_len);
 	~CgiHandler();
 
-	bool start();
+	bool start(const std::string& interpreter_path, const std::string& script_path);
 	void writeBody();
 	void readOutput();
 	bool waitChild();

@@ -29,7 +29,7 @@ CgiHandler::~CgiHandler()
 	}
 }
 
-bool CgiHandler::start()
+bool CgiHandler::start(const std::string& interpreter_path, const std::string& script_path)
 {
 	if (pipe(pipe_in) == -1) {state = CGI_ERROR; return (false);}
 	if (pipe(pipe_out) == -1) {close(pipe_in[0]); close(pipe_in[1]); state = CGI_ERROR; return (false);}
@@ -38,6 +38,10 @@ bool CgiHandler::start()
 	if (fcntl(pipe_in[1], F_SETFD, FD_CLOEXEC) == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
 	if (fcntl(pipe_out[0], F_SETFD, FD_CLOEXEC) == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
 	if (fcntl(pipe_out[1], F_SETFD, FD_CLOEXEC) == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
+
+
+	char *argv[3];
+	argv[0] = const_cast<char *>(interpreter_path.c_str()); argv[1] = const_cast<char *>(script_path.c_str()); argv[3] = NULL;
 
 	pid = fork();
 	if (pid == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
