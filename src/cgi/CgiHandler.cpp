@@ -30,11 +30,31 @@ CgiHandler::~CgiHandler()
 	}
 }
 
-char **CgiHandler::buildEnvp() const
+static void splitQueryString(const StringView& uri, std::string& path, std::string& query_string)
+{
+
+}
+
+char** CgiHandler::buildEnvp(const std::string& server_name, const std::string& server_port) const
 {
 	std::vector<std::string> vect_envp;
 
+	vect_envp.push_back("REQUEST_METHOD=" + request->method.toString());
+	vect_envp.push_back("SERVER_PROTOCOL=" + request->version.toString());
+	vect_envp.push_back("GATEWAY_INTERFACE=CGI/1.1");
+	vect_envp.push_back("SERVER_NAME=" + server_name);
+	vect_envp.push_back("SERVER_PORT=" + server_port);
 
+	if (body_len > 0)
+	{
+		std::ostringstream oss;
+		oss << body_len;
+		vect_envp.push_back("CONTENT_LENGTH=" + oss.str());
+	}
+
+	const StringView *ct = request->headers.get("content-type");
+	if (ct != NULL)
+		vect_envp.push_back("CONTENT_TYPE=" + std::string(ct->data(), ct->length()));
 }
 
 bool CgiHandler::start(const std::string& interpreter_path, const std::string& script_path,

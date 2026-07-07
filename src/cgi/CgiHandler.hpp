@@ -41,7 +41,7 @@ public:
 	int getExitStatus() const;
 
 private:
-	char **buildEnvp() const;
+	char** buildEnvp(const std::string& server_name, const std::string& server_port) const;
 
 	CgiHandler(const CgiHandler& other);
 	CgiHandler& operator=(const CgiHandler& other);
