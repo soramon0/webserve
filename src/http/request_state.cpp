@@ -303,9 +303,17 @@ State stateHeaderValue(Context &ctx) {
 
 State stateBody(Context &ctx) {
   Logger::debug("state: body");
+
   if (ctx.req->method != HttpMethod::POST) {
     return stateDone(ctx);
   }
+  if (ctx.req->headers.has("content-length") &&
+      ctx.req->getContentLength() == 0) {
+    return stateDone(ctx);
+  }
+
+  // get location to know which config for how to handle this request body
+
   // parse body
   return stateDone(ctx);
 }

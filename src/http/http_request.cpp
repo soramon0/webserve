@@ -11,6 +11,9 @@ HttpRequest::HttpRequest()
       status(HttpStatus::OK) {
   arena.setAlignment(1);
   arena.setZeroout(false);
+  body.setAlignment(1);
+  body.setZeroout(false);
+  body.setMaxCap(KIB(16));
   // MaxArenaBlocks(5) -> 1kb + 4x8kb
   if (!arena.init(KIB(1), KIB(8))) {
     ready = false;

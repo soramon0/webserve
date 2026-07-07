@@ -14,6 +14,7 @@ private:
   bool request_line_complete;
   static const size_t MaxArenaBlocks;
   ArenaList arena;
+  ArenaList body;
   size_t contentLength;
 
   bool expandArena(size_t size);

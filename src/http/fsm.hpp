@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config/server.hpp"
 #include "http/status_code.hpp"
 #include "http_request.hpp"
 #include "logger/log.hpp"
@@ -45,6 +46,7 @@ private:
 
 class FSM {
 private:
+  Server *server;
   HttpRequest *req;
   State state;
 
@@ -54,9 +56,11 @@ public:
   StringView curr_header_value;
 
   FSM();
+  FSM(Server *s);
   ~FSM();
 
   bool feedChunk(const char *buf, std::size_t len);
+  void setServer(Server *s) { server = s; };
   bool finish() const;
   HttpRequest *getRequest() const { return req; };
 
