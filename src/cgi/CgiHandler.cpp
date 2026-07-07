@@ -29,7 +29,8 @@ CgiHandler::~CgiHandler()
 	}
 }
 
-bool CgiHandler::start(const std::string& interpreter_path, const std::string& script_path)
+bool CgiHandler::start(const std::string& interpreter_path, const std::string& script_path,
+				const std::string& server_name, const std::string& server_port)
 {
 	if (pipe(pipe_in) == -1) {state = CGI_ERROR; return (false);}
 	if (pipe(pipe_out) == -1) {close(pipe_in[0]); close(pipe_in[1]); state = CGI_ERROR; return (false);}
@@ -49,8 +50,8 @@ bool CgiHandler::start(const std::string& interpreter_path, const std::string& s
 	{
 		close(pipe_in[1]); close(pipe_out[0]);
 
-		if (dup2(pipe_in[0], STDIN_FILENO) == -1) {state = CGI_ERROR; _exit(1);}
-		if (dup2(pipe_out[1], STDOUT_FILENO) == -1) {state = CGI_ERROR; _exit(1);}
+		if (dup2(pipe_in[0], STDIN_FILENO) == -1) _exit(1);
+		if (dup2(pipe_out[1], STDOUT_FILENO) == -1) _exit(1);
 
 		close(pipe_in[0]); close(pipe_out[1]);
 	}
