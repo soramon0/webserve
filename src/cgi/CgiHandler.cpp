@@ -1,4 +1,5 @@
 #include "CgiHandler.hpp"
+#include "cgi_utils.hpp"
 #include <sys/types.h>
 #include <cstring>
 #include <unistd.h>
@@ -50,6 +51,11 @@ char** CgiHandler::buildEnvp(const std::string& server_name, const std::string& 
 	const StringView *ct = request->headers.get("content-type");
 	if (ct != NULL)
 		vect_envp.push_back("CONTENT_TYPE=" + std::string(ct->data(), ct->length()));
+
+	std::string path, query_string;
+	splitQueryString(request->uri, path, query_string);
+	vect_envp.push_back("SCRIPT_NAME=" + path);
+	vect_envp.push_back("QUERY_STRING=" + query_string);
 }
 
 bool CgiHandler::start(const std::string& interpreter_path, const std::string& script_path,
