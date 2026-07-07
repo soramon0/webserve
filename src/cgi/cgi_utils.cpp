@@ -1,5 +1,6 @@
 #include "cgi_utils.hpp"
 #include <cstring>
+#include <unistd.h>
 
 static size_t findChar(const StringView& sv, char c)
 {
@@ -62,3 +63,10 @@ void freeEnvp(char **envp)
 	delete[] envp;
 }
 
+void close_wrapper(int& fd)
+{
+	if (fd == -1)
+		return ;
+	close(fd);
+	fd = -1;
+}
