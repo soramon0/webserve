@@ -4,5 +4,6 @@
 #include "CgiHandler.hpp"
 
 void splitQueryString(const StringView& uri, std::string& path, std::string& query_string);
+std::string toHttpEnvName(const std::string& key);
 
 #endif

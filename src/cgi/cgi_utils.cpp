@@ -25,3 +25,18 @@ void splitQueryString(const StringView& uri, std::string& path, std::string& que
 		return ;
 	}
 }
+
+std::string toHttpEnvName(const std::string& key)
+{
+	std::string env_name = key;
+
+	for (size_t i = 0; i < key.length(); i++)
+	{
+		if (key[i] == '-')
+			env_name[i] = '_';
+		else
+			env_name[i] = std::toupper(static_cast<unsigned char>(key[i]));
+	}
+	env_name = "HTTP_" + env_name;
+	return (env_name);
+}

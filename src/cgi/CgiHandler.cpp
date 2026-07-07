@@ -56,6 +56,18 @@ char** CgiHandler::buildEnvp(const std::string& server_name, const std::string& 
 	splitQueryString(request->uri, path, query_string);
 	vect_envp.push_back("SCRIPT_NAME=" + path);
 	vect_envp.push_back("QUERY_STRING=" + query_string);
+
+	Headers::AllRange range = request->headers.all();
+	for (Headers::AllRange::first_type it = range.first; it != range.second; ++it)
+	{
+		std::string key(it->first.data(), it->first.length());
+		std::string value(it->second.data(), it->second.length());
+
+		if (key == "content-type" || key == "content-length" || key == "authorization")
+			continue;
+
+		vect_envp.push_back(toHttpEnvName(key) + "=" + value);
+	}
 }
 
 bool CgiHandler::start(const std::string& interpreter_path, const std::string& script_path,
