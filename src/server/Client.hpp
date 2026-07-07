@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../../include/common.h"
+#include "common.h"
 #include "request.hpp"
-#include "../config/server.hpp"
+#include "config/server.hpp"
+#include "http/fsm.hpp"
 
 #define MAX_REQUEST_SIZE 2047
 
@@ -21,6 +22,8 @@ class Client
 	size_t			offset;
 	int				is_header_parsed;
 	size_t			header_size;
+
+	FSM machine;
 
 	friend class Webserv;
 

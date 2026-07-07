@@ -1,0 +1,177 @@
+#include "arena.hpp"
+
+#include <cassert>
+#include <cstring>
+#include <new>
+#include <stdint.h>
+
+static bool is_power_of_two(uintptr_t x) { return (x & (x - 1)) == 0; }
+
+uintptr_t align_forward(uintptr_t ptr, size_t align) {
+  uintptr_t p, a, modulo;
+
+  assert(is_power_of_two(align));
+
+  p = ptr;
+  a = static_cast<uintptr_t>(align);
+  modulo = p & (a - 1);
+  if (modulo != 0) {
+    p += a - modulo;
+  }
+  return p;
+}
+
+void ArenaBlock::setAlignment(size_t align) { alignment = align; }
+void ArenaBlock::setZeroout(bool val) { zeroout = val; }
+
+bool ArenaBlock::usable() const { return buf != NULL && capacity != 0; }
+
+size_t ArenaBlock::consumed() const { return curr_offset; };
+
+size_t ArenaBlock::available() const {
+  if (!buf || curr_offset > capacity)
+    return 0;
+
+  size_t offset = next_offset(alignment);
+  if (offset >= capacity)
+    return 0;
+  return capacity - offset;
+};
+
+bool ArenaBlock::setup(size_t cap) {
+  if (usable())
+    return true;
+  return reinit(cap);
+}
+
+// call deinit() before re-initializing.
+bool ArenaBlock::init(size_t cap) {
+  if (buf != NULL || cap == 0) {
+    return false;
+  }
+
+  buf = new (std::nothrow) unsigned char[cap];
+  if (buf == NULL) {
+    return false;
+  }
+
+  owns_memory = true;
+  capacity = cap;
+  return true;
+}
+
+bool ArenaBlock::reinit(size_t cap) {
+  deinit();
+  return init(cap);
+}
+
+bool ArenaBlock::deinit() {
+  if (buf == NULL) {
+    return false;
+  }
+
+  if (owns_memory) {
+    delete[] buf;
+  }
+  buf = NULL;
+  capacity = 0;
+  prev_offset = 0;
+  curr_offset = 0;
+  owns_memory = false;
+  return true;
+}
+
+ArenaBlock::~ArenaBlock() { deinit(); }
+
+void *ArenaBlock::alloc_align(size_t size, size_t align) {
+  if (!buf)
+    return NULL;
+
+  size_t offset = next_offset(align);
+  if (offset + size > capacity)
+    return NULL;
+
+  void *ptr = &buf[offset];
+  prev_offset = offset;
+  curr_offset = offset + size;
+  if (zeroout)
+    std::memset(ptr, 0, size);
+
+  return ptr;
+}
+
+size_t ArenaBlock::next_offset(size_t align) const {
+  uintptr_t curr_ptr = reinterpret_cast<uintptr_t>(buf + curr_offset);
+  uintptr_t aligned = align_forward(curr_ptr, align);
+  return aligned - reinterpret_cast<uintptr_t>(buf);
+}
+
+void *ArenaBlock::alloc(size_t size) { return alloc_align(size, alignment); }
+
+void *ArenaBlock::resize_align(void *old_memory, size_t old_size,
+                               size_t new_size, size_t align) {
+  if (!buf)
+    return NULL;
+
+  assert(is_power_of_two(align));
+
+  unsigned char *old_mem = static_cast<unsigned char *>(old_memory);
+
+  if (old_mem == NULL || old_size == 0) {
+    return alloc_align(new_size, align);
+  }
+
+  if (old_mem < buf || old_mem >= buf + capacity) {
+    assert(0 && "Memory is out of bounds of the buffer in this arena");
+    return NULL;
+  }
+
+  if (buf + prev_offset == old_mem) {
+    if (prev_offset + new_size > capacity) {
+      return NULL; // Out of memory!
+    }
+
+    curr_offset = prev_offset + new_size;
+    if (new_size > old_size && zeroout) {
+      std::memset(&buf[prev_offset + old_size], 0, new_size - old_size);
+    }
+    return old_memory;
+  } else {
+    void *new_mem = alloc_align(new_size, align);
+    size_t copy_size = old_size < new_size ? old_size : new_size;
+    std::memmove(new_mem, old_memory, copy_size);
+    return new_mem;
+  }
+}
+
+void *ArenaBlock::resize(void *old_memory, size_t old_size, size_t new_size) {
+  return resize_align(old_memory, old_size, new_size, alignment);
+}
+
+void ArenaBlock::free_all() {
+  curr_offset = 0;
+  prev_offset = 0;
+}
+
+char *ArenaBlock::str_append(const char *str, size_t len) {
+  char *data = static_cast<char *>(alloc(len));
+  if (!data) {
+    return NULL;
+  }
+  std::memcpy(data, str, len);
+  return data;
+}
+
+char *ArenaBlock::str_resize(const char *old_memory, size_t old_size,
+                             const char *src, size_t new_size) {
+  if (!src || new_size == 0) {
+    return NULL;
+  }
+
+  void *buf = resize(const_cast<char *>(old_memory), old_size, new_size);
+  if (!buf) {
+    return NULL;
+  }
+  std::memcpy(static_cast<char *>(buf) + old_size, src, new_size - old_size);
+  return static_cast<char *>(buf);
+}

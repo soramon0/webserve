@@ -1,3 +1,4 @@
+#include "lib/utils.hpp"
 #include "parser.hpp"
 #include <cstdlib>
 
@@ -207,6 +208,47 @@ ssize_t Parser::handleCgiPass(DirectiveCtx &ctx) {
     return -1;
 
   ctx.shared->withCgi(ext, previous().lexeme);
+
+  return expectDirectiveArgsCount(dir);
+}
+
+ssize_t Parser::handleMethods(DirectiveCtx &ctx) {
+  const Token &dir = previous();
+
+  if (this->ctx.back() != CTX_LOCATION) {
+    reportParseError(dir, "`methods` directive is not allowed here.");
+    return -1;
+  }
+
+  std::map<std::string, int> store;
+  store["get"] = 0;
+  store["post"] = 0;
+  store["delete"] = 0;
+
+  ctx.loc->methods.clear();
+  while (check(Directive::WORD)) {
+    const Token &t = peek();
+    const std::string httpMethod = strToLower(t.lexeme);
+    std::map<std::string, int>::iterator it = store.find(httpMethod);
+    if (it == store.end()) {
+      reportParseError(t, "unsupported http method.");
+      return -1;
+    }
+    if (it->second != 0) {
+      reportParseError(t, "duplicate http method.");
+      return -1;
+    } else {
+      it->second++;
+    }
+
+    ctx.loc->methods.push_back(httpMethod);
+    advance();
+  }
+
+  if (ctx.loc->methods.size() == 0) {
+    reportParseError(dir, "at least one method required.");
+    return -1;
+  }
 
   return expectDirectiveArgsCount(dir);
 }

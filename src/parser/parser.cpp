@@ -16,6 +16,7 @@ Parser::Parser(const char *path)
 
   directiveHandlers.insert(std::make_pair("root", &Parser::handleRoot));
   directiveHandlers.insert(std::make_pair("index", &Parser::handleIndex));
+  directiveHandlers.insert(std::make_pair("methods", &Parser::handleMethods));
   directiveHandlers.insert(
       std::make_pair("autoindex", &Parser::handleAutoIndex));
   directiveHandlers.insert(

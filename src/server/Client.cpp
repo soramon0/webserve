@@ -7,9 +7,10 @@
 #define BLANKLINE "\r\n\r\n"
 
 Client::Client() : received(0), is_complete(0), offset(0),
-					is_header_parsed(0)
+					is_header_parsed(0), machine()
 {
 	addrlen = sizeof(addr);
+	machine.setServer(this->srv);
 }
 
 Client::~Client() {}
@@ -83,7 +84,7 @@ void	Client::parseRequest()
 
 size_t Client::getMaxSize()
 {
-	size_t body_size;
+	size_t body_size = 0;
 
 	if (!is_header_parsed)
 		return MAX_REQUEST_SIZE;

@@ -29,3 +29,23 @@ void reportError(const std::string &src, size_t row, size_t start,
 
   Logger::error("%s", oss.str().c_str());
 }
+
+std::string strToLower(const std::string &str) {
+  std::string ret(str);
+
+  for (std::string::size_type i = 0; i < ret.length(); ++i) {
+    ret[i] = (unsigned char)std::tolower(ret[i]);
+  }
+
+  return ret;
+}
+
+std::string strToUpper(const std::string &str) {
+  std::string ret(str);
+
+  for (std::string::size_type i = 0; i < ret.length(); ++i) {
+    ret[i] = (unsigned char)std::toupper(ret[i]);
+  }
+
+  return ret;
+}

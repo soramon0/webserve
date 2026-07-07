@@ -1,7 +1,7 @@
 CXX      := g++
-CXXFLAGS := -Wall -Wextra -Werror -std=c++98
+CXXFLAGS := -Wall -Wextra -Werror -std=c++11
 LDFLAGS  :=
-NAME     := webserv_test
+NAME     := webserv
 
 # Colors
 GREEN   := \033[1;32m

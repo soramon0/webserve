@@ -1,13 +1,16 @@
 #include "location.hpp"
+#include "lib/utils.hpp"
 #include "redirect.hpp"
 #include <sstream>
 
 Location::Location() : path(), return_rule(NULL) {
   shared_config = new SharedConfig();
+  methods.push_back("get");
 };
 
 Location::Location(const std::string &path) : path(path), return_rule(NULL) {
   shared_config = new SharedConfig();
+  methods.push_back("get");
 };
 
 Location::~Location() {
@@ -21,7 +24,7 @@ Location::~Location() {
 };
 
 Location::Location(const Location &other)
-    : path(other.path), return_rule(NULL) {
+    : path(other.path), return_rule(NULL), methods(other.methods) {
   if (other.return_rule) {
     this->return_rule = new ReturnDir(*other.return_rule);
   }
@@ -39,6 +42,7 @@ Location &Location::operator=(const Location &other) {
   }
 
   this->path = other.path;
+  this->methods = other.methods;
 
   if (this->return_rule) {
     delete this->return_rule;
@@ -100,6 +104,19 @@ std::string Location::toString(int indent) const {
     oss << tab << "\treturn " << this->return_rule->code << " "
         << this->return_rule->url << ";\n";
   }
+
+  oss << tab << "\tmethods ";
+  if (!this->methods.empty()) {
+    for (size_t i = 0; i < this->methods.size(); i++) {
+      oss << strToUpper(this->methods[i]);
+      if (i + 1 < this->methods.size()) {
+        oss << " ";
+      } else {
+        oss << ";\n";
+      }
+    }
+  }
+
   if (this->shared_config) {
     oss << this->shared_config->toString(indent + 1);
   }
