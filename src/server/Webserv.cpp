@@ -170,7 +170,7 @@ void Webserv::handleNewConnection(SOCKET srv) {
 void Webserv::handleClientData(SOCKET c) {
   Client *cl = clients[c];
 
-  char buf[10];
+  char buf[KIB(1) / 2];
   ssize_t bytes = recv(cl->socket, buf, sizeof(buf), 0);
   if (bytes <= 0) {
     removeClient(c);
