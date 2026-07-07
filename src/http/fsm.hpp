@@ -46,7 +46,6 @@ private:
 
 class FSM {
 private:
-  Server *server;
   HttpRequest *req;
   State state;
 
@@ -54,6 +53,7 @@ public:
   FSMStatus status;
   StringView curr_header_key;
   StringView curr_header_value;
+  Server *server;
 
   FSM();
   FSM(Server *s);

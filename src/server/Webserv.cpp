@@ -179,11 +179,15 @@ void Webserv::handleClientData(SOCKET c) {
 
   HttpRequest *req = cl->machine.getRequest();
   if (!cl->machine.feedChunk(buf, bytes)) {
-    Logger::error("request error: %d", req->status.asInt());
+    Logger::debug("request status: %d", req->status.asInt());
+    Logger::debug("request error: %.*s", (int)req->error.length(),
+                  req->error.data());
+    modify_epoll(epoll_fd, c, EPOLLOUT);
   }
   // client should send a response if machine is finished
-  if (req->isDone()) {
+  if (cl->machine.status.isDone()) {
     req->printRequest();
+    modify_epoll(epoll_fd, c, EPOLLOUT);
   }
 }
 
@@ -199,17 +203,12 @@ void Webserv::removeClient(SOCKET c) {
   delete cl;
 }
 
-void Webserv::handleHttpRequest(SOCKET c) {
-  Client *cl = clients[c];
-
-  cl->parseRequest();
-  if (cl->is_complete) {
-    cl->request.printRequest();
-    modify_epoll(epoll_fd, c, EPOLLOUT);
-  }
-}
-
 void Webserv::handleHttpResponse(SOCKET c) {
+  FSM fsm = clients[c]->machine;
+
+  if (fsm.status.isPending())
+    return;
+
   std::string response = HELLO_WORLD_RESPONSE;
 
   int n = send(c, response.c_str(), response.size(), 0);

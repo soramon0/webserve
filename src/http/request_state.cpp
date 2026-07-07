@@ -372,5 +372,6 @@ State stateError(Context &ctx) {
   if (ctx.fsm.status.isPending()) {
     ctx.fsm.status = FSMStatus::MALFORMED;
   }
+  ctx.req->setDone();
   return stateError;
 }
