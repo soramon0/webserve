@@ -10,20 +10,19 @@
 #include <sstream>
 #include <vector>
 
-CgiHandler::CgiHandler(const HttpRequest* request, const char *body, size_t body_len)
+CgiHandler::CgiHandler(const HttpRequest *request, const char *body, size_t body_len)
 	: pid(-1), exit_status(0), body(body), body_len(body_len), body_written(0), cgi_output(""),
-	state(WRITING_BODY), request(request)
+	  state(WRITING_BODY), request(request)
 {
-	pipe_in[0] = -1; pipe_in[1] = -1;
-	pipe_out[0] = -1; pipe_out[1] = -1;
+	pipe_in[0] = -1;
+	pipe_in[1] = -1;
+	pipe_out[0] = -1;
+	pipe_out[1] = -1;
 }
 
-CgiHandler::~CgiHandler() 
+CgiHandler::~CgiHandler()
 {
-	close_wrapper(pipe_in[0]);
-	close_wrapper(pipe_in[1]);
-	close_wrapper(pipe_out[0]);
-	close_wrapper(pipe_out[1]);
+	close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]);
 
 	if (pid > 0 && state != CGI_DONE)
 	{
@@ -32,7 +31,7 @@ CgiHandler::~CgiHandler()
 	}
 }
 
-char** CgiHandler::buildEnvp(const std::string& server_name, const std::string& server_port) const
+char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &server_port) const
 {
 	std::vector<std::string> vect_envp;
 
@@ -74,23 +73,25 @@ char** CgiHandler::buildEnvp(const std::string& server_name, const std::string& 
 	return (envp);
 }
 
-bool CgiHandler::start(const std::string& interpreter_path, const std::string& script_path,
-				const std::string& server_name, const std::string& server_port)
+bool CgiHandler::start(const std::string &interpreter_path, const std::string &script_path,
+					   const std::string &server_name, const std::string &server_port)
 {
-	if (pipe(pipe_in) == -1) {state = CGI_ERROR; return (false);}
-	if (pipe(pipe_out) == -1) {close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); state = CGI_ERROR; return (false);}
+	if (pipe(pipe_in) == -1) { state = CGI_ERROR; return (false); }
+	if (pipe(pipe_out) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); state = CGI_ERROR; return (false); }
 
-	if (fcntl(pipe_in[0], F_SETFD, FD_CLOEXEC) == -1) {close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false);}
-	if (fcntl(pipe_in[1], F_SETFD, FD_CLOEXEC) == -1) {close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false);}
-	if (fcntl(pipe_out[0], F_SETFD, FD_CLOEXEC) == -1) {close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false);}
-	if (fcntl(pipe_out[1], F_SETFD, FD_CLOEXEC) == -1) {close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false);}
+	if (fcntl(pipe_in[0], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false); }
+	if (fcntl(pipe_in[1], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false); }
+	if (fcntl(pipe_out[0], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false);}
+	if (fcntl(pipe_out[1], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR;return (false); }
 
 	char *argv[3];
-	argv[0] = const_cast<char *>(interpreter_path.c_str()); argv[1] = const_cast<char *>(script_path.c_str()); argv[2] = NULL;
+	argv[0] = const_cast<char *>(interpreter_path.c_str());
+	argv[1] = const_cast<char *>(script_path.c_str());
+	argv[2] = NULL;
 	char **envp = buildEnvp(server_name, server_port);
 
 	pid = fork();
-	if (pid == -1) {freeEnvp(envp); close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false);}
+	if (pid == -1) { freeEnvp(envp); close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false); }
 	else if (pid == 0)
 	{
 		close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]);
@@ -103,8 +104,6 @@ bool CgiHandler::start(const std::string& interpreter_path, const std::string& s
 	}
 	close_wrapper(pipe_in[0]); close_wrapper(pipe_out[1]);
 
-
-
 	freeEnvp(envp);
 	return (true);
 }
@@ -114,21 +113,39 @@ void CgiHandler::writeBody()
 	ssize_t n = write(pipe_in[1], body + body_written, body_len - body_written);
 
 	if (n > 0)
+	{
 		body_written += n;
+		if (body_written == body_len)
+		{
+			close_wrapper(pipe_in[1]);
+			state = READING_OUTPUT;
+		}
+		return ;
+	}
+	if (n == -1)
+	{
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return ;
+		state = CGI_ERROR;
+	}
+}
+
+void CgiHandler::readOutput()
+{
+	char buf[4096];
+	ssize_t n = read(pipe_out[0], buf, sizeof(buf));
+	if (n > 0)
+		cgi_output.append(buf, n);
+	else if (n == 0)
+	{
+		close_wrapper(pipe_out[0]);
+		waitChild();
+		state = CGI_DONE;
+	}
 	else if (n == -1)
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
-		else
-		{
-			state = CGI_ERROR;
-			return ;
-		}
-	}
-
-	if (body_written == body_len)
-	{
-		close_wrapper(pipe_in[1]);
-		state = READING_OUTPUT;
+		state = CGI_ERROR;
 	}
 }
