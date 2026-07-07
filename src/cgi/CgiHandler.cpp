@@ -41,7 +41,7 @@ bool CgiHandler::start(const std::string& interpreter_path, const std::string& s
 
 
 	char *argv[3];
-	argv[0] = const_cast<char *>(interpreter_path.c_str()); argv[1] = const_cast<char *>(script_path.c_str()); argv[3] = NULL;
+	argv[0] = const_cast<char *>(interpreter_path.c_str()); argv[1] = const_cast<char *>(script_path.c_str()); argv[2] = NULL;
 
 	pid = fork();
 	if (pid == -1) {close(pipe_in[0]); close(pipe_in[1]); close(pipe_out[0]); close(pipe_out[1]); state = CGI_ERROR; return (false);}
