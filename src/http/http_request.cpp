@@ -38,6 +38,8 @@ void HttpRequest::printRequest() const {
   Logger::debug("-------------------");
 }
 
+void HttpRequest::finishRequestLine() { request_line_complete = true; }
+
 bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
   if (size == 0)
     return true;
@@ -70,7 +72,20 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
 
     char *str = arena.str_resize(field.data(), prev_size, buf, total);
     if (!str) {
-      return false;
+      if (!expandArena(total)) {
+        return false;
+      }
+
+      char *data = arena.str_append(field.data(), field.length());
+      if (!data) {
+        return false;
+      }
+      field = StringView(data, field.length());
+
+      str = arena.str_resize(field.data(), prev_size, buf, total);
+      if (!str) {
+        return false;
+      }
     }
     field = StringView(str, total);
   }

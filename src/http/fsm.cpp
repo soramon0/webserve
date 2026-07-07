@@ -4,9 +4,25 @@
 
 FSM::FSM() : req(NULL), state(stateStart), status(FSMStatus::PENDING) {
   req = new HttpRequest();
-};
+}
 
-FSM::~FSM() {};
+FSM::~FSM() { clear(); }
+
+void FSM::clear() {
+  if (req) {
+    delete req;
+    req = NULL;
+  }
+  state = stateStart;
+  status = FSMStatus::PENDING;
+  curr_header_value.clear();
+  curr_header_key.clear();
+}
+
+void FSM::restart() {
+  clear();
+  req = new HttpRequest();
+}
 
 void FSM::clear() {
   if (req) {
