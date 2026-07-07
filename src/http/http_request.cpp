@@ -118,8 +118,140 @@ void HttpRequest::dumpState() {
   printRequest();
 };
 
+bool HttpRequest::validateHeaders(StringView &key, StringView &value) {
+  if (key == "host") {
+    if (headers.has(key)) {
+      StringView("duplicate host header");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+
+    if (value.empty()) {
+      error = StringView("host cannot be empty");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    return true;
+  }
+
+  if (key == "connection") {
+    // future feature
+    // TODO: Store connection state on the request context for quick access
+    // later
+    if (value.empty()) {
+      error = StringView("connection cannot be empty");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    return true;
+  }
+
+  if (key == "content-length") {
+    if (headers.has("transfer-encoding")) {
+      error = StringView("bad content-length");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+
+    if (headers.has(key)) {
+      error = StringView("duplicate content-length header");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+
+    size_t parsed_len = 0;
+    if (!parseContentLength(value, parsed_len)) {
+      error = StringView("content-length invalid or overflowed");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+
+    contentLength = parsed_len;
+    return true;
+  }
+
+  if (key == "transfer-encoding") {
+    if (headers.has("content-length")) {
+      error = StringView("bad transfer-encoding");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    if (headers.has(key)) {
+      error = StringView("duplicate transfer-encoding header");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    if (value.empty()) {
+      error = StringView("transfer-encoding cannot be empty");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    if (value != "chunked") {
+      error = StringView("transfer-encoding only support chunked");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    return true;
+  }
+  if (key == "authorization") {
+    if (headers.has(key)) {
+      error = StringView("duplicate authorization header");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    if (value.empty()) {
+      error = StringView("authorization cannot be empty");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    return true;
+  }
+  if (key == "user-agent") {
+    if (headers.has(key)) {
+      StringView("duplicate user-agent header");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    if (value.empty()) {
+      StringView("user-agent cannot be empty");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    return true;
+  }
+  if (key == "date") {
+    if (headers.has(key)) {
+      StringView("duplicate date header");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    if (value.empty()) {
+      StringView("date cannot be empty");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    return true;
+  }
+
+  if (key == "content-type") {
+    if (headers.has(key)) {
+      StringView("duplicate content-type header");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    if (value.empty()) {
+      error = StringView("content-type cannot be empty");
+      status = HttpStatus::BAD_REQUEST;
+      return false;
+    }
+    return true;
+  }
+
+  return true;
+}
+
 bool HttpRequest::parseContentLength(const StringView &value,
-                                     size_t &out_length) const {
+                                     size_t &out) const {
   if (value.empty() || value.length() > 20) {
     return false;
   }
@@ -146,6 +278,6 @@ bool HttpRequest::parseContentLength(const StringView &value,
     return false;
   }
 
-  out_length = static_cast<size_t>(parsed_val);
+  out = static_cast<size_t>(parsed_val);
   return true;
 }

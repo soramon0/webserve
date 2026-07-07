@@ -17,6 +17,7 @@ private:
   size_t contentLength;
 
   bool expandArena(size_t size);
+  bool parseContentLength(const StringView &value, size_t &out_length) const;
 
 public:
   HttpStatus status;
@@ -39,6 +40,5 @@ public:
   void dumpState();
   bool getStateReady() const { return ready; }
   size_t getContentLength() const { return contentLength; }
-  void setContentLength(size_t c) { contentLength = c; }
-  bool parseContentLength(const StringView &value, size_t &out_length) const;
+  bool validateHeaders(StringView &key, StringView &value);
 };
