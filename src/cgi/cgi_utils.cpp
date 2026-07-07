@@ -1,4 +1,5 @@
 #include "cgi_utils.hpp"
+#include <cstring>
 
 static size_t findChar(const StringView& sv, char c)
 {
@@ -40,3 +41,24 @@ std::string toHttpEnvName(const std::string& key)
 	env_name = "HTTP_" + env_name;
 	return (env_name);
 }
+
+char **vectorToEnvp(const std::vector<std::string>& vect)
+{
+	char **envp = new char*[vect.size() + 1];
+	size_t i = 0;
+	for (i = 0; i < vect.size(); i++)
+	{
+		envp[i] = new char[vect[i].size() + 1];
+		std::strcpy(envp[i], vect[i].c_str());
+	}
+	envp[i] = NULL;
+	return (envp);
+}
+
+void freeEnvp(char **envp)
+{
+	for (size_t i = 0; envp[i] != NULL; i++)
+		delete[] envp[i];
+	delete[] envp;
+}
+

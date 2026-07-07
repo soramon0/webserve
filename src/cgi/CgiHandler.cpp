@@ -68,6 +68,9 @@ char** CgiHandler::buildEnvp(const std::string& server_name, const std::string& 
 
 		vect_envp.push_back(toHttpEnvName(key) + "=" + value);
 	}
+
+	char **envp = vectorToEnvp(vect_envp);
+	return (envp);
 }
 
 bool CgiHandler::start(const std::string& interpreter_path, const std::string& script_path,
