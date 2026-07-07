@@ -30,11 +30,6 @@ CgiHandler::~CgiHandler()
 	}
 }
 
-static void splitQueryString(const StringView& uri, std::string& path, std::string& query_string)
-{
-
-}
-
 char** CgiHandler::buildEnvp(const std::string& server_name, const std::string& server_port) const
 {
 	std::vector<std::string> vect_envp;
