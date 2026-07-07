@@ -2,11 +2,13 @@
 #include "common.h"
 #include "logger/log.hpp"
 #include "request_state.hpp"
+#include <limits>
 
 const size_t HttpRequest::MaxArenaBlocks = 5;
 
 HttpRequest::HttpRequest()
-    : ready(true), request_line_complete(false), status(HttpStatus::OK) {
+    : ready(true), request_line_complete(false), contentLength(0),
+      status(HttpStatus::OK) {
   arena.setAlignment(1);
   arena.setZeroout(false);
   // MaxArenaBlocks(5) -> 1kb + 4x8kb
@@ -115,3 +117,35 @@ void HttpRequest::dumpState() {
   Logger::info("req.error = %.*s", (int)error.length(), error.data());
   printRequest();
 };
+
+bool HttpRequest::parseContentLength(const StringView &value,
+                                     size_t &out_length) const {
+  if (value.empty() || value.length() > 20) {
+    return false;
+  }
+
+  char buf[32];
+  std::memcpy(buf, value.data(), value.length());
+  buf[value.length()] = '\0';
+
+  char *endptr;
+  errno = 0;
+  unsigned long parsed_val = std::strtoul(buf, &endptr, 10);
+
+  // Check if the entire string was consumed
+  if (endptr == buf || *endptr != '\0') {
+    return false;
+  }
+
+  // Check for general strtoul overflow (e.g., value > ULONG_MAX)
+  if (errno == ERANGE) {
+    return false;
+  }
+
+  if (parsed_val > std::numeric_limits<size_t>::max()) {
+    return false;
+  }
+
+  out_length = static_cast<size_t>(parsed_val);
+  return true;
+}

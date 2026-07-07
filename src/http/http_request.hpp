@@ -14,6 +14,7 @@ private:
   bool request_line_complete;
   static const size_t MaxArenaBlocks;
   ArenaList arena;
+  size_t contentLength;
 
   bool expandArena(size_t size);
 
@@ -37,4 +38,7 @@ public:
   void finishRequestLine();
   void dumpState();
   bool getStateReady() const { return ready; }
+  size_t getContentLength() const { return contentLength; }
+  void setContentLength(size_t c) { contentLength = c; }
+  bool parseContentLength(const StringView &value, size_t &out_length) const;
 };

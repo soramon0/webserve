@@ -313,16 +313,14 @@ State stateHeaderValue(Context &ctx) {
         ctx.fsm.setMalformed400("duplicate content-length header");
         return stateError(ctx);
       }
-      if (value.empty()) {
-        ctx.fsm.setMalformed400("content-length cannot be empty");
+
+      size_t parsed_len = 0;
+      if (!ctx.req->parseContentLength(value, parsed_len)) {
+        ctx.fsm.setMalformed400("content-length invalid or overflowed");
         return stateError(ctx);
       }
-      for (size_t i = 0; i < value.length(); i++) {
-        if (!std::isdigit(static_cast<unsigned char>(value[i]))) {
-          ctx.fsm.setMalformed400("content-length invalid");
-          return stateError(ctx);
-        }
-      }
+
+      ctx.req->setContentLength(parsed_len);
     }
 
     if (key == "transfer-encoding") {
