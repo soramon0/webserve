@@ -24,28 +24,12 @@ void FSM::restart() {
   req = new HttpRequest();
 }
 
-void FSM::clear() {
-  if (req) {
-    delete req;
-  }
-  state = stateStart;
-  status = FSMStatus::PENDING;
-  curr_header_value.clear();
-  curr_header_key.clear();
-}
-
-void FSM::restart() {
-  clear();
-  req = new HttpRequest();
-}
-
 bool FSM::feedChunk(const char *buf, size_t len) {
   if (!req->getStateReady()) {
     setMalformed500();
     return false;
   }
 
-  Logger::debug("arena available space: %zu", req->arena.getBlockLeftSpace());
   Logger::debug("socket recieved: %.*s", (int)len, buf);
 
   if (len == 0) {
@@ -88,14 +72,6 @@ void FSM::setMalformed(HttpStatus::Code s) { setMalformed(s, NULL); }
 
 void FSM::setMalformed500(const char *msg) {
   status = FSMStatus::MALFORMED;
-
-  // State::Progression progress = state.getProgression(stateMethod);
-  // if (progress < State::HEADER_KEY) {
-  //  if (req->arena.getBlockCount() > 1) {
-  //   this->req->status = HttpStatus::REQUEST_ENTITY_TOO_LARGE;
-  //    this->req->error = StringView("request-line too large");
-  //  }
-  //}
 
   if (msg) {
     this->req->error = StringView(msg);
