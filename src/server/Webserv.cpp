@@ -170,7 +170,7 @@ void Webserv::handleNewConnection(SOCKET srv) {
 void Webserv::handleClientData(SOCKET c) {
   Client *cl = clients[c];
 
-  char buf[KIB(1) / 2];
+  char buf[10];
   ssize_t bytes = recv(cl->socket, buf, sizeof(buf), 0);
   if (bytes <= 0) {
     removeClient(c);
@@ -182,7 +182,9 @@ void Webserv::handleClientData(SOCKET c) {
     Logger::error("request error: %d", req->status.asInt());
   }
   // client should send a response if machine is finished
-  req->printRequest();
+  if (req->isDone()) {
+    req->printRequest();
+  }
 }
 
 void Webserv::removeClient(SOCKET c) {

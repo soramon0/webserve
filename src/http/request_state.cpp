@@ -1,4 +1,5 @@
 #include "request_state.hpp"
+#include "common.h"
 #include "fsm.hpp"
 #include "http/http_method.hpp"
 #include "http/http_version.hpp"
@@ -307,14 +308,51 @@ State stateBody(Context &ctx) {
   if (ctx.req->method != HttpMethod::POST) {
     return stateDone(ctx);
   }
-  if (ctx.req->headers.has("content-length") &&
-      ctx.req->getContentLength() == 0) {
+
+  bool hasContentLength = ctx.req->headers.has("content-length");
+  bool hasTransferEncoding = ctx.req->headers.has("transfer-encoding");
+  if (!hasContentLength && !hasTransferEncoding) {
+    ctx.fsm.setMalformed400();
+    return stateError(ctx);
+  }
+
+  if (hasContentLength && ctx.req->getContentLength() == 0) {
     return stateDone(ctx);
   }
 
-  // get location to know which config for how to handle this request body
+  if (!ctx.req->body.isInitialized() && !ctx.req->body.init(KIB(16), KIB(16))) {
+    ctx.fsm.setMalformed500();
+    return stateError(ctx);
+  }
 
-  // parse body
+  if (hasContentLength) {
+    size_t start = ctx.offset;
+    while (ctx.offset < ctx.len) {
+      ctx.offset++;
+    }
+    size_t size = ctx.offset - start;
+    // TODO: handle overflow
+    if (ctx.req->body.getTotalConsumed() + size > ctx.req->getContentLength()) {
+      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+      return stateError(ctx);
+    }
+
+    if (!ctx.req->body.str_append(&ctx.buf[start], size)) {
+      ctx.fsm.setMalformed500();
+      return stateError(ctx);
+    }
+
+    if (ctx.req->body.getTotalConsumed() < ctx.req->getContentLength()) {
+      return stateBody;
+    }
+
+    return stateDone(ctx);
+  }
+
+  if (hasTransferEncoding) {
+    return stateDone(ctx);
+  }
+
   return stateDone(ctx);
 }
 
@@ -323,6 +361,7 @@ State stateDone(Context &ctx) {
   // skip to end of buffer
   ctx.offset = ctx.len;
   ctx.fsm.setDone();
+  ctx.req->setDone();
   return stateDone;
 }
 

@@ -11,16 +11,17 @@
 class HttpRequest {
 private:
   bool ready;
+  bool done;
   bool request_line_complete;
   static const size_t MaxArenaBlocks;
   ArenaList arena;
-  ArenaList body;
   size_t contentLength;
 
   bool expandArena(size_t size);
   bool parseContentLength(const StringView &value, size_t &out_length) const;
 
 public:
+  ArenaList body;
   HttpStatus status;
   HttpMethod method;
   HttpVersion version;
@@ -40,6 +41,8 @@ public:
   void finishRequestLine();
   void dumpState();
   bool getStateReady() const { return ready; }
+  bool isDone() const { return done; }
+  void setDone() { done = true; }
   size_t getContentLength() const { return contentLength; }
   bool validateHeaders(StringView &key, StringView &value);
 };
