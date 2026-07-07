@@ -188,6 +188,246 @@ TEST_CASE("FSM enforces mandatory Host header for HTTP/1.1") {
   }
 }
 
+TEST_CASE("FSM validates specific header fields") {
+  FSM fsm;
+
+  SUBCASE("Reject duplicate Host header") {
+    std::string input = "GET / HTTP/1.1\r\n"
+                        "Host: example.com\r\n"
+                        "Host: other.com\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject empty Connection header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Connection:  \t\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Accept valid Connection header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Connection: close\r\n\r\n";
+
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isDone());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::OK);
+    const StringView *conn = req->headers.get("connection");
+    REQUIRE(conn != nullptr);
+    CHECK(*conn == StringView("close"));
+  }
+
+  SUBCASE("Reject Content-Length when Transfer-Encoding is present") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Transfer-Encoding: chunked\r\n"
+                        "Content-Length: 0\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject duplicate Content-Length header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Content-Length: 0\r\n"
+                        "Content-Length: 1\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject invalid Content-Length value") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Content-Length: abc\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Accept valid Content-Length header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Content-Length: 42\r\n\r\n";
+
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isDone());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::OK);
+    CHECK(req->getContentLength() == 42);
+  }
+
+  SUBCASE("Reject Transfer-Encoding when Content-Length is present") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Content-Length: 0\r\n"
+                        "Transfer-Encoding: chunked\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject duplicate Transfer-Encoding header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Transfer-Encoding: chunked\r\n"
+                        "Transfer-Encoding: chunked\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject empty Transfer-Encoding header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Transfer-Encoding:  \t\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject unsupported Transfer-Encoding value") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Transfer-Encoding: gzip\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Accept valid Transfer-Encoding chunked") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Transfer-Encoding: chunked\r\n\r\n";
+
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isDone());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::OK);
+    const StringView *te = req->headers.get("transfer-encoding");
+    REQUIRE(te != nullptr);
+    CHECK(*te == StringView("chunked"));
+  }
+
+  SUBCASE("Reject duplicate Authorization header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Authorization: Bearer token\r\n"
+                        "Authorization: Bearer other\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject empty Authorization header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Authorization:  \t\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject duplicate User-Agent header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "User-Agent: agent/1.0\r\n"
+                        "User-Agent: agent/2.0\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject empty User-Agent header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "User-Agent:  \t\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject duplicate Date header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Date: Tue, 07 Jul 2026 12:00:00 GMT\r\n"
+                        "Date: Wed, 08 Jul 2026 12:00:00 GMT\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject empty Date header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Date:  \t\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject duplicate Content-Type header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Content-Type: text/html\r\n"
+                        "Content-Type: application/json\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
+  SUBCASE("Reject empty Content-Type header") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Content-Type:  \t\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+}
+
 TEST_CASE("FSM handles arena growth, 8KB field limit, and max block counts") {
   FSM fsm;
 
