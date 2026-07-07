@@ -343,6 +343,36 @@ State stateHeaderValue(Context &ctx) {
         return stateError(ctx);
       }
     }
+    if (key == "authorization") {
+      if (ctx.req->headers.has(key)) {
+        ctx.fsm.setMalformed400("duplicate authorization header");
+        return stateError(ctx);
+      }
+      if (value.empty()) {
+        ctx.fsm.setMalformed400("authorization cannot be empty");
+        return stateError(ctx);
+      }
+    }
+    if (key == "user-agent") {
+      if (ctx.req->headers.has(key)) {
+        ctx.fsm.setMalformed400("duplicate user-agent header");
+        return stateError(ctx);
+      }
+      if (value.empty()) {
+        ctx.fsm.setMalformed400("user-agent cannot be empty");
+        return stateError(ctx);
+      }
+    }
+    if (key == "date") {
+      if (ctx.req->headers.has(key)) {
+        ctx.fsm.setMalformed400("duplicate date header");
+        return stateError(ctx);
+      }
+      if (value.empty()) {
+        ctx.fsm.setMalformed400("date cannot be empty");
+        return stateError(ctx);
+      }
+    }
 
     if (key == "content-type") {
       if (ctx.req->headers.has(key)) {
