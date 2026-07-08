@@ -361,7 +361,6 @@ State stateDone(Context &ctx) {
   // skip to end of buffer
   ctx.offset = ctx.len;
   ctx.fsm.setDone();
-  ctx.req->setDone();
   return stateDone;
 }
 
@@ -372,6 +371,5 @@ State stateError(Context &ctx) {
   if (ctx.fsm.status.isPending()) {
     ctx.fsm.status = FSMStatus::MALFORMED;
   }
-  ctx.req->setDone();
   return stateError;
 }

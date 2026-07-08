@@ -7,7 +7,7 @@
 const size_t HttpRequest::MaxArenaBlocks = 5;
 
 HttpRequest::HttpRequest()
-    : ready(true), done(false), request_line_complete(false), contentLength(0),
+    : ready(true), request_line_complete(false), contentLength(0),
       status(HttpStatus::OK) {
   arena.setAlignment(1);
   arena.setZeroout(false);

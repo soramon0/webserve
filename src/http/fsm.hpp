@@ -46,17 +46,19 @@ private:
 
 class FSM {
 private:
+  Server *server;
   HttpRequest *req;
   State state;
+
+  FSM(const FSM &);
+  FSM &operator=(const FSM &);
 
 public:
   FSMStatus status;
   StringView curr_header_key;
   StringView curr_header_value;
-  Server *server;
 
   FSM();
-  FSM(Server *s);
   ~FSM();
 
   bool feedChunk(const char *buf, std::size_t len);

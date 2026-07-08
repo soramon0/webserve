@@ -3,7 +3,7 @@
 #include "request_state.hpp"
 
 FSM::FSM()
-    : req(NULL), state(stateStart), status(FSMStatus::PENDING), server(NULL) {
+    : server(NULL), req(NULL), state(stateStart), status(FSMStatus::PENDING) {
   req = new HttpRequest();
 }
 

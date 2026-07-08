@@ -16,19 +16,16 @@ Webserv::Webserv(Config _conf) : config(_conf) {}
 Webserv::~Webserv() {
   close(epoll_fd);
   // close all sockets before
-  std::map<SOCKET, Client *>::iterator it_cl = clients.begin();
-  std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
-  while (it_cl != clients.end()) {
-    close(it_cl->first);
-    delete it_cl->second;
-    ++it_cl;
+
+  while (!clients.empty()) {
+    removeClient(clients.begin()->first);
   }
-  clients.clear();
+
+  std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
   while (it_srv != servers.end()) {
     close(it_srv->first);
     ++it_srv;
   }
-  servers.clear();
 }
 
 void Webserv::start() {
@@ -178,14 +175,14 @@ void Webserv::handleClientData(SOCKET c) {
   }
 
   HttpRequest *req = cl->machine.getRequest();
-  if (!cl->machine.feedChunk(buf, bytes)) {
+  if (cl->machine.status.isPending() && !cl->machine.feedChunk(buf, bytes)) {
     Logger::debug("request status: %d", req->status.asInt());
     Logger::debug("request error: %.*s", (int)req->error.length(),
                   req->error.data());
-    modify_epoll(epoll_fd, c, EPOLLOUT);
   }
-  // client should send a response if machine is finished
-  if (cl->machine.status.isDone()) {
+
+  // notify client to send a response
+  if (!cl->machine.status.isPending()) {
     req->printRequest();
     modify_epoll(epoll_fd, c, EPOLLOUT);
   }
@@ -194,19 +191,20 @@ void Webserv::handleClientData(SOCKET c) {
 void Webserv::removeClient(SOCKET c) {
   Logger::debug("dropping client(%d)", c);
 
-  if (!clients.count(c))
+  std::map<SOCKET, Client *>::iterator it = clients.find(c);
+  if (it == clients.end()) {
     return;
-  Client *cl = clients[c];
+  }
+
   epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
-  close(c);
+  Client *cl = it->second;
   clients.erase(c);
+  close(c);
   delete cl;
 }
 
 void Webserv::handleHttpResponse(SOCKET c) {
-  FSM fsm = clients[c]->machine;
-
-  if (fsm.status.isPending())
+  if (clients[c]->machine.status.isPending())
     return;
 
   std::string response = HELLO_WORLD_RESPONSE;
@@ -214,5 +212,4 @@ void Webserv::handleHttpResponse(SOCKET c) {
   int n = send(c, response.c_str(), response.size(), 0);
   (void)n;
   removeClient(c);
-  Logger::info("Client disconneted...\n");
 }
