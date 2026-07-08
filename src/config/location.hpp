@@ -19,6 +19,7 @@ struct Location {
   Location(const std::string &path);
 
   Location &withPath(const std::string &path);
+  Location &withMethod(const std::string &method);
   Location &withRedirect(uint16_t code, const std::string &url);
   Location &withRedirect(const std::string &url);
   Location &withSharedConfig(const SharedConfig &cfg);

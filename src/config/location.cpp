@@ -2,6 +2,7 @@
 #include "lib/utils.hpp"
 #include "redirect.hpp"
 #include <sstream>
+#include <algorithm>
 
 Location::Location() : path(), return_rule(NULL) {
   shared_config = new SharedConfig();
@@ -65,6 +66,15 @@ Location &Location::operator=(const Location &other) {
 
 Location &Location::withPath(const std::string &path) {
   this->path = path;
+  return *this;
+}
+
+Location &Location::withMethod(const std::string &method) {
+  std::string lower_method = strToLower(method);
+  if (std::find(this->methods.begin(), this->methods.end(), lower_method) ==
+      this->methods.end()) {
+    this->methods.push_back(lower_method);
+  }
   return *this;
 }
 

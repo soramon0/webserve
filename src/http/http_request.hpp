@@ -10,11 +10,11 @@
 
 class HttpRequest {
 private:
-  bool ready;
-  bool request_line_complete;
   static const size_t MaxArenaBlocks;
   ArenaList arena;
   size_t contentLength;
+  bool ready;
+  bool request_line_complete;
 
   HttpRequest(const HttpRequest &);
   HttpRequest &operator=(const HttpRequest &);

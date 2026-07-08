@@ -145,3 +145,22 @@ std::string Server::toString(int indent) const {
   oss << tab << "}\n";
   return oss.str();
 }
+
+const Location *Server::findLocation(const HttpRequest *req) const {
+  if (locations.size() == 0)
+    return NULL;
+
+  std::map<std::string, Location>::const_iterator it = locations.begin();
+  size_t best = 0;
+  const Location *bestLoc = NULL;
+  std::string path = std::string(req->uri.data(), req->uri.length());
+  while (it != locations.end()) {
+    std::string prefix = it->first;
+    if (path.substr(0, prefix.size()) == prefix && best < prefix.size()) {
+      best = prefix.size();
+      bestLoc = &it->second;
+    }
+    ++it;
+  }
+  return bestLoc;
+}

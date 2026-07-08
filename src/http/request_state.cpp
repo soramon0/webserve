@@ -6,6 +6,7 @@
 #include "http/status_code.hpp"
 #include "http_request.hpp"
 #include "logger/log.hpp"
+#include <algorithm>
 #include <cctype>
 #include <cstddef>
 
@@ -313,6 +314,26 @@ State stateBody(Context &ctx) {
   bool hasTransferEncoding = ctx.req->headers.has("transfer-encoding");
   if (!hasContentLength && !hasTransferEncoding) {
     ctx.fsm.setMalformed400();
+    return stateError(ctx);
+  }
+
+  Server *server = ctx.fsm.getServer();
+  if (!server) {
+    Logger::debug("server in body is null");
+    ctx.fsm.setMalformed500();
+    return stateError(ctx);
+  }
+
+  const Location *loc = server->findLocation(ctx.req);
+  if (!loc) {
+    ctx.fsm.setMalformed(HttpStatus::NOT_FOUND);
+    return stateError(ctx);
+  }
+
+  std::vector<std::string>::const_iterator it = std::find(
+      loc->methods.begin(), loc->methods.end(), ctx.req->method_view.data());
+  if (it == loc->methods.end()) {
+    ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED);
     return stateError(ctx);
   }
 
