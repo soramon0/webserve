@@ -23,9 +23,23 @@ public:
         alignment(DEFAULT_ALIGNMENT), zeroout(false) {};
   ~ArenaList();
 
+  bool isInitialized() const { return current != NULL; };
   size_t getBlockCount() const { return count; }
   size_t getBlockLeftSpace() const {
     return current ? current->available() : 0;
+  }
+  ArenaBlock *getFirstBlock() const { return head; }
+  ArenaBlock *getCurrentBlock() const { return current; }
+  size_t getTotalConsumed() const {
+    ArenaBlock *curr = head;
+    size_t total = 0;
+    while (curr != NULL) {
+      ArenaBlock *next_block = curr->next;
+      total += curr->consumed();
+      curr = next_block;
+    }
+
+    return total;
   }
   size_t getMaxCap() const { return max_cap; }
   void setMaxCap(size_t cap) { max_cap = cap; }
@@ -43,7 +57,7 @@ public:
   };
 
   bool init(size_t capacity, size_t max_capacity);
-  void *grow(size_t size);
+  void *assignBlock();
   void *alloc(size_t size);
 
   char *str_append(const char *str, size_t len) {

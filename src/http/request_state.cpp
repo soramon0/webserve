@@ -1,4 +1,5 @@
 #include "request_state.hpp"
+#include "common.h"
 #include "fsm.hpp"
 #include "http/http_method.hpp"
 #include "http/http_version.hpp"
@@ -183,6 +184,7 @@ State stateVersion(Context &ctx) {
     return stateVersion;
   }
 
+  ctx.req->finishRequestLine();
   return stateHeaderKey;
 }
 
@@ -202,8 +204,9 @@ State stateHeaderKey(Context &ctx) {
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderKey;
     }
+
     // force done state until we implment body state
-    return stateDone(ctx);
+    return stateBody(ctx);
   }
 
   // header-field   = field-name ":" OWS field-value OWS
@@ -249,7 +252,8 @@ State stateHeaderValue(Context &ctx) {
   StringView &key = ctx.fsm.curr_header_key;
   StringView &value = ctx.fsm.curr_header_value;
 
-  if (ctx.fsm.isCRLF(ctx.buf[ctx.offset]) && key.empty() && value.empty()) {
+  if (ctx.offset < ctx.len && ctx.fsm.isCRLF(ctx.buf[ctx.offset]) &&
+      key.empty() && value.empty()) {
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderValue;
     }
@@ -267,7 +271,7 @@ State stateHeaderValue(Context &ctx) {
     return stateError(ctx);
   }
 
-  if (ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
+  if (ctx.offset < ctx.len && ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
     Headers::normalizeKey(const_cast<char *>(key.data()), key.length());
     if (!Headers::isValidKey(key)) {
       ctx.fsm.setMalformed400();
@@ -277,6 +281,11 @@ State stateHeaderValue(Context &ctx) {
     Headers::normalizeValue(value);
     if (!Headers::isValidValue(value)) {
       ctx.fsm.setMalformed400();
+      return stateError(ctx);
+    }
+
+    if (!ctx.req->validateHeaders(key, value)) {
+      ctx.fsm.setMalformed(ctx.req->status.value(), ctx.req->error);
       return stateError(ctx);
     }
 
@@ -295,10 +304,55 @@ State stateHeaderValue(Context &ctx) {
 
 State stateBody(Context &ctx) {
   Logger::debug("state: body");
+
   if (ctx.req->method != HttpMethod::POST) {
     return stateDone(ctx);
   }
-  // parse body
+
+  bool hasContentLength = ctx.req->headers.has("content-length");
+  bool hasTransferEncoding = ctx.req->headers.has("transfer-encoding");
+  if (!hasContentLength && !hasTransferEncoding) {
+    ctx.fsm.setMalformed400();
+    return stateError(ctx);
+  }
+
+  if (hasContentLength && ctx.req->getContentLength() == 0) {
+    return stateDone(ctx);
+  }
+
+  if (!ctx.req->body.isInitialized() && !ctx.req->body.init(KIB(16), KIB(16))) {
+    ctx.fsm.setMalformed500();
+    return stateError(ctx);
+  }
+
+  if (hasContentLength) {
+    size_t start = ctx.offset;
+    while (ctx.offset < ctx.len) {
+      ctx.offset++;
+    }
+    size_t size = ctx.offset - start;
+    // TODO: handle overflow
+    if (ctx.req->body.getTotalConsumed() + size > ctx.req->getContentLength()) {
+      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+      return stateError(ctx);
+    }
+
+    if (!ctx.req->body.str_append(&ctx.buf[start], size)) {
+      ctx.fsm.setMalformed500();
+      return stateError(ctx);
+    }
+
+    if (ctx.req->body.getTotalConsumed() < ctx.req->getContentLength()) {
+      return stateBody;
+    }
+
+    return stateDone(ctx);
+  }
+
+  if (hasTransferEncoding) {
+    return stateDone(ctx);
+  }
+
   return stateDone(ctx);
 }
 

@@ -2,13 +2,17 @@
 #include "logger/log.hpp"
 #include "request_state.hpp"
 
-FSM::FSM() : req(NULL), state(stateStart), status(FSMStatus::PENDING) {
+FSM::FSM()
+    : server(NULL), req(NULL), state(stateStart), status(FSMStatus::PENDING) {
   req = new HttpRequest();
 }
 
 FSM::~FSM() { clear(); }
 
 void FSM::clear() {
+  if (server) {
+    server = NULL;
+  }
   if (req) {
     delete req;
     req = NULL;
@@ -30,7 +34,7 @@ bool FSM::feedChunk(const char *buf, size_t len) {
     return false;
   }
 
-  Logger::debug("socket recieved: %.*s", (int)len, buf);
+  Logger::debug("socket recieved:\n%.*s", (int)len, buf);
 
   if (len == 0) {
     this->setMalformed400();

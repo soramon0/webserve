@@ -163,3 +163,34 @@ TEST_CASE("FSM correctly rejects various malformed request lines") {
   REQUIRE(req != nullptr);
   CHECK(req->status == HttpStatus::BAD_REQUEST);
 }
+
+TEST_CASE("FSM keeps request line within the initial 1KB arena block") {
+  FSM fsm;
+
+  SUBCASE("FSM accepts request line that fills the 1KB block") {
+    // GET(3) + uri(1013) + HTTP/1.1(8) = 1024 bytes in the first block
+    std::string uri_body(1012, 'u');
+    std::string input =
+        "GET /" + uri_body + " HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isDone());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::OK);
+    CHECK(req->uri.length() == 1013);
+  }
+
+  SUBCASE("FSM rejects request line that exceeds the 1KB block") {
+    std::string uri_body(1013, 'v');
+    std::string input = "GET /" + uri_body + " HTTP/1.1\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::URI_TOO_LONG);
+  }
+}

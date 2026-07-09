@@ -11,12 +11,19 @@
 class HttpRequest {
 private:
   bool ready;
-  size_t max_arena_blocks;
+  bool request_line_complete;
+  static const size_t MaxArenaBlocks;
+  ArenaList arena;
+  size_t contentLength;
+
+  HttpRequest(const HttpRequest &);
+  HttpRequest &operator=(const HttpRequest &);
 
   bool expandArena(size_t size);
+  bool parseContentLength(const StringView &value, size_t &out_length) const;
 
 public:
-  ArenaList arena;
+  ArenaList body;
   HttpStatus status;
   HttpMethod method;
   HttpVersion version;
@@ -33,6 +40,9 @@ public:
 
   void printRequest() const;
   bool updateField(StringView &field, const char *buf, size_t size);
+  void finishRequestLine();
   void dumpState();
   bool getStateReady() const { return ready; }
+  size_t getContentLength() const { return contentLength; }
+  bool validateHeaders(StringView &key, StringView &value);
 };

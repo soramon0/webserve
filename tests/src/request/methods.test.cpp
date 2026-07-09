@@ -6,7 +6,8 @@ TEST_CASE("FSM accepts supported HTTP methods") {
   FSM fsm;
 
   SUBCASE("POST") {
-    std::string input = "POST / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    std::string input =
+        "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n";
     CHECK(fsm.feedChunk(input.data(), input.length()));
     REQUIRE(fsm.status.isDone());
 

@@ -47,10 +47,7 @@ bool ArenaList::init(size_t capacity, size_t max_capacity) {
   return true;
 };
 
-void *ArenaList::grow(size_t size) {
-  if (size > max_cap)
-    return NULL;
-
+void *ArenaList::assignBlock() {
   ArenaBlock *block = createBlock(max_cap);
   if (!block)
     return NULL;
@@ -62,9 +59,12 @@ void *ArenaList::grow(size_t size) {
 }
 
 void *ArenaList::alloc(size_t size) {
+  if (size > max_cap)
+    return NULL;
+
   void *data = current->alloc(size);
   if (!data) {
-    if (grow(size)) {
+    if (assignBlock()) {
       return current->alloc(size);
     }
   }
