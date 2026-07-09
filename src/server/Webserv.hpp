@@ -5,10 +5,7 @@
 #include "Client.hpp"
 #include <map>
 
-
 #define MAX_EVENTS 64
-
-#define HELLO_WORLD_RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!"
 
 class Webserv
 {
@@ -24,7 +21,6 @@ public:
 	void	start();
 	SOCKET	createSocket(int id);
 	void	handleNewConnection(SOCKET srv);
-	void	handleHttpRequest(SOCKET c);
 	void	handleHttpResponse(SOCKET c);
 	void	handleClientData(SOCKET c);
 	void	removeClient(SOCKET c);

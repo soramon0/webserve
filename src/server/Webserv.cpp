@@ -138,7 +138,6 @@ void Webserv::handleNewConnection(SOCKET srv) {
   while (max_accepts-- > 0) {
     Client *c = new Client();
     c->socket = accept(srv, &c->addr, &c->addrlen);
-    c->received = 0;
 
     if (c->socket == -1) {
       delete c;
@@ -207,7 +206,13 @@ void Webserv::handleHttpResponse(SOCKET c) {
   if (clients[c]->machine.status.isPending())
     return;
 
-  std::string response = HELLO_WORLD_RESPONSE;
+  std::string response =
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: text/plain\r\n"
+    "Content-Length: 5\r\n"
+    "Connection: close\r\n"
+    "\r\n"
+    "hello";
 
   int n = send(c, response.c_str(), response.size(), 0);
   (void)n;
