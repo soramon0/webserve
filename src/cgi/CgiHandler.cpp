@@ -79,10 +79,8 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 	if (pipe(pipe_in) == -1) { state = CGI_ERROR; return (false); }
 	if (pipe(pipe_out) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); state = CGI_ERROR; return (false); }
 
-	if (fcntl(pipe_in[0], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false); }
 	if (fcntl(pipe_in[1], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false); }
 	if (fcntl(pipe_out[0], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false);}
-	if (fcntl(pipe_out[1], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR;return (false); }
 
 	char *argv[3];
 	argv[0] = const_cast<char *>(interpreter_path.c_str());
