@@ -35,7 +35,7 @@ public:
 	bool waitChild();
 
 	CgiState getCgiState() const;
-	std::string getCgiOutput() const;
+	const std::string& getCgiOutput() const;
 	int getWriteFd() const;
 	int getReadFd() const;
 	int getExitStatus() const;
