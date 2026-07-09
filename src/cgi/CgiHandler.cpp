@@ -139,8 +139,8 @@ void CgiHandler::readOutput()
 	else if (n == 0)
 	{
 		close_wrapper(pipe_out[0]);
-		waitChild();
-		state = CGI_DONE;
+		if (waitChild())
+			state = CGI_DONE;
 	}
 	else if (n == -1)
 	{
@@ -148,4 +148,29 @@ void CgiHandler::readOutput()
 			return ;
 		state = CGI_ERROR;
 	}
+}
+
+bool CgiHandler::waitChild()
+{
+	int status;
+	if (pid <= 0)
+		return (false);
+	pid_t ret = waitpid(pid, &status, WNOHANG);
+	if (ret == 0)
+		return (false);
+	if (ret == pid)
+	{
+		if (WIFEXITED(status))
+			exit_status = WEXITSTATUS(status);
+		else if (WIFSIGNALED(status))
+			exit_status = 128 + WTERMSIG(status);
+		pid = -1;
+		return (true);
+	}
+	if (ret == -1)
+	{
+		state = CGI_ERROR;
+		return (false);
+	}
+	return (false);
 }
