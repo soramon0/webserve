@@ -1,6 +1,7 @@
 #include "Webserv.hpp"
 #include "logger/log.hpp"
 #include "utils.hpp"
+#include "router.hpp"
 #include <cstring>
 #include <iostream>
 #include <signal.h>
@@ -136,7 +137,7 @@ void Webserv::handleNewConnection(SOCKET srv) {
   int max_accepts = 32;
 
   while (max_accepts-- > 0) {
-    Client *c = new Client();
+    Client *c = new Client(); //TODO: there is a conditional jump here
     c->socket = accept(srv, &c->addr, &c->addrlen);
 
     if (c->socket == -1) {
@@ -203,18 +204,91 @@ void Webserv::removeClient(SOCKET c) {
 }
 
 void Webserv::handleHttpResponse(SOCKET c) {
-  if (clients[c]->machine.status.isPending())
+  Client* cl = clients[c];
+  HttpRequest* req = cl->machine.getRequest();
+
+  if (cl->machine.status.isPending()) {
+    Logger::debug("no request yet");
     return;
+  }
 
-  std::string response =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 5\r\n"
-    "Connection: close\r\n"
-    "\r\n"
-    "hello";
+  // debugging
+  Logger::debug("alloooooooo wach katsm3ooniii");
 
-  int n = send(c, response.c_str(), response.size(), 0);
-  (void)n;
-  removeClient(c);
+  //processing kima galia karim, ndirha hna 
+  processRequest(cl);
+
+  // REDIRECT
+  if (isRedirect(req->status)) {
+    std::string body = "";
+    std::string resp =
+        "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
+        "Location: " + cl->redirect_url + "\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+    send(c, resp.c_str(), resp.size(), 0);
+    removeClient(c);
+    return;
+  }
+
+  // 404
+  if (req->status == HttpStatus::NOT_FOUND) {
+    std::string body = "<html><body><h1>404 Not Found</h1></body></html>";
+    std::ostringstream resp;
+    resp << "HTTP/1.1 404 Not Found\r\n"
+          << "Content-Length: " << body.size() << "\r\n"
+          << "Connection: close\r\n"
+          << "\r\n"
+          << body;
+    std::string r = resp.str();
+    send(c, r.c_str(), r.size(), 0);
+    removeClient(c);
+    return;
+  }
+
+	if (req->status == HttpStatus::OK) {
+		std::ostringstream resp;
+		resp << "HTTP/1.1 200 OK\r\n"
+			<< "Content-Length: " << cl->response_body.size() << "\r\n"
+			<< "Connection: close\r\n"
+			<< "\r\n"
+			<< cl->response_body;
+		std::string r = resp.str();
+		send(c, r.c_str(), r.size(), 0);
+		removeClient(c);
+		return;
+	}
+
+	if (req->status == HttpStatus::METHOD_NOT_ALLOWED)
+	{
+		std::string body = "<html><body><h1>405 Method Not Allowed</h1></body></html>";
+		std::ostringstream resp;
+		resp << "HTTP/1.1 405 Method Not Allowed\r\n"
+			<< "Content-Length: " << body.size() << "\r\n"
+			<< "Connection: close\r\n"
+			<< "\r\n"
+			<< body;
+		std::string r = resp.str();
+		send(c, r.c_str(), r.size(), 0);
+		removeClient(c);
+		return;
+	}
 }
+
+// void Webserv::handleHttpResponse(SOCKET c) {
+//   if (clients[c]->machine.status.isPending())
+//     return;
+  
+//   std::string response =
+//     "HTTP/1.1 200 OK\r\n"
+//     "Content-Type: text/plain\r\n"
+//     "Content-Length: 5\r\n"
+//     "Connection: close\r\n"
+//     "\r\n"
+//     "hello";
+
+//   int n = send(c, response.c_str(), response.size(), 0);
+//   (void)n;
+//   removeClient(c);
+// }

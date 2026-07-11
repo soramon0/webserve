@@ -4,19 +4,20 @@
 #include "config/server.hpp"
 #include "http/fsm.hpp"
 
-class Client
+struct Client
 {
 	socklen_t		addrlen;
 	struct sockaddr addr;
 	SOCKET			socket;
 	Server*			srv;
 
-	FSM machine;
+	//new fields
+	Location*		location;
+	std::string		redirect_url;
+	std::string		response_body;
 
-	friend class Webserv;
+	FSM				machine;
 
-public:
 	Client();
 	~Client();
-
 };

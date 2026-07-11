@@ -2,13 +2,16 @@
 #include <string>
 #include <sstream>
 #include <cstdlib>
+#include <cstring>
 
-#define CRLF "\r\n"
-#define BLANKLINE "\r\n\r\n"
-
-Client::Client() : machine()
+Client::Client()
+	: addrlen(0),
+	  socket(-1),
+	  srv(NULL),
+	  location(NULL),
+	  machine()
 {
-	addrlen = sizeof(addr);
+	std::memset(&addr, 0, sizeof(addr));
 	machine.setServer(this->srv);
 }
 

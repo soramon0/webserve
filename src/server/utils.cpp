@@ -1,8 +1,8 @@
 #include "common.h"
 #include "utils.hpp"
+#include "logger/log.hpp"
 #include <fcntl.h>
 #include <sys/epoll.h>
-#include "logger/log.hpp"
 #include <cstring>
 
 int set_nonblocking(int fd) {
@@ -51,4 +51,13 @@ int modify_epoll(int epoll_fd, int c, int flag)
         return -1;
     }
     return 0;
+}
+
+bool isRedirect(HttpStatus& status) {
+  return (
+    status == HttpStatus::MOVED_PERMANENTLY
+    || status == HttpStatus::FOUND
+    || status == HttpStatus::TEMPORARY_REDIRECT
+    || status == HttpStatus::PERMANENT_REDIRECT
+  );
 }
