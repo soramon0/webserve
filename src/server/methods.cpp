@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <sys/stat.h>
 #include <fstream>
+#include <sstream>
 
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
@@ -35,10 +36,35 @@ void handleGet(Client* cl) {
 				break;
 			}
 		}
-		// if still a directory after checking indexes
+		// if indx found is  a directory after checking indexes
 		struct stat check;
 		if (stat(file_path.c_str(), &check) == -1 || S_ISDIR(check.st_mode))
 		{
+			if (cl->location->shared_config->autoindex == SharedConfig::INDEX_ON)
+			{
+					// generate directory listing
+					DIR* dir = opendir(file_path.c_str());
+					if (dir == NULL) {
+							req->status = HttpStatus::FORBIDDEN;
+							return;
+					}
+					std::ostringstream listing;
+					listing << "<html><body><h1>Index of " << uri << "</h1><ul>";
+					struct dirent* entry;
+					while ((entry = readdir(dir)) != NULL)
+					{
+							std::string name = entry->d_name;
+							if (name == "." || name == "..")
+    						continue;
+							listing << "<li><a href=\"" << name << "\">" << name << "</a></li>";
+					}
+					closedir(dir);
+					listing << "</ul></body></html>";
+					cl->response_body = listing.str();
+					cl->file_path = "";
+					req->status = HttpStatus::OK;
+					return;
+			}
 			req->status = HttpStatus::FORBIDDEN;
 			return;
 		}

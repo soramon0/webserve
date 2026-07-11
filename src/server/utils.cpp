@@ -65,6 +65,8 @@ bool isRedirect(HttpStatus& status) {
 
 std::string getContentType(const std::string& path)
 {
+    if (path.empty())
+        return "text/html";
     size_t pos = path.rfind('.');
     if (pos == std::string::npos)
         return "application/octet-stream";
