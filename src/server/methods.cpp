@@ -20,6 +20,29 @@ void handleGet(Client* cl) {
 		req->status = HttpStatus::NOT_FOUND;
 		return;
 	}
+	// durectory handling
+	if (S_ISDIR(file_stat.st_mode))
+	{
+		// try each index file in order
+		std::vector<std::string>& indexes = cl->location->shared_config->index;
+		for (size_t i = 0; i < indexes.size(); i++)
+		{
+			std::string index_path = file_path + "/" + indexes[i];
+			struct stat index_stat;
+			if (stat(index_path.c_str(), &index_stat) == 0)
+			{
+				file_path = index_path;
+				break;
+			}
+		}
+		// if still a directory after checking indexes
+		struct stat check;
+		if (stat(file_path.c_str(), &check) == -1 || S_ISDIR(check.st_mode))
+		{
+			req->status = HttpStatus::FORBIDDEN;
+			return;
+		}
+	}
 
 	// next : open file -> read it in a string -> send response
 	std::ifstream file(file_path.c_str(), std::ios::binary);// opens file (to avoid system translation)
