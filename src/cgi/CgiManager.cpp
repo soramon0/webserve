@@ -1,4 +1,5 @@
 #include "CgiManager.hpp"
+#include <algorithm>
 #include <sstream>
 
 CgiManager::CgiManager(int epoll_fd) : epoll_fd(epoll_fd) {}
@@ -32,4 +33,16 @@ bool CgiManager::registerHandler(const HttpRequest *request, const char *body, s
 	}
 	delete handler;
 	return (false);
+}
+
+void CgiManager::removeHandler(CgiHandler* handler)
+{
+	if (handler->getWriteFd() != -1)
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, handler->getWriteFd(), NULL);
+	if (handler->getReadFd() != -1)
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, handler->getReadFd(), NULL);
+	std::vector<CgiHandler*>::iterator it = std::find(handlers.begin(), handlers.end(), handler);
+	if (it != handlers.end())
+		handlers.erase(it);
+	delete handler;
 }

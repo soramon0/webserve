@@ -20,6 +20,7 @@ public:
 	bool registerHandler(const HttpRequest* request, const char* body, size_t body_len,
 						const std::string& interpreter_path, const std::string& script_path,
 						const std::string& server_name, const std::string& server_port);
+	void removeHandler(CgiHandler* handler);
 private:
 
 };
