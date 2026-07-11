@@ -212,9 +212,6 @@ void Webserv::handleHttpResponse(SOCKET c) {
     return;
   }
 
-  // debugging
-  Logger::debug("alloooooooo wach katsm3ooniii");
-
   //processing kima galia karim, ndirha hna 
   processRequest(cl);
 
@@ -232,11 +229,13 @@ void Webserv::handleHttpResponse(SOCKET c) {
     return;
   }
 
-  // 404
-  if (req->status == HttpStatus::NOT_FOUND) {
-    std::string body = "<html><body><h1>404 Not Found</h1></body></html>";
+  // 4** errors
+  if (req->status == HttpStatus::NOT_FOUND
+    || req->status == HttpStatus::FORBIDDEN
+    || req->status == HttpStatus::METHOD_NOT_ALLOWED) {
+    std::string body = "<html><body><h1>" + std::string(req->status.toString()) + "</h1></body></html>";
     std::ostringstream resp;
-    resp << "HTTP/1.1 404 Not Found\r\n"
+    resp << "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
           << "Content-Length: " << body.size() << "\r\n"
           << "Connection: close\r\n"
           << "\r\n"
@@ -251,6 +250,7 @@ void Webserv::handleHttpResponse(SOCKET c) {
 		std::ostringstream resp;
 		resp << "HTTP/1.1 200 OK\r\n"
 			<< "Content-Length: " << cl->response_body.size() << "\r\n"
+      << "Content-Type: " << getContentType(cl->file_path) << "\r\n"
 			<< "Connection: close\r\n"
 			<< "\r\n"
 			<< cl->response_body;
@@ -259,36 +259,4 @@ void Webserv::handleHttpResponse(SOCKET c) {
 		removeClient(c);
 		return;
 	}
-
-	if (req->status == HttpStatus::METHOD_NOT_ALLOWED)
-	{
-		std::string body = "<html><body><h1>405 Method Not Allowed</h1></body></html>";
-		std::ostringstream resp;
-		resp << "HTTP/1.1 405 Method Not Allowed\r\n"
-			<< "Content-Length: " << body.size() << "\r\n"
-			<< "Connection: close\r\n"
-			<< "\r\n"
-			<< body;
-		std::string r = resp.str();
-		send(c, r.c_str(), r.size(), 0);
-		removeClient(c);
-		return;
-	}
 }
-
-// void Webserv::handleHttpResponse(SOCKET c) {
-//   if (clients[c]->machine.status.isPending())
-//     return;
-  
-//   std::string response =
-//     "HTTP/1.1 200 OK\r\n"
-//     "Content-Type: text/plain\r\n"
-//     "Content-Length: 5\r\n"
-//     "Connection: close\r\n"
-//     "\r\n"
-//     "hello";
-
-//   int n = send(c, response.c_str(), response.size(), 0);
-//   (void)n;
-//   removeClient(c);
-// }

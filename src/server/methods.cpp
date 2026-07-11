@@ -50,6 +50,7 @@ void handleGet(Client* cl) {
 		std::istreambuf_iterator<char>()); // reads all of it into "body"
 
 	cl->response_body = body;
+	cl->file_path = file_path;
 	req->status = HttpStatus::OK;
 }
 

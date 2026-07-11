@@ -15,6 +15,7 @@ struct Client
 	Location*		location;
 	std::string		redirect_url;
 	std::string		response_body;
+	std::string		file_path;
 
 	FSM				machine;
 
