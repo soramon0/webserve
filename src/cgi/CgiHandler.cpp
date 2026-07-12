@@ -144,9 +144,8 @@ void CgiHandler::writeBody()
 	}
 	if (n == -1)
 	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return ;
 		state = CGI_ERROR;
+		return ;
 	}
 }
 
