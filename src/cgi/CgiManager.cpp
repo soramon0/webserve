@@ -147,4 +147,16 @@ void CgiManager::checkTimeouts()
 			handlers[i]->timeoutKill();
 		}
 	}
+	std::vector<CgiHandler*>::iterator it = pending_reap.begin();
+	while(it != pending_reap.end())
+	{
+		if (now - (*it)->getStartTime() > CGI_TIMEOUT_SECONDS)
+		{
+			(*it)->timeoutKill();
+			handlers.push_back(*it);
+			it = pending_reap.erase(it);
+		}
+		else
+			++it;
+	}
 }
