@@ -31,7 +31,6 @@ public:
   StringView method_view;
   StringView uri;
   StringView version_view;
-  StringView status_line;
   StringView error;
 
   Headers headers;

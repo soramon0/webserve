@@ -61,14 +61,12 @@ void FSM::setDone() { status = FSMStatus::DONE; }
 void FSM::setMalformed(HttpStatus::Code s, const StringView &error) {
   status = FSMStatus::MALFORMED;
   this->req->status = s;
-  this->req->status_line = HttpStatus::reasonPhrase(s);
   this->req->error = error;
 }
 
 void FSM::setMalformed(HttpStatus::Code s, const char *msg) {
   status = FSMStatus::MALFORMED;
   this->req->status = s;
-  this->req->status_line = HttpStatus::reasonPhrase(s);
   if (msg) {
     this->req->error = StringView(msg);
   }
@@ -79,8 +77,6 @@ void FSM::setMalformed(HttpStatus::Code s) { setMalformed(s, NULL); }
 void FSM::setMalformed500(const char *msg) {
   status = FSMStatus::MALFORMED;
   this->req->status = HttpStatus::INTERNAL_SERVER_ERROR;
-  this->req->status_line =
-      HttpStatus::reasonPhrase(HttpStatus::INTERNAL_SERVER_ERROR);
 
   if (msg) {
     this->req->error = StringView(msg);
@@ -94,7 +90,6 @@ void FSM::setMalformed500() { setMalformed500(NULL); }
 void FSM::setMalformed400(const char *msg) {
   status = FSMStatus::MALFORMED;
   this->req->status = HttpStatus::BAD_REQUEST;
-  this->req->status_line = HttpStatus::reasonPhrase(HttpStatus::BAD_REQUEST);
   if (msg) {
     this->req->error = StringView(msg);
   } else {

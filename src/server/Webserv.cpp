@@ -219,13 +219,13 @@ void Webserv::handleHttpResponse(SOCKET c) {
     stream << " ";
     stream << req->status.asInt();
     stream << " ";
-    stream << req->status_line;
+    stream << HttpStatus::reasonPhrase(req->status.value());
     stream << "\r\n";
     stream << "Content-Type: text/plain\r\n";
     stream << "Content-Length: ";
     stream << req->error.length();
     stream << "\r\n\r\n";
-    stream << req->error.data();
+    stream << req->error;
     std::string response = stream.str();
     int n = send(c, response.c_str(), response.size(), 0);
     (void)n;

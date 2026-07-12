@@ -326,7 +326,7 @@ State stateBody(Context &ctx) {
 
   const Location *loc = server->findLocation(ctx.req);
   if (!loc) {
-    ctx.fsm.setMalformed(HttpStatus::NOT_FOUND);
+    ctx.fsm.setMalformed(HttpStatus::NOT_FOUND, "resource not found");
     return stateError(ctx);
   }
 
@@ -354,7 +354,7 @@ State stateBody(Context &ctx) {
     size_t size = ctx.offset - start;
     // TODO: handle overflow
     if (ctx.req->body.getTotalConsumed() + size > ctx.req->getContentLength()) {
-      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE, "request entity too large");
       return stateError(ctx);
     }
 
