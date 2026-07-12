@@ -133,3 +133,10 @@ std::string Location::toString(int indent) const {
   oss << tab << "}\n";
   return oss.str();
 }
+
+bool Location::hasMethod(const StringView &method) const {
+  std::vector<std::string>::const_iterator it =
+      std::find(methods.begin(), methods.end(), method);
+
+  return it != methods.end();
+}

@@ -12,8 +12,6 @@ HttpRequest::HttpRequest()
   arena.setAlignment(1);
   arena.setZeroout(false);
 
-  body.setAlignment(1);
-  body.setZeroout(false);
   // MaxArenaBlocks(5) -> 1kb + 4x8kb
   if (!arena.init(KIB(1), KIB(8))) {
     ready = false;
@@ -43,13 +41,13 @@ void HttpRequest::printRequest() const {
   }
 
   Logger::debug("--- body ---");
-  ArenaBlock *head = body.getFirstBlock();
-  while (head) {
-    if (head->getInternalBuffer()) {
-      Logger::debug("%.*s", (int)head->consumed(), head->getInternalBuffer());
-    }
-    head = head->getNextBlock();
-  }
+  // ArenaBlock *head = body.getFirstBlock();
+  // while (head) {
+  //   if (head->getInternalBuffer()) {
+  //     Logger::debug("%.*s", (int)head->consumed(), head->getInternalBuffer());
+  //   }
+  //   head = head->getNextBlock();
+  // }
 
   Logger::debug("-------------------");
 }

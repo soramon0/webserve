@@ -1,12 +1,10 @@
 #include "request_state.hpp"
-#include "common.h"
 #include "fsm.hpp"
 #include "http/http_method.hpp"
 #include "http/http_version.hpp"
 #include "http/status_code.hpp"
 #include "http_request.hpp"
 #include "logger/log.hpp"
-#include <algorithm>
 #include <cctype>
 #include <cstddef>
 
@@ -319,8 +317,7 @@ State stateBody(Context &ctx) {
 
   Server *server = ctx.fsm.getServer();
   if (!server) {
-    Logger::debug("server in body is null");
-    ctx.fsm.setMalformed500();
+    ctx.fsm.setMalformed500("server in body is null");
     return stateError(ctx);
   }
 
@@ -330,14 +327,13 @@ State stateBody(Context &ctx) {
     return stateError(ctx);
   }
 
-  std::vector<std::string>::const_iterator it =
-      std::find(loc->methods.begin(), loc->methods.end(), ctx.req->method_view);
-  if (it == loc->methods.end()) {
+  if (loc->hasMethod(ctx.req->method_view)) {
     ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED, "method not allowed");
     return stateError(ctx);
   }
 
-  if (hasContentLength && ctx.req->getContentLength() == 0) {
+  size_t target_length = ctx.req->getContentLength();
+  if (hasContentLength && target_length == 0) {
     return stateDone(ctx);
   }
 
@@ -347,30 +343,35 @@ State stateBody(Context &ctx) {
     return stateError(ctx);
   }
 
-  if (!ctx.req->body.isInitialized() && !ctx.req->body.init(KIB(16), KIB(16))) {
+  if (!ctx.req->body.init(target_length)) {
     ctx.fsm.setMalformed500();
     return stateError(ctx);
   }
 
   if (hasContentLength) {
-    // TODO: handle overflow
-    if (ctx.req->body.getTotalConsumed() + ctx.len >
-        ctx.req->getContentLength()) {
+    if (ctx.req->body.size() + ctx.len > ctx.req->getContentLength()) {
       ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
                            "request greater than content-length");
       return stateError(ctx);
     }
 
     size_t size = ctx.len - ctx.offset;
-    if (!ctx.req->body.str_append(&ctx.buf[ctx.offset], size)) {
+    if (size == 0) {
+      return stateBody; // Yield back to epoll for next chunk read
+    }
+
+    if (!ctx.req->body.append(&ctx.buf[ctx.offset], size)) {
       ctx.fsm.setMalformed500();
       return stateError(ctx);
     }
 
-    if (ctx.req->body.getTotalConsumed() < ctx.req->getContentLength()) {
+    ctx.offset += size;
+
+    if (ctx.req->body.size() < target_length) {
       return stateBody;
     }
 
+    ctx.req->body.finalize();
     return stateDone(ctx);
   }
 

@@ -6,6 +6,7 @@
 #include "http/status_code.hpp"
 #include "lib/arena_list.hpp"
 #include "lib/string_view.hpp"
+#include "request_body.hpp"
 #include "request_state.hpp"
 
 class HttpRequest {
@@ -23,7 +24,7 @@ private:
   bool parseContentLength(const StringView &value, size_t &out_length) const;
 
 public:
-  ArenaList body;
+  RequestBody body;
   HttpStatus status;
   HttpMethod method;
   HttpVersion version;
