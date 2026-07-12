@@ -36,12 +36,17 @@ bool CgiManager::registerHandler(const HttpRequest *request, const char *body, s
 	return (false);
 }
 
-void CgiManager::removeHandler(CgiHandler* handler)
+void CgiManager::deregisterEpoll(CgiHandler* handler)
 {
 	if (handler->getWriteFd() != -1)
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, handler->getWriteFd(), NULL);
 	if (handler->getReadFd() != -1)
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, handler->getReadFd(), NULL);
+}
+
+void CgiManager::removeHandler(CgiHandler* handler)
+{
+	deregisterEpoll(handler);
 	std::vector<CgiHandler*>::iterator it = std::find(handlers.begin(), handlers.end(), handler);
 	if (it != handlers.end())
 		handlers.erase(it);
@@ -60,7 +65,7 @@ void CgiManager::handleWriteResult(CgiHandler* handler)
 		return ;
 	}
 	else if (handler->getCgiState() == CGI_ERROR)
-		removeHandler(handler);
+		deregisterEpoll(handler);
 	return ;
 }
 
@@ -74,9 +79,21 @@ void CgiManager::dispatch(struct epoll_event& ev)
 		return ;
 	}
 	if (handler->getCgiState() == READING_OUTPUT)
+	{
 		handler->readOutput();
-	//readOuput() changes state to either CGI_DONE or CGI_ERROR fjami3 l7alat this should be called
-	removeHandler(handler); 	
+		if (handler->getCgiState() == CGI_ERROR)
+		{
+			deregisterEpoll(handler);
+			return ;
+		}
+		if (handler->getCgiState() == READING_OUTPUT && handler->getReadFd() == -1)
+		{
+			std::vector<CgiHandler*>::iterator it = std::find(handlers.begin(), handlers.end(), handler);
+			if (it != handlers.end())
+				handlers.erase(it);
+			pending_reap.push_back(handler);
+		}
+	}
 	return ;
 }
 

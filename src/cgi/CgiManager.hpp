@@ -26,6 +26,7 @@ public:
 	CgiHandler* claim(const HttpRequest* request);
 
 private:
+	void deregisterEpoll(CgiHandler* handler);
 	void handleWriteResult(CgiHandler* handler);
 	CgiHandler* claimFrom(std::vector<CgiHandler*>& container, const HttpRequest* request);
 };
