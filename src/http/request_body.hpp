@@ -20,25 +20,23 @@ private:
   std::string temp_file_path;
   size_t total_size;
   size_t file_read_offset;
-  bool is_file;
   bool initialized;
+  bool is_file;
   bool memory_read_done;
+
   std::string to_string_patch(int n) const;
   bool init_file();
-
   bool openInputStream(std::ifstream &out_stream) const;
 
 public:
   RequestBody();
   ~RequestBody();
 
-  bool init(size_t size);
   size_t size() const { return total_size; };
   bool isFile() const { return is_file; }
-  const unsigned char *getMemoryBuffer() const {
-    return arena.getInternalBuffer();
-  }
   const std::string &getTempFilePath() const { return temp_file_path; }
+
+  bool init(size_t size);
   bool append(const char *buf, size_t size);
   void finalize();
 

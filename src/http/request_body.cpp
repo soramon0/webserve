@@ -4,7 +4,7 @@
 #include <string>
 
 RequestBody::RequestBody()
-    : total_size(0), file_read_offset(0), is_file(false),
+    : total_size(0), file_read_offset(0), initialized(false), is_file(false),
       memory_read_done(false) {
   arena.setAlignment(1);
   arena.setZeroout(false);
