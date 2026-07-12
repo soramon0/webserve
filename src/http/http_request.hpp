@@ -39,7 +39,7 @@ public:
   HttpRequest();
   ~HttpRequest();
 
-  void printRequest() const;
+  void printRequest();
   bool updateField(StringView &field, const char *buf, size_t size);
   void finishRequestLine();
   void dumpState();

@@ -327,7 +327,7 @@ State stateBody(Context &ctx) {
     return stateError(ctx);
   }
 
-  if (loc->hasMethod(ctx.req->method_view)) {
+  if (!loc->hasMethod(ctx.req->method_view)) {
     ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED, "method not allowed");
     return stateError(ctx);
   }
@@ -349,15 +349,15 @@ State stateBody(Context &ctx) {
   }
 
   if (hasContentLength) {
-    if (ctx.req->body.size() + ctx.len > ctx.req->getContentLength()) {
-      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
-                           "request greater than content-length");
-      return stateError(ctx);
-    }
-
     size_t size = ctx.len - ctx.offset;
     if (size == 0) {
       return stateBody; // Yield back to epoll for next chunk read
+    }
+
+    if (ctx.req->body.size() + size > ctx.req->getContentLength()) {
+      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
+                           "request greater than content-length");
+      return stateError(ctx);
     }
 
     if (!ctx.req->body.append(&ctx.buf[ctx.offset], size)) {

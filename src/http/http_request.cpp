@@ -20,7 +20,7 @@ HttpRequest::HttpRequest()
 
 HttpRequest::~HttpRequest() {}
 
-void HttpRequest::printRequest() const {
+void HttpRequest::printRequest() {
   Logger::debug("-------------------");
   Logger::debug("--- HttpRequest ---");
 
@@ -41,13 +41,15 @@ void HttpRequest::printRequest() const {
   }
 
   Logger::debug("--- body ---");
-  // ArenaBlock *head = body.getFirstBlock();
-  // while (head) {
-  //   if (head->getInternalBuffer()) {
-  //     Logger::debug("%.*s", (int)head->consumed(), head->getInternalBuffer());
-  //   }
-  //   head = head->getNextBlock();
-  // }
+  ReadResult res;
+  do {
+    res = this->body.read();
+    if (res.block) {
+      Logger::debug("%.*s", (int)res.block->consumed(),
+                    res.block->getInternalBuffer());
+    }
+  } while (res.status != READ_DONE);
+  body.resetReader();
 
   Logger::debug("-------------------");
 }
