@@ -304,44 +304,52 @@ State stateHeaderValue(Context &ctx) {
 State stateBody(Context &ctx) {
   Logger::debug("state: body");
 
-  bool hasContentLength = ctx.req->headers.has("content-length");
-  bool hasTransferEncoding = ctx.req->headers.has("transfer-encoding");
-  if (!hasContentLength && !hasTransferEncoding) {
-    ctx.fsm.setMalformed400();
-    return stateError(ctx);
-  }
-
-  Server *server = ctx.fsm.getServer();
-  if (!server) {
-    ctx.fsm.setMalformed500("server in body is null");
-    return stateError(ctx);
-  }
-
-  const Location *loc = server->findLocation(ctx.req);
-  if (!loc) {
-    ctx.fsm.setMalformed(HttpStatus::NOT_FOUND, "resource not found");
-    return stateError(ctx);
-  }
-
-  if (!loc->hasMethod(ctx.req->method_view)) {
-    ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED, "method not allowed");
-    return stateError(ctx);
-  }
-
-  size_t target_length = ctx.req->getContentLength();
-  if (hasContentLength && target_length == 0) {
+  if (ctx.req->method != HttpMethod::POST) {
     return stateDone(ctx);
   }
 
-  if (ctx.req->getContentLength() > loc->shared_config->client_max_body_size) {
-    ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
-                         "request greater than client_max_body_size");
-    return stateError(ctx);
-  }
+  bool hasContentLength = ctx.req->headers.has("content-length");
+  bool hasTransferEncoding = ctx.req->headers.has("transfer-encoding");
+  size_t target_length = ctx.req->getContentLength();
 
-  if (!ctx.req->body.init(target_length)) {
-    ctx.fsm.setMalformed500();
-    return stateError(ctx);
+  if (ctx.req->body.size() == 0) {
+    Server *server = ctx.fsm.getServer();
+    if (!server) {
+      ctx.fsm.setMalformed500("server in body is null");
+      return stateError(ctx);
+    }
+
+    const Location *loc = server->findLocation(ctx.req);
+    if (!loc) {
+      ctx.fsm.setMalformed(HttpStatus::NOT_FOUND, "resource not found");
+      return stateError(ctx);
+    }
+
+    if (!loc->hasMethod(ctx.req->method_view)) {
+      ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED,
+                           "method not allowed");
+      return stateError(ctx);
+    }
+
+    if (!hasContentLength && !hasTransferEncoding) {
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+    }
+
+    if (hasContentLength && target_length == 0) {
+      return stateDone(ctx);
+    }
+
+    if (target_length > loc->shared_config->client_max_body_size) {
+      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
+                           "request greater than client_max_body_size");
+      return stateError(ctx);
+    }
+
+    if (!ctx.req->body.init(target_length)) {
+      ctx.fsm.setMalformed500();
+      return stateError(ctx);
+    }
   }
 
   if (hasContentLength) {
