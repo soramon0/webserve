@@ -1,4 +1,5 @@
 #include "CgiManager.hpp"
+#include "cgi_utils.hpp"
 #include <algorithm>
 #include <sstream>
 
@@ -45,4 +46,36 @@ void CgiManager::removeHandler(CgiHandler* handler)
 	if (it != handlers.end())
 		handlers.erase(it);
 	delete handler;
+}
+
+void CgiManager::handleWriteResult(CgiHandler* handler)
+{
+	if (handler->getCgiState() == READING_OUTPUT)
+	{
+		struct epoll_event ev;
+		ev.events = EPOLLIN;
+		ev.data.ptr = handler;
+		if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, handler->getReadFd(), &ev) == -1)
+			removeHandler(handler);
+		return ;
+	}
+	else if (handler->getCgiState() == CGI_ERROR)
+		removeHandler(handler);
+	return ;
+}
+
+void CgiManager::dispatch(struct epoll_event& ev)
+{
+	CgiHandler* handler = static_cast<CgiHandler*>(ev.data.ptr);
+	if (handler->getCgiState() == WRITING_BODY)
+	{
+		handler->writeBody();
+		handleWriteResult(handler);
+		return ;
+	}
+	if (handler->getCgiState() == READING_OUTPUT)
+		handler->readOutput();
+	//readOuput() changes state to either CGI_DONE or CGI_ERROR fjami3 l7alat this should be called
+	removeHandler(handler); 	
+	return ;
 }

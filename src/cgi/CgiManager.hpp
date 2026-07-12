@@ -21,8 +21,10 @@ public:
 						const std::string& interpreter_path, const std::string& script_path,
 						const std::string& server_name, const std::string& server_port);
 	void removeHandler(CgiHandler* handler);
-private:
 
+private:
+	void handleWriteResult(CgiHandler* handler);
+	void dispatch(struct epoll_event& ev);
 };
 
 #endif
