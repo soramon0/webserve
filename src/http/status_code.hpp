@@ -5,6 +5,7 @@ class HttpStatus {
 public:
   enum Code {
     OK = 200,
+    NO_CONTENT = 204,
     MOVED_PERMANENTLY = 301,
     FOUND = 302,
     TEMPORARY_REDIRECT = 307,

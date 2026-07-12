@@ -80,12 +80,39 @@ void handleGet(Client* cl) {
 	req->status = HttpStatus::OK;
 }
 
-void handlePost(Client* cl)
+void handleDelete(Client* cl)
 {
-	cl->machine.getRequest()->status = HttpStatus::NOT_IMPLEMENTED;
+	HttpRequest* req = cl->machine.getRequest();
+	std::string uri(req->uri.data(), req->uri.length());
+	std::string uri_suffix = uri.substr(cl->location->path.size());
+	std::string file_path = cl->location->shared_config->root + "/" + uri_suffix;
+
+	Logger::info("uri is : %s", file_path.c_str());
+
+	// check the file existance
+	struct stat file_stat;
+	if (stat(file_path.c_str(), &file_stat) == -1)
+	{
+		Logger::info("DELETE: the path is not  found");
+		req->status = HttpStatus::NOT_FOUND;
+		return;
+	}
+
+	if (S_ISDIR(file_stat.st_mode)) { //TODO : delete directory
+    req->status = HttpStatus::FORBIDDEN;
+    return;
+	}
+
+	if (unlink(file_path.c_str()) == -1)
+	{
+		Logger::info("DELETE : can't delete this file '%s'", file_path.c_str());
+		req->status = HttpStatus::FORBIDDEN;
+		return ;
+	}
+	req->status = HttpStatus::NO_CONTENT;// deleted succssesfully
 }
 
-void handleDelete(Client* cl)
+void handlePost(Client* cl)
 {
 	cl->machine.getRequest()->status = HttpStatus::NOT_IMPLEMENTED;
 }

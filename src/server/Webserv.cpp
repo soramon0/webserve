@@ -246,6 +246,13 @@ void Webserv::handleHttpResponse(SOCKET c) {
     return;
   }
 
+  if (req->status == HttpStatus::NO_CONTENT) {
+    std::string resp = "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n";
+    send(c, resp.c_str(), resp.size(), 0);
+    removeClient(c);
+    return;
+  }
+
 	if (req->status == HttpStatus::OK) {
 		std::ostringstream resp;
 		resp << "HTTP/1.1 200 OK\r\n"
