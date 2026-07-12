@@ -304,10 +304,6 @@ State stateHeaderValue(Context &ctx) {
 State stateBody(Context &ctx) {
   Logger::debug("state: body");
 
-  if (ctx.req->method != HttpMethod::POST) {
-    return stateDone(ctx);
-  }
-
   bool hasContentLength = ctx.req->headers.has("content-length");
   bool hasTransferEncoding = ctx.req->headers.has("transfer-encoding");
   if (!hasContentLength && !hasTransferEncoding) {
