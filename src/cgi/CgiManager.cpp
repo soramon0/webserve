@@ -79,3 +79,25 @@ void CgiManager::dispatch(struct epoll_event& ev)
 	removeHandler(handler); 	
 	return ;
 }
+
+CgiHandler* CgiManager::claimFrom(std::vector<CgiHandler*>& container, const HttpRequest* request)
+{
+	for (std::vector<CgiHandler *>::iterator it = container.begin(); it != container.end(); it++)
+	{
+		if ((*it)->getRequest() == request && ((*it)->getCgiState() == CGI_DONE || (*it)->getCgiState() == CGI_ERROR))
+		{
+			CgiHandler* result = *it;
+			container.erase(it);
+			return (result);
+		}
+	}
+	return (NULL);
+}
+
+CgiHandler* CgiManager::claim(const HttpRequest* request) 
+{
+	CgiHandler* ret = claimFrom(handlers, request);
+	if (ret == NULL)
+		ret = claimFrom(pending_reap, request);
+	return (ret);
+}

@@ -39,6 +39,7 @@ public:
 	int getWriteFd() const;
 	int getReadFd() const;
 	int getExitStatus() const;
+	const HttpRequest* getRequest() const;
 
 private:
 	char** buildEnvp(const std::string& server_name, const std::string& server_port) const;
