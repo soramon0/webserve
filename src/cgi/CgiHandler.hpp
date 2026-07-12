@@ -1,6 +1,7 @@
 #ifndef CGIHANDLER_HPP
 #define CGIHANDLER_HPP
 
+#include <ctime>
 #include <string>
 #include <map>
 #include "../http/http_request.hpp"
@@ -23,6 +24,7 @@ private:
 	std::string cgi_output;
 	CgiState state;
 	const HttpRequest* request;
+	time_t start_time;
 
 public:
 	CgiHandler(const HttpRequest* request,const char *body, size_t body_len);
@@ -41,7 +43,9 @@ public:
 	int getReadFd() const;
 	int getExitStatus() const;
 	const HttpRequest* getRequest() const;
-	
+	time_t getStartTime() const;
+	void timeoutKill();
+
 private:
 	char** buildEnvp(const std::string& server_name, const std::string& server_port) const;
 

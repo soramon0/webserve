@@ -133,3 +133,18 @@ CgiHandler* CgiManager::claim(const HttpRequest* request)
 	}
 	return (NULL);
 }
+
+void CgiManager::checkTimeouts()
+{
+	time_t now = time(NULL);
+	for (std::vector<CgiHandler*>::size_type i = 0; i < handlers.size(); i++)
+	{
+		CgiState s = handlers[i]->getCgiState();
+		if ((s == WRITING_BODY || s == READING_OUTPUT) &&
+			now - handlers[i]->getStartTime() > CGI_TIMEOUT_SECONDS)
+		{
+			deregisterEpoll(handlers[i]);
+			handlers[i]->timeoutKill();
+		}
+	}
+}

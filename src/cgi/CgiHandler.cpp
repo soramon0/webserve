@@ -122,8 +122,8 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 
 		if (execve(argv[0], argv, envp) == -1) _exit(127);
 	}
+	start_time = time(NULL);
 	close_wrapper(pipe_in[0]); close_wrapper(pipe_out[1]);
-
 	freeEnvp(envp);
 	return (true);
 }
@@ -205,9 +205,22 @@ bool CgiHandler::reap()
 	return (false);
 }
 
+void CgiHandler::timeoutKill()
+{
+	if (pid > 0)
+	{
+		kill(pid, SIGKILL);
+		int status;
+		waitpid(pid, &status, 0);
+		pid = -1;
+	}
+	state = CGI_ERROR;
+}
+
 CgiState CgiHandler::getCgiState() const { return (state); }
 const std::string& CgiHandler::getCgiOutput() const { return (cgi_output); }
 int CgiHandler::getWriteFd() const { return (pipe_in[1]); }
 int CgiHandler::getReadFd() const { return (pipe_out[0]); }
 int CgiHandler::getExitStatus() const { return (exit_status); }
 const HttpRequest* CgiHandler::getRequest() const { return (request); }
+time_t CgiHandler::getStartTime() const { return (start_time); }

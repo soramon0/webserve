@@ -5,6 +5,9 @@
 #include <sys/epoll.h>
 #include "../config/shared_config.hpp"
 #include <vector>
+#include <fcntl.h>
+
+#define CGI_TIMEOUT_SECONDS  10
 
 class CgiManager
 {
@@ -25,6 +28,7 @@ public:
 	void dispatch(struct epoll_event& ev);
 	CgiHandler* claim(const HttpRequest* request);
 	void reapPending();
+	void checkTimeouts();
 
 private:
 	void deregisterEpoll(CgiHandler* handler);
