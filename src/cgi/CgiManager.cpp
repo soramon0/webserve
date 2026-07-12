@@ -5,6 +5,14 @@
 
 CgiManager::CgiManager(int epoll_fd) : epoll_fd(epoll_fd) {}
 
+CgiManager::~CgiManager()
+{
+	for (std::vector<CgiHandler*>::size_type i = 0; i < pending_reap.size(); i++)
+		delete (pending_reap[i]);
+	for (std::vector<CgiHandler*>::size_type i = 0; i < handlers.size(); i++)
+		delete (handlers[i]);
+}
+
 bool CgiManager::owns(int fd) const
 {
 	for (std::vector<CgiHandler *>::size_type i = 0; i < handlers.size(); i++)

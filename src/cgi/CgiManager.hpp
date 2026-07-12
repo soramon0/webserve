@@ -29,6 +29,9 @@ public:
 private:
 	void deregisterEpoll(CgiHandler* handler);
 	void handleWriteResult(CgiHandler* handler);
+
+	CgiManager(const CgiManager& other);
+	CgiManager& operator=(const CgiManager& other);
 };
 
 #endif
