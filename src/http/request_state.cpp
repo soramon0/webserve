@@ -330,8 +330,8 @@ State stateBody(Context &ctx) {
     return stateError(ctx);
   }
 
-  std::vector<std::string>::const_iterator it = std::find(
-      loc->methods.begin(), loc->methods.end(), ctx.req->method_view);
+  std::vector<std::string>::const_iterator it =
+      std::find(loc->methods.begin(), loc->methods.end(), ctx.req->method_view);
   if (it == loc->methods.end()) {
     ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED, "method not allowed");
     return stateError(ctx);
@@ -341,24 +341,28 @@ State stateBody(Context &ctx) {
     return stateDone(ctx);
   }
 
+  if (ctx.req->getContentLength() > loc->shared_config->client_max_body_size) {
+    ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
+                         "request greater than client_max_body_size");
+    return stateError(ctx);
+  }
+
   if (!ctx.req->body.isInitialized() && !ctx.req->body.init(KIB(16), KIB(16))) {
     ctx.fsm.setMalformed500();
     return stateError(ctx);
   }
 
   if (hasContentLength) {
-    size_t start = ctx.offset;
-    while (ctx.offset < ctx.len) {
-      ctx.offset++;
-    }
-    size_t size = ctx.offset - start;
     // TODO: handle overflow
-    if (ctx.req->body.getTotalConsumed() + size > ctx.req->getContentLength()) {
-      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE, "request entity too large");
+    if (ctx.req->body.getTotalConsumed() + ctx.len >
+        ctx.req->getContentLength()) {
+      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
+                           "request greater than content-length");
       return stateError(ctx);
     }
 
-    if (!ctx.req->body.str_append(&ctx.buf[start], size)) {
+    size_t size = ctx.len - ctx.offset;
+    if (!ctx.req->body.str_append(&ctx.buf[ctx.offset], size)) {
       ctx.fsm.setMalformed500();
       return stateError(ctx);
     }
