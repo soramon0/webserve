@@ -6,12 +6,12 @@
 
 Location::Location() : path(), return_rule(NULL) {
   shared_config = new SharedConfig();
-  methods.push_back("get");
+  methods.push_back("GET");
 };
 
 Location::Location(const std::string &path) : path(path), return_rule(NULL) {
   shared_config = new SharedConfig();
-  methods.push_back("get");
+  methods.push_back("GET");
 };
 
 Location::~Location() {
