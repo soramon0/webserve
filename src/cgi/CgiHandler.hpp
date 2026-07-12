@@ -33,6 +33,7 @@ public:
 	void writeBody();
 	void readOutput();
 	bool waitChild();
+	bool reap();
 
 	CgiState getCgiState() const;
 	const std::string& getCgiOutput() const;
@@ -40,7 +41,7 @@ public:
 	int getReadFd() const;
 	int getExitStatus() const;
 	const HttpRequest* getRequest() const;
-
+	
 private:
 	char** buildEnvp(const std::string& server_name, const std::string& server_port) const;
 

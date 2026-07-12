@@ -24,11 +24,11 @@ public:
 	void removeHandler(CgiHandler* handler);
 	void dispatch(struct epoll_event& ev);
 	CgiHandler* claim(const HttpRequest* request);
+	void reapPending();
 
 private:
 	void deregisterEpoll(CgiHandler* handler);
 	void handleWriteResult(CgiHandler* handler);
-	CgiHandler* claimFrom(std::vector<CgiHandler*>& container, const HttpRequest* request);
 };
 
 #endif

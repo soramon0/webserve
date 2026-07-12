@@ -173,6 +173,16 @@ bool CgiHandler::waitChild()
 	return (false);
 }
 
+bool CgiHandler::reap()
+{
+	if (waitChild())
+	{
+		state = CGI_DONE;
+		return (true);
+	}
+	return (false);
+}
+
 CgiState CgiHandler::getCgiState() const { return (state); }
 const std::string& CgiHandler::getCgiOutput() const { return (cgi_output); }
 int CgiHandler::getWriteFd() const { return (pipe_in[1]); }
