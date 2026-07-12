@@ -71,7 +71,7 @@ TEST_CASE("RequestBody stores small payloads in memory") {
   body.finalize();
 
   CHECK(body.size() == sizeof(payload) - 1);
-  CHECK(std::memcmp(body.getMemoryBuffer(), payload, body.size()) == 0);
+  CHECK(std::memcmp(body.getBuffer(), payload, body.size()) == 0);
 
   std::string read_back = readAllBody(body);
   CHECK(read_back == payload);

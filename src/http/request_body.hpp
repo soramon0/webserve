@@ -35,6 +35,7 @@ public:
   size_t size() const { return total_size; };
   bool isFile() const { return is_file; }
   const std::string &getTempFilePath() const { return temp_file_path; }
+  const unsigned char *getBuffer() const { return arena.getInternalBuffer(); }
 
   bool init(size_t size);
   bool append(const char *buf, size_t size);
