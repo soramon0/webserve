@@ -58,6 +58,7 @@ char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &
 	vect_envp.push_back("QUERY_STRING=" + query_string);
 
 	Headers::AllRange range = request->headers.all();
+	std::string last_key;
 	for (Headers::AllRange::first_type it = range.first; it != range.second; ++it)
 	{
 		std::string key(it->first.data(), it->first.length());
@@ -66,7 +67,13 @@ char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &
 		if (key == "content-type" || key == "content-length" || key == "authorization")
 			continue;
 
-		vect_envp.push_back(toHttpEnvName(key) + "=" + value);
+		if (key == last_key)
+			vect_envp.back() += (key == "cookie" ? "; " : ",") + value;
+		else
+		{
+			vect_envp.push_back(toHttpEnvName(key) + "=" + value);
+			last_key = key;
+		}
 	}
 
 	char **envp = vectorToEnvp(vect_envp);
