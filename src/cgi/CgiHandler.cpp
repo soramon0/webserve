@@ -89,11 +89,24 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 	if (fcntl(pipe_in[1], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false); }
 	if (fcntl(pipe_out[0], F_SETFD, FD_CLOEXEC) == -1) { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false);}
 
+	if (interpreter_path.empty() || interpreter_path[0] != '/') { close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false);}
+
 	char *argv[3];
 	argv[0] = const_cast<char *>(interpreter_path.c_str());
 	argv[1] = const_cast<char *>(script_path.c_str());
 	argv[2] = NULL;
 	char **envp = buildEnvp(server_name, server_port);
+
+	size_t pos = script_path.find_last_of('/');
+	if (pos == std::string::npos)
+	{
+		freeEnvp(envp);
+		close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]);
+		close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]);
+		state = CGI_ERROR;
+		return (false);
+	}
+	std::string dir = script_path.substr(0, pos + 1);
 
 	pid = fork();
 	if (pid == -1) { freeEnvp(envp); close_wrapper(pipe_in[0]); close_wrapper(pipe_in[1]); close_wrapper(pipe_out[0]); close_wrapper(pipe_out[1]); state = CGI_ERROR; return (false); }
@@ -104,6 +117,8 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 		if (dup2(pipe_in[0], STDIN_FILENO) == -1) _exit(1);
 		if (dup2(pipe_out[1], STDOUT_FILENO) == -1) _exit(1);
 		close_wrapper(pipe_in[0]); close_wrapper(pipe_out[1]);
+
+		if (chdir(dir.c_str()) == -1) _exit(1);
 
 		if (execve(argv[0], argv, envp) == -1) _exit(127);
 	}
