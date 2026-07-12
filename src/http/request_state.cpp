@@ -340,7 +340,7 @@ State stateBody(Context &ctx) {
       return stateDone(ctx);
     }
 
-    if (target_length > loc->shared_config->client_max_body_size) {
+    if (hasContentLength && target_length > loc->shared_config->client_max_body_size) {
       ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
                            "request greater than client_max_body_size");
       return stateError(ctx);
