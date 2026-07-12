@@ -159,6 +159,7 @@ void Webserv::handleNewConnection(SOCKET srv) {
       continue;
     }
     c->srv = servers[srv];
+    c->machine.setServer(c->srv);
     clients[c->socket] = c;
     Logger::info("client Connected...");
   }
@@ -217,11 +218,13 @@ void Webserv::handleHttpResponse(SOCKET c) {
     stream << req->version.toString();
     stream << " ";
     stream << req->status.asInt();
+    stream << " ";
+    stream << req->status_line;
     stream << "\r\n";
-    stream << "Content-Type: text/plain";
+    stream << "Content-Type: text/plain\r\n";
     stream << "Content-Length: ";
     stream << req->error.length();
-    stream << "\r\n";
+    stream << "\r\n\r\n";
     stream << req->error.data();
     std::string response = stream.str();
     int n = send(c, response.c_str(), response.size(), 0);

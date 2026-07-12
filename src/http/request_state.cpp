@@ -331,9 +331,9 @@ State stateBody(Context &ctx) {
   }
 
   std::vector<std::string>::const_iterator it = std::find(
-      loc->methods.begin(), loc->methods.end(), ctx.req->method_view.data());
+      loc->methods.begin(), loc->methods.end(), ctx.req->method_view);
   if (it == loc->methods.end()) {
-    ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED);
+    ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED, "method not allowed");
     return stateError(ctx);
   }
 
