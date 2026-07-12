@@ -6,7 +6,7 @@
 #define MAX_CLIENT_BODY_SIZE 1000000 // 1m
 
 struct Config {
-  std::vector<Server> servers;
+  std::vector<Server *> servers;
   SharedConfig *shared_config;
 
   ~Config();
@@ -20,7 +20,6 @@ struct Config {
   bool hasServer(const Server &srv) const;
 
   void resolveSharedConfigs();
-
 
   Config(const Config &other);
   Config &operator=(const Config &other);

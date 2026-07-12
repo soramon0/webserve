@@ -54,6 +54,7 @@ public:
   bool usable() const;
   size_t consumed() const;
   size_t available() const;
+  size_t getCapacity() const;
   unsigned char *getInternalBuffer() const { return buf; }
   ArenaBlock *getNextBlock() const { return next; }
 

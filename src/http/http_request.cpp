@@ -7,13 +7,11 @@
 const size_t HttpRequest::MaxArenaBlocks = 5;
 
 HttpRequest::HttpRequest()
-    : ready(true), request_line_complete(false), contentLength(0),
+    : contentLength(0), ready(true), request_line_complete(false),
       status(HttpStatus::OK) {
   arena.setAlignment(1);
   arena.setZeroout(false);
 
-  body.setAlignment(1);
-  body.setZeroout(false);
   // MaxArenaBlocks(5) -> 1kb + 4x8kb
   if (!arena.init(KIB(1), KIB(8))) {
     ready = false;
@@ -22,7 +20,7 @@ HttpRequest::HttpRequest()
 
 HttpRequest::~HttpRequest() {}
 
-void HttpRequest::printRequest() const {
+void HttpRequest::printRequest() {
   Logger::debug("-------------------");
   Logger::debug("--- HttpRequest ---");
 
@@ -43,13 +41,15 @@ void HttpRequest::printRequest() const {
   }
 
   Logger::debug("--- body ---");
-  ArenaBlock *head = body.getFirstBlock();
-  while (head) {
-    if (head->getInternalBuffer()) {
-      Logger::debug("%.*s", (int)head->consumed(), head->getInternalBuffer());
+  ReadResult res;
+  do {
+    res = this->body.read();
+    if (res.block) {
+      Logger::debug("%.*s", (int)res.block->consumed(),
+                    res.block->getInternalBuffer());
     }
-    head = head->getNextBlock();
-  }
+  } while (res.status != READ_DONE);
+  body.resetReader();
 
   Logger::debug("-------------------");
 }
@@ -133,7 +133,7 @@ void HttpRequest::dumpState() {
 bool HttpRequest::validateHeaders(StringView &key, StringView &value) {
   if (key == "host") {
     if (headers.has(key)) {
-      StringView("duplicate host header");
+      error = StringView("duplicate host header");
       status = HttpStatus::BAD_REQUEST;
       return false;
     }

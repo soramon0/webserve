@@ -51,6 +51,16 @@ inline bool operator==(const StringView &lhs, const StringView &rhs) {
   return std::strncmp(lhs.data(), rhs.data(), lhs.length()) == 0;
 }
 
+inline bool operator==(const StringView &lhs, const std::string &rhs) {
+  if (lhs.length() != rhs.length())
+    return false;
+  return std::strncmp(lhs.data(), rhs.data(), lhs.length()) == 0;
+}
+
+inline bool operator==(const std::string &lhs, const StringView &rhs) {
+  return rhs == lhs;
+}
+
 inline bool operator==(const StringView &lhs, const char *rhs) {
   return lhs == StringView(rhs);
 }

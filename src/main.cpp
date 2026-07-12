@@ -1,4 +1,3 @@
-#include "common.h"
 #include "config/config.hpp"
 #include "logger/log.hpp"
 #include "parser/parser.hpp"

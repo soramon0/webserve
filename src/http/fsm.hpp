@@ -63,6 +63,7 @@ public:
 
   bool feedChunk(const char *buf, std::size_t len);
   void setServer(Server *s) { server = s; };
+  Server *getServer() const { return server; };
   bool finish() const;
   HttpRequest *getRequest() const { return req; };
 

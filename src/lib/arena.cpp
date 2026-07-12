@@ -28,6 +28,8 @@ bool ArenaBlock::usable() const { return buf != NULL && capacity != 0; }
 
 size_t ArenaBlock::consumed() const { return curr_offset; };
 
+size_t ArenaBlock::getCapacity() const { return capacity; }
+
 size_t ArenaBlock::available() const {
   if (!buf || curr_offset > capacity)
     return 0;

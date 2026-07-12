@@ -40,7 +40,7 @@ void Webserv::start() {
     }
     if (add_to_epoll(epoll_fd, listen_sock, EPOLLIN) == -1)
       continue;
-    servers[listen_sock] = &config.servers[i];
+    servers[listen_sock] = config.servers[i];
   }
 
   if (servers.size() == 0) {
@@ -102,9 +102,9 @@ SOCKET Webserv::createSocket(int id) {
   hints.ai_flags = AI_PASSIVE;
 
   std::ostringstream os;
-  os << config.servers[id].port;
+  os << config.servers[id]->port;
   std::string port = os.str();
-  std::string host = config.servers[id].interface;
+  std::string host = config.servers[id]->interface;
 
   struct addrinfo *addr;
   if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr)) {
@@ -159,6 +159,7 @@ void Webserv::handleNewConnection(SOCKET srv) {
       continue;
     }
     c->srv = servers[srv];
+    c->machine.setServer(c->srv);
     clients[c->socket] = c;
     Logger::info("client Connected...");
   }
@@ -204,12 +205,36 @@ void Webserv::removeClient(SOCKET c) {
 }
 
 void Webserv::handleHttpResponse(SOCKET c) {
-  if (clients[c]->machine.status.isPending())
+  FSMStatus status = clients[c]->machine.status;
+
+  if (status.isPending())
     return;
 
-  std::string response = HELLO_WORLD_RESPONSE;
+  HttpRequest *req = clients[c]->machine.getRequest();
+  if (status.isMalformed()) {
+    // request had an error
+    std::ostringstream stream;
 
-  int n = send(c, response.c_str(), response.size(), 0);
-  (void)n;
+    stream << req->version.toString();
+    stream << " ";
+    stream << req->status.asInt();
+    stream << " ";
+    stream << HttpStatus::reasonPhrase(req->status.value());
+    stream << "\r\n";
+    stream << "Content-Type: text/plain\r\n";
+    stream << "Content-Length: ";
+    stream << req->error.length();
+    stream << "\r\n\r\n";
+    stream << req->error;
+    std::string response = stream.str();
+    int n = send(c, response.c_str(), response.size(), 0);
+    (void)n;
+  } else {
+    std::string response = HELLO_WORLD_RESPONSE;
+
+    int n = send(c, response.c_str(), response.size(), 0);
+    (void)n;
+  }
+
   removeClient(c);
 }
