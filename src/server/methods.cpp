@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <sstream>
+#include <cstdio> // remove
 
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
@@ -98,14 +99,9 @@ void handleDelete(Client* cl)
 		return;
 	}
 
-	if (S_ISDIR(file_stat.st_mode)) { //TODO : delete directory
-    req->status = HttpStatus::FORBIDDEN;
-    return;
-	}
-
-	if (unlink(file_path.c_str()) == -1)
+	if (std::remove(file_path.c_str()))
 	{
-		Logger::info("DELETE : can't delete this file '%s'", file_path.c_str());
+		Logger::info("DELETE : can't delete this file/dir '%s'", file_path.c_str());
 		req->status = HttpStatus::FORBIDDEN;
 		return ;
 	}
