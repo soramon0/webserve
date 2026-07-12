@@ -1,8 +1,8 @@
 #include "location.hpp"
 #include "lib/utils.hpp"
 #include "redirect.hpp"
-#include <sstream>
 #include <algorithm>
+#include <sstream>
 
 Location::Location() : path(), return_rule(NULL) {
   shared_config = new SharedConfig();
@@ -70,10 +70,10 @@ Location &Location::withPath(const std::string &path) {
 }
 
 Location &Location::withMethod(const std::string &method) {
-  std::string lower_method = strToLower(method);
-  if (std::find(this->methods.begin(), this->methods.end(), lower_method) ==
+  std::string m = strToUpper(method);
+  if (std::find(this->methods.begin(), this->methods.end(), m) ==
       this->methods.end()) {
-    this->methods.push_back(lower_method);
+    this->methods.push_back(m);
   }
   return *this;
 }

@@ -70,20 +70,20 @@ private:
     std::memcpy(buf, method, len);
     buf[len] = '\0';
     for (size_t i = 0; i < len; i++) {
-      buf[i] = std::tolower(static_cast<unsigned char>(buf[i]));
+      buf[i] = std::toupper(static_cast<unsigned char>(buf[i]));
     }
 
-    if (std::strcmp(buf, "get") == 0) {
+    if (std::strcmp(buf, "GET") == 0) {
       value_ = GET;
-    } else if (std::strcmp(buf, "post") == 0) {
+    } else if (std::strcmp(buf, "POST") == 0) {
       value_ = POST;
-    } else if (std::strcmp(buf, "delete") == 0) {
+    } else if (std::strcmp(buf, "DELETE") == 0) {
       value_ = DELETE;
-    } else if (std::strcmp(buf, "put") == 0) {
+    } else if (std::strcmp(buf, "PUT") == 0) {
       value_ = PUT;
-    } else if (std::strcmp(buf, "head") == 0) {
+    } else if (std::strcmp(buf, "HEAD") == 0) {
       value_ = HEAD;
-    } else if (std::strcmp(buf, "options") == 0) {
+    } else if (std::strcmp(buf, "OPTIONS") == 0) {
       value_ = OPTIONS;
     } else {
       value_ = UNKNOWN;
