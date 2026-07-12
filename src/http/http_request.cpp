@@ -133,7 +133,7 @@ void HttpRequest::dumpState() {
 bool HttpRequest::validateHeaders(StringView &key, StringView &value) {
   if (key == "host") {
     if (headers.has(key)) {
-      StringView("duplicate host header");
+      error = StringView("duplicate host header");
       status = HttpStatus::BAD_REQUEST;
       return false;
     }
