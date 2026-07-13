@@ -92,13 +92,16 @@ RequestBody::ReadResult RequestBody::read() {
     return res;
   }
 
-  arena.deinit();
   size_t chunk_capacity = KIB(8);
-  if (!arena.init(chunk_capacity) || !arena.alloc(chunk_capacity)) {
-    res.status = READ_ERROR;
+  if (!arena.setup(chunk_capacity)) {
+    Logger::error("Failed to setup scratch arena");
     readf.close();
+    res.status = READ_ERROR;
     return res;
   }
+
+  arena.free_all();            // clear internal state without freeing buffer
+  arena.alloc(chunk_capacity); // should never fail
 
   char *buf = reinterpret_cast<char *>(arena.getInternalBuffer());
   readf.read(buf, chunk_capacity);
