@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/string_view.hpp"
+
 // RFC HTTP response codes only
 class HttpStatus {
 public:
@@ -35,6 +37,39 @@ public:
   bool operator==(Code v) const { return value_ == v; }
   bool operator!=(HttpStatus other) const { return value_ != other.value_; }
   bool operator!=(Code v) const { return value_ != v; }
+
+  static StringView reasonPhrase(Code code) {
+    switch (code) {
+    case OK:
+      return StringView("OK");
+    case BAD_REQUEST:
+      return StringView("Bad Request");
+    case FORBIDDEN:
+      return StringView("Forbidden");
+    case NOT_FOUND:
+      return StringView("Not Found");
+    case METHOD_NOT_ALLOWED:
+      return StringView("Method Not Allowed");
+    case REQUEST_ENTITY_TOO_LARGE:
+      return StringView("Request Entity Too Large");
+    case URI_TOO_LONG:
+      return StringView("URI Too Long");
+    case REQUEST_HEADER_FIELDS_TOO_LARGE:
+      return StringView("Request Header Fields Too Large");
+    case INTERNAL_SERVER_ERROR:
+      return StringView("Internal Server Error");
+    case NOT_IMPLEMENTED:
+      return StringView("Not Implemented");
+    case BAD_GATEWAY:
+      return StringView("Bad Gateway");
+    case SERVICE_UNAVAILABLE:
+      return StringView("Service Unavailable");
+    case GATEWAY_TIMEOUT:
+      return StringView("Gateway Timeout");
+    default:
+      return StringView("Internal Server Error");
+    }
+  }
 
 private:
   Code value_;

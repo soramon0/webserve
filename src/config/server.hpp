@@ -1,4 +1,5 @@
 #pragma once
+#include "http/http_request.hpp"
 #include "location.hpp"
 #include "redirect.hpp"
 #include <map>
@@ -26,4 +27,6 @@ struct Server {
   Server &withSharedConfig(const SharedConfig &cfg);
 
   std::string toString(int indent) const;
+
+  const Location *findLocation(const HttpRequest *req) const;
 };

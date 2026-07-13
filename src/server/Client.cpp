@@ -10,7 +10,6 @@ Client::Client() : received(0), is_complete(0), offset(0),
 					is_header_parsed(0), machine()
 {
 	addrlen = sizeof(addr);
-	machine.setServer(this->srv);
 }
 
 Client::~Client() {}

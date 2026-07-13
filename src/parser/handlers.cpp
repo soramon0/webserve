@@ -221,14 +221,14 @@ ssize_t Parser::handleMethods(DirectiveCtx &ctx) {
   }
 
   std::map<std::string, int> store;
-  store["get"] = 0;
-  store["post"] = 0;
-  store["delete"] = 0;
+  store["GET"] = 0;
+  store["POST"] = 0;
+  store["DELETE"] = 0;
 
   ctx.loc->methods.clear();
   while (check(Directive::WORD)) {
     const Token &t = peek();
-    const std::string httpMethod = strToLower(t.lexeme);
+    const std::string httpMethod = strToUpper(t.lexeme);
     std::map<std::string, int>::iterator it = store.find(httpMethod);
     if (it == store.end()) {
       reportParseError(t, "unsupported http method.");

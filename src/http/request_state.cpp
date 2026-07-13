@@ -1,5 +1,4 @@
 #include "request_state.hpp"
-#include "common.h"
 #include "fsm.hpp"
 #include "http/http_method.hpp"
 #include "http/http_version.hpp"
@@ -311,41 +310,72 @@ State stateBody(Context &ctx) {
 
   bool hasContentLength = ctx.req->headers.has("content-length");
   bool hasTransferEncoding = ctx.req->headers.has("transfer-encoding");
-  if (!hasContentLength && !hasTransferEncoding) {
-    ctx.fsm.setMalformed400();
-    return stateError(ctx);
-  }
+  size_t target_length = ctx.req->getContentLength();
 
-  if (hasContentLength && ctx.req->getContentLength() == 0) {
-    return stateDone(ctx);
-  }
-
-  if (!ctx.req->body.isInitialized() && !ctx.req->body.init(KIB(16), KIB(16))) {
-    ctx.fsm.setMalformed500();
-    return stateError(ctx);
-  }
-
-  if (hasContentLength) {
-    size_t start = ctx.offset;
-    while (ctx.offset < ctx.len) {
-      ctx.offset++;
-    }
-    size_t size = ctx.offset - start;
-    // TODO: handle overflow
-    if (ctx.req->body.getTotalConsumed() + size > ctx.req->getContentLength()) {
-      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE);
+  if (ctx.req->body.size() == 0) {
+    Server *server = ctx.fsm.getServer();
+    if (!server) {
+      ctx.fsm.setMalformed500("server in body is null");
       return stateError(ctx);
     }
 
-    if (!ctx.req->body.str_append(&ctx.buf[start], size)) {
+    const Location *loc = server->findLocation(ctx.req);
+    if (!loc) {
+      ctx.fsm.setMalformed(HttpStatus::NOT_FOUND, "resource not found");
+      return stateError(ctx);
+    }
+
+    if (!loc->hasMethod(ctx.req->method_view)) {
+      ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED,
+                           "method not allowed");
+      return stateError(ctx);
+    }
+
+    if (!hasContentLength && !hasTransferEncoding) {
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+    }
+
+    if (hasContentLength && target_length == 0) {
+      return stateDone(ctx);
+    }
+
+    if (hasContentLength && target_length > loc->shared_config->client_max_body_size) {
+      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
+                           "request greater than client_max_body_size");
+      return stateError(ctx);
+    }
+
+    if (!ctx.req->body.init(target_length)) {
+      ctx.fsm.setMalformed500();
+      return stateError(ctx);
+    }
+  }
+
+  if (hasContentLength) {
+    size_t size = ctx.len - ctx.offset;
+    if (size == 0) {
+      return stateBody; // Yield back to epoll for next chunk read
+    }
+
+    if (ctx.req->body.size() + size > ctx.req->getContentLength()) {
+      ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
+                           "request greater than content-length");
+      return stateError(ctx);
+    }
+
+    if (!ctx.req->body.append(&ctx.buf[ctx.offset], size)) {
       ctx.fsm.setMalformed500();
       return stateError(ctx);
     }
 
-    if (ctx.req->body.getTotalConsumed() < ctx.req->getContentLength()) {
+    ctx.offset += size;
+
+    if (ctx.req->body.size() < target_length) {
       return stateBody;
     }
 
+    ctx.req->body.finalize();
     return stateDone(ctx);
   }
 
