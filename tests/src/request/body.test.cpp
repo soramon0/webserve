@@ -30,7 +30,8 @@ static void setupUploadServer(Server &server, size_t max_body) {
   server.withLocation("/upload", makeUploadLocation());
 }
 
-static void feedInChunks(FSM &fsm, const std::string &input, size_t chunk_size) {
+static void feedInChunks(FSM &fsm, const std::string &input,
+                         size_t chunk_size) {
   for (size_t offset = 0; offset < input.length(); offset += chunk_size) {
     size_t len = chunk_size;
     if (offset + len > input.length()) {
@@ -45,15 +46,15 @@ static std::string readAllBody(RequestBody &body) {
   body.resetReader();
 
   for (;;) {
-    ReadResult res = body.read();
-    REQUIRE(res.status != READ_ERROR);
+    RequestBody::ReadResult res = body.read();
+    REQUIRE(res.status != RequestBody::READ_ERROR);
 
     if (res.block) {
-      out.append(reinterpret_cast<const char *>(res.block->getInternalBuffer()),
+      out.append(reinterpret_cast<const char *>(res.block->getBuffer()),
                  res.block->consumed());
     }
 
-    if (res.status == READ_DONE) {
+    if (res.status == RequestBody::READ_DONE) {
       break;
     }
   }
@@ -77,7 +78,8 @@ TEST_CASE("RequestBody stores small payloads in memory") {
   CHECK(read_back == payload);
 }
 
-TEST_CASE("RequestBody spills to a temp file when memory capacity is exceeded") {
+TEST_CASE(
+    "RequestBody spills to a temp file when memory capacity is exceeded") {
   RequestBody body;
   const size_t first_chunk = KIB(16);
   const size_t extra = 128;
@@ -176,8 +178,7 @@ TEST_CASE("FSM rejects POST without Content-Length or Transfer-Encoding") {
   setupUploadServer(server, 100);
   fsm.setServer(&server);
 
-  const std::string input =
-      "POST /upload HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  const std::string input = "POST /upload HTTP/1.1\r\nHost: localhost\r\n\r\n";
 
   CHECK(!fsm.feedChunk(input.data(), input.length()));
   REQUIRE(fsm.status.isMalformed());
@@ -202,7 +203,7 @@ TEST_CASE("FSM rejects POST when body exceeds client_max_body_size") {
   HttpRequest *req = fsm.getRequest();
   REQUIRE(req != nullptr);
   CHECK(req->status == HttpStatus::REQUEST_ENTITY_TOO_LARGE);
-  CHECK(req->error == StringView("request greater than client_max_body_size"));
+  CHECK(req->error == "request greater than client_max_body_size");
 }
 
 TEST_CASE("FSM rejects POST when received body exceeds Content-Length") {
@@ -224,7 +225,7 @@ TEST_CASE("FSM rejects POST when received body exceeds Content-Length") {
   HttpRequest *req = fsm.getRequest();
   REQUIRE(req != nullptr);
   CHECK(req->status == HttpStatus::REQUEST_ENTITY_TOO_LARGE);
-  CHECK(req->error == StringView("request greater than content-length"));
+  CHECK(req->error == "request greater than content-length");
 }
 
 TEST_CASE("FSM rejects POST when location does not allow the method") {
