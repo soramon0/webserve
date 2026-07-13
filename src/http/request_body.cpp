@@ -53,6 +53,7 @@ bool RequestBody::append(const char *buf, size_t size) {
 
       if (writef.fail())
         return false;
+      arena.deinit();  // body lives on disk now
     }
   }
 
