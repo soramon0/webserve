@@ -41,14 +41,14 @@ void HttpRequest::printRequest() {
   }
 
   Logger::debug("--- body ---");
-  ReadResult res;
+  RequestBody::ReadResult res;
   do {
     res = this->body.read();
     if (res.block) {
       Logger::debug("%.*s", (int)res.block->consumed(),
                     res.block->getInternalBuffer());
     }
-  } while (res.status != READ_DONE);
+  } while (res.status != RequestBody::READ_DONE);
   body.resetReader();
 
   Logger::debug("-------------------");
