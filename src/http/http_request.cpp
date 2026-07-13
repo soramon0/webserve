@@ -47,7 +47,7 @@ void HttpRequest::printRequest() {
     if (res.block) {
       Logger::debug("%.*s", (int)res.block->consumed(), res.block->getBuffer());
     }
-  } while (res.status != RequestBody::READ_DONE);
+  } while (res.block);
   body.resetReader();
 
   Logger::debug("-------------------");
