@@ -48,8 +48,7 @@ bool RequestBody::append(const char *buf, size_t size) {
       return false;
 
     if (arena.consumed() > 0) {
-      const char *buf =
-          reinterpret_cast<const char *>(arena.getInternalBuffer());
+      const char *buf = reinterpret_cast<const char *>(arena.getBuffer());
       writef.write(buf, arena.consumed());
 
       if (writef.fail())
@@ -103,7 +102,7 @@ RequestBody::ReadResult RequestBody::read() {
   arena.free_all();            // clear internal state without freeing buffer
   arena.alloc(chunk_capacity); // should never fail
 
-  char *buf = reinterpret_cast<char *>(arena.getInternalBuffer());
+  char *buf = reinterpret_cast<char *>(arena.getBuffer());
   readf.read(buf, chunk_capacity);
 
   if (readf.bad()) {

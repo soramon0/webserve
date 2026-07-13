@@ -45,8 +45,7 @@ void HttpRequest::printRequest() {
   do {
     res = this->body.read();
     if (res.block) {
-      Logger::debug("%.*s", (int)res.block->consumed(),
-                    res.block->getInternalBuffer());
+      Logger::debug("%.*s", (int)res.block->consumed(), res.block->getBuffer());
     }
   } while (res.status != RequestBody::READ_DONE);
   body.resetReader();
