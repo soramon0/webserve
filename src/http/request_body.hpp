@@ -43,6 +43,9 @@ public:
   bool isFile() const { return is_file; }
   const std::string &getFilePath() const { return filepath; }
   const unsigned char *getBuffer() const { return arena.getBuffer(); }
+  bool fitsContentLength(size_t chunk_size, size_t cl) const {
+    return total_size <= cl && chunk_size <= cl - total_size;
+  }
 
   bool init(size_t size);
   bool append(const char *buf, size_t size);

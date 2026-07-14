@@ -358,7 +358,7 @@ State stateBody(Context &ctx) {
       return stateBody; // Yield back to epoll for next chunk read
     }
 
-    if (ctx.req->body.size() + size > target_length) {
+    if (!ctx.req->body.fitsContentLength(size, target_length)) {
       ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
                            "request greater than content-length");
       return stateError(ctx);
