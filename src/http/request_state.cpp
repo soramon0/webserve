@@ -308,8 +308,8 @@ State stateBody(Context &ctx) {
     return stateDone(ctx);
   }
 
-  bool hasContentLength = ctx.req->headers.has("content-length");
-  bool hasTransferEncoding = ctx.req->headers.has("transfer-encoding");
+  bool hasCL = ctx.req->headers.has("content-length");
+  bool hasTE = ctx.req->headers.has("transfer-encoding");
   size_t target_length = ctx.req->getContentLength();
 
   if (ctx.req->body.size() == 0) {
@@ -331,16 +331,16 @@ State stateBody(Context &ctx) {
       return stateError(ctx);
     }
 
-    if (!hasContentLength && !hasTransferEncoding) {
+    if (!hasCL && !hasTE) {
       ctx.fsm.setMalformed400();
       return stateError(ctx);
     }
 
-    if (hasContentLength && target_length == 0) {
+    if (hasCL && target_length == 0) {
       return stateDone(ctx);
     }
 
-    if (hasContentLength && target_length > loc->shared_config->client_max_body_size) {
+    if (hasCL && target_length > loc->shared_config->client_max_body_size) {
       ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
                            "request greater than client_max_body_size");
       return stateError(ctx);
@@ -352,13 +352,13 @@ State stateBody(Context &ctx) {
     }
   }
 
-  if (hasContentLength) {
+  if (hasCL) {
     size_t size = ctx.len - ctx.offset;
     if (size == 0) {
       return stateBody; // Yield back to epoll for next chunk read
     }
 
-    if (ctx.req->body.size() + size > ctx.req->getContentLength()) {
+    if (ctx.req->body.size() + size > target_length) {
       ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
                            "request greater than content-length");
       return stateError(ctx);
@@ -379,7 +379,7 @@ State stateBody(Context &ctx) {
     return stateDone(ctx);
   }
 
-  if (hasTransferEncoding) {
+  if (hasTE) {
     return stateDone(ctx);
   }
 
