@@ -1,5 +1,6 @@
 #include "lib/utils.hpp"
 #include "parser.hpp"
+#include <cerrno>
 #include <cstdlib>
 
 ssize_t Parser::handleRoot(DirectiveCtx &ctx) {
@@ -90,18 +91,27 @@ ssize_t Parser::handleClientMaxBodySize(DirectiveCtx &ctx) {
                "expected size after `client_max_body_size` directive."))
     return -1;
 
-  if (previous().lexeme.find_first_not_of("0123456789") != std::string::npos) {
+  const std::string &lexeme = previous().lexeme;
+  if (lexeme.empty() ||
+      lexeme.find_first_not_of("0123456789") != std::string::npos) {
     reportParseError(previous(), "size must be a valid number.");
     return -1;
   }
 
-  long long size = std::atoll(previous().lexeme.c_str());
-  if (size <= 0) {
+  errno = 0;
+  unsigned long parsed = std::strtoul(lexeme.c_str(), NULL, 10);
+
+  if (errno == ERANGE) {
+    reportParseError(previous(), "size overflows.");
+    return -1;
+  }
+
+  if (parsed == 0) {
     reportParseError(previous(), "size must be greater than 0.");
     return -1;
   }
 
-  ctx.shared->client_max_body_size = size;
+  ctx.shared->client_max_body_size = static_cast<size_t>(parsed);
 
   return expectDirectiveArgsCount(dir);
 }
