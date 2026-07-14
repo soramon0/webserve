@@ -1,7 +1,9 @@
+#include "common.h"
 #include "lib/utils.hpp"
 #include "parser.hpp"
 #include <cerrno>
 #include <cstdlib>
+#include <stdint.h>
 
 ssize_t Parser::handleRoot(DirectiveCtx &ctx) {
   const Token &dir = previous();
@@ -92,14 +94,33 @@ ssize_t Parser::handleClientMaxBodySize(DirectiveCtx &ctx) {
     return -1;
 
   const std::string &lexeme = previous().lexeme;
-  if (lexeme.empty() ||
-      lexeme.find_first_not_of("0123456789") != std::string::npos) {
+  size_t i = 0;
+  while (i < lexeme.size() && lexeme[i] >= '0' && lexeme[i] <= '9')
+    ++i;
+
+  if (i == 0) {
     reportParseError(previous(), "size must be a valid number.");
     return -1;
   }
 
+  const std::string unit = strToLower(lexeme.substr(i));
+  size_t mult = 1;
+  if (unit.empty() || unit == "b")
+    mult = 1;
+  else if (unit == "kib")
+    mult = KIB(1);
+  else if (unit == "mib")
+    mult = MIB(1);
+  else if (unit == "gib")
+    mult = GIB(1);
+  else {
+    reportParseError(previous(), "unknown size unit.");
+    return -1;
+  }
+
+  const std::string num = lexeme.substr(0, i);
   errno = 0;
-  unsigned long parsed = std::strtoul(lexeme.c_str(), NULL, 10);
+  unsigned long parsed = std::strtoul(num.c_str(), NULL, 10);
 
   if (errno == ERANGE) {
     reportParseError(previous(), "size overflows.");
@@ -111,7 +132,12 @@ ssize_t Parser::handleClientMaxBodySize(DirectiveCtx &ctx) {
     return -1;
   }
 
-  ctx.shared->client_max_body_size = static_cast<size_t>(parsed);
+  if (parsed > SIZE_MAX / mult) {
+    reportParseError(previous(), "size overflows.");
+    return -1;
+  }
+
+  ctx.shared->client_max_body_size = static_cast<size_t>(parsed) * mult;
 
   return expectDirectiveArgsCount(dir);
 }
