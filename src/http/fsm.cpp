@@ -3,7 +3,8 @@
 #include "request_state.hpp"
 
 FSM::FSM()
-    : server(NULL), req(NULL), state(stateStart), status(FSMStatus::PENDING) {
+    : server(NULL), req(NULL), state(stateStart), status(FSMStatus::PENDING),
+      chunk_state(FSM::CHUNK_SIZE), chunk_size(0) {
   req = new HttpRequest();
 }
 
@@ -19,6 +20,8 @@ void FSM::clear() {
   }
   state = stateStart;
   status = FSMStatus::PENDING;
+  chunk_state = CHUNK_SIZE;
+  chunk_size = 0;
   curr_header_value.clear();
   curr_header_key.clear();
 }

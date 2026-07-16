@@ -193,18 +193,23 @@ State stateHeaderKey(Context &ctx) {
   // parse request header and save it in fsm.current_key
   size_t start = ctx.offset;
   if (ctx.fsm.isCRLF(ctx.buf[start])) {
-    if (ctx.req->version == HttpVersion::V1_1) {
+    if (ctx.req->version == HttpVersion::V1_1 &&
+        ctx.fsm.chunk_state != FSM::CHUNK_TRAILERS) {
       const StringView *host = ctx.req->headers.get("host");
       if (!host || host->empty()) {
         ctx.fsm.setMalformed400();
         return stateError(ctx);
       }
     }
+
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderKey;
     }
 
-    // force done state until we implment body state
+    if (ctx.fsm.chunk_state == FSM::CHUNK_TRAILERS) {
+      return stateDone(ctx);
+    }
+
     return stateBody(ctx);
   }
 
@@ -324,6 +329,7 @@ State stateBody(Context &ctx) {
       ctx.fsm.setMalformed(HttpStatus::NOT_FOUND, "resource not found");
       return stateError(ctx);
     }
+    ctx.req->body.setMaxBodySize(loc->shared_config->client_max_body_size);
 
     if (!loc->hasMethod(ctx.req->method_view)) {
       ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED,
@@ -381,10 +387,132 @@ State stateBody(Context &ctx) {
   }
 
   if (hasTE) {
-    return stateDone(ctx);
+    return stateBodyChunked(ctx);
   }
 
-  return stateDone(ctx);
+  // should never get here
+  ctx.fsm.setMalformed500();
+  return stateError(ctx);
+}
+
+// POST /submit-data HTTP/1.1\r\n
+// Transfer-Encoding: chunked\r\n
+// \r\n
+//
+// --- we're here ----
+// [Size in Hex] -> \r\n -> [The Data Bytes] -> \r\n
+// a\r\n
+// Hello, thi\r\n
+// 16\r\n
+// s is a chunked request\r\n
+// b\r\n
+//  body text.\r\n
+// 0\r\n
+// \r\n
+// [Size in Hex] -> \r\n -> [The Data Bytes] -> \r\n
+// states: CHUNK_SIZE, CHUNK_BODY
+State stateBodyChunked(Context &ctx) {
+outer:
+  while (ctx.offset < ctx.len) {
+    char c = ctx.buf[ctx.offset];
+
+    switch (ctx.fsm.chunk_state) {
+    case FSM::CHUNK_SIZE:
+      if (c == ';') {
+        ctx.fsm.chunk_state = FSM::CHUNK_EXTENSION;
+        ctx.offset++;
+        goto outer;
+      } else if (c == '\r') {
+        ctx.fsm.chunk_state = FSM::CHUNK_SIZE_CRLF;
+        ctx.offset++;
+        goto outer;
+      } else if (isxdigit(c)) {
+        int val = (c >= 'a')   ? (c - 'a' + 10)
+                  : (c >= 'A') ? (c - 'A' + 10)
+                               : (c - '0');
+
+        if (ctx.fsm.chunk_size > (SIZE_MAX / 16)) {
+          ctx.fsm.setMalformed400(); // Overflow!
+          return stateError(ctx);
+        }
+        ctx.fsm.chunk_size = (ctx.fsm.chunk_size * 16) + val;
+        ctx.offset++;
+        goto outer;
+      }
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+
+    case FSM::CHUNK_SIZE_CRLF:
+      if (c == '\n') {
+        if (ctx.fsm.chunk_size == 0) {
+          ctx.fsm.chunk_state = FSM::CHUNK_TRAILERS;
+        } else {
+          ctx.fsm.chunk_state = FSM::CHUNK_BODY;
+        }
+        ctx.offset++;
+        goto outer;
+      }
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+
+    case FSM::CHUNK_EXTENSION:
+      if (c == '\r') {
+        ctx.fsm.chunk_state = FSM::CHUNK_SIZE_CRLF;
+      }
+      ctx.offset++;
+      goto outer;
+
+    case FSM::CHUNK_BODY: {
+      size_t available = ctx.len - ctx.offset;
+      size_t to_consume = std::min(available, ctx.fsm.chunk_size);
+
+      if (!ctx.req->body.fitsContentLength(to_consume,
+                                           ctx.req->body.getMaxBodySize())) {
+        ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
+                             "request chunk greater than max body size");
+        return stateError(ctx);
+      }
+
+      if (!ctx.req->body.append(&ctx.buf[ctx.offset], to_consume)) {
+        ctx.fsm.setMalformed500();
+        return stateError(ctx);
+      }
+
+      ctx.offset += to_consume;
+      ctx.fsm.chunk_size -= to_consume;
+
+      if (ctx.fsm.chunk_size == 0) {
+        ctx.fsm.chunk_state = FSM::CHUNK_BODY_CRLF;
+      }
+      goto outer;
+    }
+
+    case FSM::CHUNK_BODY_CRLF:
+      if (c == '\r') {
+        ctx.fsm.chunk_state = FSM::CHUNK_BODY_LF;
+        ctx.offset++;
+        goto outer;
+      }
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+
+    case FSM::CHUNK_BODY_LF:
+      if (c == '\n') {
+        ctx.fsm.chunk_state = FSM::CHUNK_SIZE;
+        ctx.offset++;
+        goto outer;
+      }
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+    case FSM::CHUNK_TRAILERS:
+      ctx.req->body.finalize();
+      // security issue
+      // TODO: implement trailer parsing
+      return stateHeaderKey;
+    }
+  }
+
+  return stateBodyChunked;
 }
 
 State stateDone(Context &ctx) {

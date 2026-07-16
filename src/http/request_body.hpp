@@ -10,6 +10,7 @@ private:
   std::string filepath;
   size_t total_size;
   size_t file_read_offset;
+  size_t max_body_size;
   bool initialized;
   bool is_file;
   bool mem_read_done;
@@ -40,6 +41,8 @@ public:
   ~RequestBody();
 
   size_t size() const { return total_size; };
+  size_t getMaxBodySize() const { return max_body_size; };
+  void setMaxBodySize(size_t cap) { max_body_size = cap; };
   bool isFile() const { return is_file; }
   const std::string &getFilePath() const { return filepath; }
   const unsigned char *getBuffer() const { return arena.getBuffer(); }

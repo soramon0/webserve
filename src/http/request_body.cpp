@@ -5,8 +5,8 @@
 #include <string>
 
 RequestBody::RequestBody()
-    : total_size(0), file_read_offset(0), initialized(false), is_file(false),
-      mem_read_done(false) {
+    : total_size(0), file_read_offset(0), max_body_size(0), initialized(false),
+      is_file(false), mem_read_done(false) {
   arena.setAlignment(1);
   arena.setZeroout(false);
 }
@@ -144,9 +144,7 @@ void RequestBody::resetReader() {
   }
 }
 
-void RequestBody::finalize() {
-  closefile(writef);
-}
+void RequestBody::finalize() { closefile(writef); }
 
 bool RequestBody::init_writef() {
   if (writef.is_open() || is_file)

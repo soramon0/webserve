@@ -55,6 +55,20 @@ private:
 
 public:
   FSMStatus status;
+
+  enum ChunkState {
+    CHUNK_SIZE,
+    CHUNK_EXTENSION,
+    CHUNK_SIZE_CRLF,
+    CHUNK_BODY,
+    CHUNK_BODY_CRLF,
+    CHUNK_BODY_LF,
+    CHUNK_TRAILERS,
+  };
+
+  ChunkState chunk_state;
+  size_t chunk_size;
+
   StringView curr_header_key;
   StringView curr_header_value;
 
