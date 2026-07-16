@@ -6,16 +6,17 @@
 #include <map>
 
 #define MAX_EVENTS 64
+#define TIMEOUT 10
 
 class Webserv
 {
 private:
-	Config						config;
+	Config&						config;
 	int							epoll_fd;
 	std::map<SOCKET, Client*>	clients;
 	std::map<SOCKET, Server*>	servers;
 public:
-	Webserv(Config _conf);
+	Webserv(Config& _conf);
 	~Webserv();
 
 	void	start();
@@ -25,5 +26,7 @@ public:
 	void	handleClientData(SOCKET c);
 	void	removeClient(SOCKET c);
 	void	eventLoop();
+	void	checkTimeouts();
+	void	timeoutClient(SOCKET c);
 };
 

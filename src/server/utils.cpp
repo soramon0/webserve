@@ -7,7 +7,7 @@
 #include <string>
 
 int set_nonblocking(int fd) {
-    int flags = fcntl(fd, F_GETFL, 0);
+    int flags = fcntl(fd, F_GETFL, 0);// TODO: remove get
     if (flags == -1) return -1;
     return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
@@ -61,6 +61,14 @@ bool isRedirect(HttpStatus& status) {
     || status == HttpStatus::TEMPORARY_REDIRECT
     || status == HttpStatus::PERMANENT_REDIRECT
   );
+}
+
+std::string getExt(const std::string& path)
+{
+    size_t pos = path.rfind('.');
+    if (pos == std::string::npos)
+        return "";
+    return path.substr(pos + 1);
 }
 
 std::string getContentType(const std::string& path)

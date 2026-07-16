@@ -87,7 +87,7 @@ void handleDelete(Client* cl)
 	std::string uri(req->uri.data(), req->uri.length());
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	std::string file_path = cl->location->shared_config->root + "/" + uri_suffix;
-
+	// TODO: strip the query from the uri string
 	Logger::info("uri is : %s", file_path.c_str());
 
 	// check the file existance
