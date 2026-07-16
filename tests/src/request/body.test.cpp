@@ -66,7 +66,7 @@ TEST_CASE("RequestBody stores small payloads in memory") {
   RequestBody body;
   const char payload[] = "{\"name\": \"karim\"}";
 
-  REQUIRE(body.init(sizeof(payload) - 1));
+  REQUIRE(body.init(sizeof(payload) - 1, false));
   CHECK(!body.isFile());
   REQUIRE(body.append(payload, sizeof(payload) - 1));
   body.finalize();
@@ -85,7 +85,7 @@ TEST_CASE(
   const size_t extra = 128;
   std::string payload(first_chunk + extra, 'a');
 
-  REQUIRE(body.init(100));
+  REQUIRE(body.init(100, false));
   REQUIRE(body.append(payload.data(), first_chunk));
   CHECK(!body.isFile());
 
@@ -102,13 +102,36 @@ TEST_CASE("RequestBody uses file mode when declared size exceeds memory cap") {
   const size_t payload_size = KIB(16) + 1;
   std::string payload(payload_size, 'b');
 
-  REQUIRE(body.init(payload_size));
+  REQUIRE(body.init(payload_size, false));
   CHECK(body.isFile());
   REQUIRE(body.append(payload.data(), payload.size()));
   body.finalize();
 
   CHECK(body.size() == payload_size);
   CHECK(readAllBody(body) == payload);
+}
+
+TEST_CASE("RequestBody uses file mode when useDisk is set") {
+  RequestBody body;
+  const char payload[] = "cgi-body";
+
+  REQUIRE(body.init(sizeof(payload) - 1, true));
+  CHECK(body.isFile());
+  REQUIRE(body.append(payload, sizeof(payload) - 1));
+  body.finalize();
+
+  CHECK(body.size() == sizeof(payload) - 1);
+  CHECK(readAllBody(body) == payload);
+}
+
+TEST_CASE("RequestBody::fitsContentLength rejects overflow past Content-Length") {
+  RequestBody body;
+  REQUIRE(body.init(8, false));
+  REQUIRE(body.append("12345", 5));
+
+  CHECK(body.fitsContentLength(3, 8));
+  CHECK(!body.fitsContentLength(4, 8));
+  CHECK(!body.fitsContentLength(1, 4));
 }
 
 TEST_CASE("FSM accepts POST body delivered in the same chunk as headers") {

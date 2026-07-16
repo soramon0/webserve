@@ -47,7 +47,7 @@ public:
     return total_size <= cl && chunk_size <= cl - total_size;
   }
 
-  bool init(size_t size);
+  bool init(size_t size, bool useDisk);
   bool append(const char *buf, size_t size);
   void finalize();
 

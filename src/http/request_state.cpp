@@ -346,7 +346,8 @@ State stateBody(Context &ctx) {
       return stateError(ctx);
     }
 
-    if (!ctx.req->body.init(target_length)) {
+    bool isCGI = !loc->shared_config->cgi_pass.empty();
+    if (!ctx.req->body.init(target_length, isCGI)) {
       ctx.fsm.setMalformed500();
       return stateError(ctx);
     }
