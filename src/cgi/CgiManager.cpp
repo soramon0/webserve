@@ -124,8 +124,6 @@ CgiHandler *CgiManager::claim(const HttpRequest *request)
 
 void CgiManager::timeoutActiveHandlers(time_t now)
 {
-	time_t now = time(NULL);
-
 	for (std::vector<CgiHandler *>::size_type i = 0; i < handlers.size(); i++)
 	{
 		CgiState s = handlers[i]->getCgiState();
@@ -139,8 +137,6 @@ void CgiManager::timeoutActiveHandlers(time_t now)
 
 void CgiManager::timeoutPendingReap(time_t now)
 {
-	time_t now = time(NULL);
-
 	std::vector<CgiHandler *>::iterator it = pending_reap.begin();
 	while (it != pending_reap.end())
 	{
