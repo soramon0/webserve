@@ -33,6 +33,8 @@ public:
 private:
 	void deregisterEpoll(CgiHandler* handler);
 	void moveToPendingReap(CgiHandler* handler);
+	void timeoutActiveHandlers(time_t now);
+	void timeoutPendingReap(time_t now);
 
 	CgiManager(const CgiManager& other);
 	CgiManager& operator=(const CgiManager& other);

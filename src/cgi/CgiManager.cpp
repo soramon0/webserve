@@ -88,7 +88,7 @@ void CgiManager::dispatch(struct epoll_event &ev)
 	}
 
 	bool eof_but_not_reaped = (handler->getCgiState() == READING_OUTPUT && handler->getReadFd() == -1) if (eof_but_not_reaped);
-		moveToPendingReap(handler);
+	moveToPendingReap(handler);
 	return;
 }
 
@@ -121,9 +121,10 @@ CgiHandler *CgiManager::claim(const HttpRequest *request)
 	return (NULL);
 }
 
-void CgiManager::checkTimeouts()
+void CgiManager::timeoutActiveHandlers(time_t now)
 {
 	time_t now = time(NULL);
+
 	for (std::vector<CgiHandler *>::size_type i = 0; i < handlers.size(); i++)
 	{
 		CgiState s = handlers[i]->getCgiState();
@@ -133,6 +134,12 @@ void CgiManager::checkTimeouts()
 			handlers[i]->timeoutKill();
 		}
 	}
+}
+
+void CgiManager::timeoutPendingReap(time_t now)
+{
+	time_t now = time(NULL);
+
 	std::vector<CgiHandler *>::iterator it = pending_reap.begin();
 	while (it != pending_reap.end())
 	{
@@ -145,4 +152,11 @@ void CgiManager::checkTimeouts()
 		else
 			++it;
 	}
+}
+
+void CgiManager::checkTimeouts()
+{
+	time_t now = time(NULL);
+	timeoutActiveHandlers(now);
+	timeoutPendingReap(now);
 }
