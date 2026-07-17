@@ -30,32 +30,39 @@ CgiHandler::~CgiHandler()
 	}
 }
 
-char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &server_port) const
+void CgiHandler::addStandardVars(std::vector<std::string> &vect_envp,
+								 const std::string &server_name, const std::string &server_port) const
 {
-	std::vector<std::string> vect_envp;
-
 	vect_envp.push_back("REQUEST_METHOD=" + request->method.toString());
 	vect_envp.push_back("SERVER_PROTOCOL=" + request->version.toString());
 	vect_envp.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	vect_envp.push_back("SERVER_NAME=" + server_name);
 	vect_envp.push_back("SERVER_PORT=" + server_port);
+}
 
+void CgiHandler::addBodyVars(std::vector<std::string> &vect_envp) const
+{
 	if (request->body.size() > 0)
 	{
 		std::ostringstream oss;
 		oss << request->body.size();
 		vect_envp.push_back("CONTENT_LENGTH=" + oss.str());
 	}
-
 	const StringView *ct = request->headers.get("content-type");
 	if (ct != NULL)
 		vect_envp.push_back("CONTENT_TYPE=" + std::string(ct->data(), ct->length()));
+}
 
+void CgiHandler::addUriVars(std::vector<std::string> &vect_envp) const
+{
 	std::string path, query_string;
 	splitQueryString(request->uri, path, query_string);
 	vect_envp.push_back("SCRIPT_NAME=" + path);
 	vect_envp.push_back("QUERY_STRING=" + query_string);
+}
 
+void CgiHandler::addHeaderVars(std::vector<std::string> &vect_envp) const
+{
 	Headers::AllRange range = request->headers.all();
 	std::string last_key;
 	for (Headers::AllRange::first_type it = range.first; it != range.second; ++it)
@@ -74,9 +81,18 @@ char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &
 			last_key = key;
 		}
 	}
+}
 
-	char **envp = vectorToEnvp(vect_envp);
-	return (envp);
+char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &server_port) const
+{
+	std::vector<std::string> vect_envp;
+
+	addStandardVars(vect_envp, server_name, server_port);
+	addBodyVars(vect_envp);
+	addUriVars(vect_envp);
+	addHeaderVars(vect_envp);
+
+	return (vectorToEnvp(vect_envp));
 }
 
 bool CgiHandler::start(const std::string &interpreter_path, const std::string &script_path,
@@ -221,8 +237,13 @@ void CgiHandler::timeoutKill()
 }
 
 CgiState CgiHandler::getCgiState() const { return (state); }
+
 const std::string &CgiHandler::getCgiOutput() const { return (cgi_output); }
+
 int CgiHandler::getReadFd() const { return (pipe_out[0]); }
+
 int CgiHandler::getExitStatus() const { return (exit_status); }
+
 const HttpRequest *CgiHandler::getRequest() const { return (request); }
+
 time_t CgiHandler::getStartTime() const { return (start_time); }

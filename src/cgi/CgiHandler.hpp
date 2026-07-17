@@ -4,6 +4,7 @@
 #include <ctime>
 #include <string>
 #include <map>
+#include <vector>
 #include "../http/http_request.hpp"
 
 enum CgiState
@@ -43,6 +44,10 @@ public:
 	time_t getStartTime() const;
 
 private:
+	void addStandardVars(std::vector<std::string>& vect_envp, const std::string& server_name, const std::string& server_port) const;
+	void addBodyVars(std::vector<std::string>& vect_envp) const;
+	void addUriVars(std::vector<std::string>& vect_envp) const;
+	void addHeaderVars(std::vector<std::string>& vect_envp) const;
 	char** buildEnvp(const std::string& server_name, const std::string& server_port) const;
 
 	CgiHandler(const CgiHandler& other);
