@@ -87,7 +87,7 @@ void CgiManager::dispatch(struct epoll_event &ev)
 		return;
 	}
 
-	bool eof_but_not_reaped = (handler->getCgiState() == READING_OUTPUT && handler->getReadFd() == -1) if (eof_but_not_reaped)
+	bool eof_but_not_reaped = (handler->getCgiState() == READING_OUTPUT && handler->getReadFd() == -1) if (eof_but_not_reaped);
 		moveToPendingReap(handler);
 	return;
 }
