@@ -55,6 +55,20 @@ private:
 
 public:
   FSMStatus status;
+
+  enum ChunkState {
+    CHUNK_SIZE,
+    CHUNK_EXTENSION,
+    CHUNK_SIZE_CRLF,
+    CHUNK_BODY,
+    CHUNK_BODY_CRLF,
+    CHUNK_BODY_LF,
+    CHUNK_TRAILERS,
+  };
+
+  ChunkState chunk_state;
+  size_t chunk_size;
+
   StringView curr_header_key;
   StringView curr_header_value;
 
@@ -81,6 +95,7 @@ public:
   bool consumeCRLF(const char *buf, size_t len, size_t &offset) const;
   bool isCRLF(unsigned char c) const { return c == '\r' || c == '\n'; }
   bool isOWS(unsigned char c) const { return c == ' ' || c == '\t'; }
+  bool appendChunkSizeDigit(unsigned char c);
   bool consumeOWS(const char *buf, size_t len, size_t &offset) const;
 
   void dumpState() const {

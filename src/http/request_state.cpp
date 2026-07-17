@@ -193,18 +193,23 @@ State stateHeaderKey(Context &ctx) {
   // parse request header and save it in fsm.current_key
   size_t start = ctx.offset;
   if (ctx.fsm.isCRLF(ctx.buf[start])) {
-    if (ctx.req->version == HttpVersion::V1_1) {
+    if (ctx.req->version == HttpVersion::V1_1 &&
+        ctx.fsm.chunk_state != FSM::CHUNK_TRAILERS) {
       const StringView *host = ctx.req->headers.get("host");
       if (!host || host->empty()) {
         ctx.fsm.setMalformed400();
         return stateError(ctx);
       }
     }
+
     if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
       return stateHeaderKey;
     }
 
-    // force done state until we implment body state
+    if (ctx.fsm.chunk_state == FSM::CHUNK_TRAILERS) {
+      return stateDone(ctx);
+    }
+
     return stateBody(ctx);
   }
 
@@ -308,8 +313,8 @@ State stateBody(Context &ctx) {
     return stateDone(ctx);
   }
 
-  bool hasContentLength = ctx.req->headers.has("content-length");
-  bool hasTransferEncoding = ctx.req->headers.has("transfer-encoding");
+  bool hasCL = ctx.req->headers.has("content-length");
+  bool hasTE = ctx.req->headers.has("transfer-encoding");
   size_t target_length = ctx.req->getContentLength();
 
   if (ctx.req->body.size() == 0) {
@@ -324,6 +329,7 @@ State stateBody(Context &ctx) {
       ctx.fsm.setMalformed(HttpStatus::NOT_FOUND, "resource not found");
       return stateError(ctx);
     }
+    ctx.req->body.setMaxBodySize(loc->shared_config->client_max_body_size);
 
     if (!loc->hasMethod(ctx.req->method_view)) {
       ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED,
@@ -331,34 +337,35 @@ State stateBody(Context &ctx) {
       return stateError(ctx);
     }
 
-    if (!hasContentLength && !hasTransferEncoding) {
+    if (!hasCL && !hasTE) {
       ctx.fsm.setMalformed400();
       return stateError(ctx);
     }
 
-    if (hasContentLength && target_length == 0) {
+    if (hasCL && target_length == 0) {
       return stateDone(ctx);
     }
 
-    if (hasContentLength && target_length > loc->shared_config->client_max_body_size) {
+    if (hasCL && target_length > loc->shared_config->client_max_body_size) {
       ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
                            "request greater than client_max_body_size");
       return stateError(ctx);
     }
 
-    if (!ctx.req->body.init(target_length)) {
+    bool isCGI = !loc->shared_config->cgi_pass.empty();
+    if (!ctx.req->body.init(target_length, isCGI)) {
       ctx.fsm.setMalformed500();
       return stateError(ctx);
     }
   }
 
-  if (hasContentLength) {
+  if (hasCL) {
     size_t size = ctx.len - ctx.offset;
     if (size == 0) {
       return stateBody; // Yield back to epoll for next chunk read
     }
 
-    if (ctx.req->body.size() + size > ctx.req->getContentLength()) {
+    if (!ctx.req->body.fitsContentLength(size, target_length)) {
       ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
                            "request greater than content-length");
       return stateError(ctx);
@@ -379,11 +386,127 @@ State stateBody(Context &ctx) {
     return stateDone(ctx);
   }
 
-  if (hasTransferEncoding) {
-    return stateDone(ctx);
+  if (hasTE) {
+    return stateBodyChunked(ctx);
   }
 
-  return stateDone(ctx);
+  // should never get here
+  ctx.fsm.setMalformed500();
+  return stateError(ctx);
+}
+
+// POST /submit-data HTTP/1.1\r\n
+// Transfer-Encoding: chunked\r\n
+// \r\n
+//
+// --- we're here ----
+// [Size in Hex] -> \r\n -> [The Data Bytes] -> \r\n
+// a\r\n
+// Hello, thi\r\n
+// 16\r\n
+// s is a chunked request\r\n
+// b\r\n
+//  body text.\r\n
+// 0\r\n
+// \r\n
+// [Size in Hex] -> \r\n -> [The Data Bytes] -> \r\n
+// states: CHUNK_SIZE, CHUNK_BODY
+State stateBodyChunked(Context &ctx) {
+  while (ctx.offset < ctx.len) {
+    char c = ctx.buf[ctx.offset];
+
+    switch (ctx.fsm.chunk_state) {
+    case FSM::CHUNK_SIZE:
+      if (c == ';') {
+        ctx.fsm.chunk_state = FSM::CHUNK_EXTENSION;
+        ctx.offset++;
+        continue;
+      } else if (c == '\r') {
+        ctx.fsm.chunk_state = FSM::CHUNK_SIZE_CRLF;
+        ctx.offset++;
+        continue;
+      } else if (isxdigit(c)) {
+        if (!ctx.fsm.appendChunkSizeDigit(c)) {
+          ctx.fsm.setMalformed400();
+          return stateError(ctx);
+        }
+        ctx.offset++;
+        continue;
+      }
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+
+    case FSM::CHUNK_SIZE_CRLF:
+      if (c == '\n') {
+        if (ctx.fsm.chunk_size == 0) {
+          ctx.fsm.chunk_state = FSM::CHUNK_TRAILERS;
+        } else {
+          ctx.fsm.chunk_state = FSM::CHUNK_BODY;
+        }
+        ctx.offset++;
+        continue;
+      }
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+
+    case FSM::CHUNK_EXTENSION:
+      if (c == '\r') {
+        ctx.fsm.chunk_state = FSM::CHUNK_SIZE_CRLF;
+      }
+      ctx.offset++;
+      continue;
+
+    case FSM::CHUNK_BODY: {
+      size_t available = ctx.len - ctx.offset;
+      size_t to_consume = std::min(available, ctx.fsm.chunk_size);
+
+      if (!ctx.req->body.fitsContentLength(to_consume,
+                                           ctx.req->body.getMaxBodySize())) {
+        ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
+                             "request chunk greater than max body size");
+        return stateError(ctx);
+      }
+
+      if (!ctx.req->body.append(&ctx.buf[ctx.offset], to_consume)) {
+        ctx.fsm.setMalformed500();
+        return stateError(ctx);
+      }
+
+      ctx.offset += to_consume;
+      ctx.fsm.chunk_size -= to_consume;
+
+      if (ctx.fsm.chunk_size == 0) {
+        ctx.fsm.chunk_state = FSM::CHUNK_BODY_CRLF;
+      }
+      continue;
+    }
+
+    case FSM::CHUNK_BODY_CRLF:
+      if (c == '\r') {
+        ctx.fsm.chunk_state = FSM::CHUNK_BODY_LF;
+        ctx.offset++;
+        continue;
+      }
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+
+    case FSM::CHUNK_BODY_LF:
+      if (c == '\n') {
+        ctx.fsm.chunk_state = FSM::CHUNK_SIZE;
+        ctx.offset++;
+        continue;
+      }
+      ctx.fsm.setMalformed400();
+      return stateError(ctx);
+    case FSM::CHUNK_TRAILERS:
+      ctx.req->body.finalize();
+      // security issue
+      // TODO: implement trailer parsing
+      return stateHeaderKey;
+    }
+  }
+
+  return stateBodyChunked;
 }
 
 State stateDone(Context &ctx) {
