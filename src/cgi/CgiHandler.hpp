@@ -31,14 +31,16 @@ public:
 	void readOutput();
 	bool waitChild();
 	bool reap();
+	void timeoutKill();
 
+
+	//getters
 	CgiState getCgiState() const;
 	const std::string& getCgiOutput() const;
 	int getReadFd() const;
 	int getExitStatus() const;
 	const HttpRequest* getRequest() const;
 	time_t getStartTime() const;
-	void timeoutKill();
 
 private:
 	char** buildEnvp(const std::string& server_name, const std::string& server_port) const;

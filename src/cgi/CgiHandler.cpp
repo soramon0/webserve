@@ -1,5 +1,6 @@
 #include "CgiHandler.hpp"
 #include "cgi_utils.hpp"
+#include "Fd.hpp"
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <cstring>
@@ -86,10 +87,11 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 		state = CGI_ERROR;
 		return (false);
 	}
+	Fd read_guard(pipe_out[0]);
+	Fd write_guard(pipe_out[1]);
+
 	if (fcntl(pipe_out[0], F_SETFD, FD_CLOEXEC) == -1)
 	{
-		close_wrapper(pipe_out[0]);
-		close_wrapper(pipe_out[1]);
 		state = CGI_ERROR;
 		return (false);
 	}
@@ -97,17 +99,13 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 	int body_fd = open(request->body.getFilePath().c_str(), O_RDONLY);
 	if (body_fd == -1)
 	{
-		close_wrapper(pipe_out[0]);
-		close_wrapper(pipe_out[1]);
 		state = CGI_ERROR;
 		return (false);
 	}
+	Fd body_guard(body_fd);
 
 	if (interpreter_path.empty() || interpreter_path[0] != '/')
 	{
-		close_wrapper(pipe_out[0]);
-		close_wrapper(pipe_out[1]);
-		close_wrapper(body_fd);
 		state = CGI_ERROR;
 		return (false);
 	}
@@ -122,9 +120,6 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 	if (pos == std::string::npos)
 	{
 		freeEnvp(envp);
-		close_wrapper(pipe_out[0]);
-		close_wrapper(pipe_out[1]);
-		close_wrapper(body_fd);
 		state = CGI_ERROR;
 		return (false);
 	}
@@ -134,9 +129,6 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 	if (pid == -1)
 	{
 		freeEnvp(envp);
-		close_wrapper(pipe_out[0]);
-		close_wrapper(pipe_out[1]);
-		close_wrapper(body_fd);
 		state = CGI_ERROR;
 		return (false);
 	}
@@ -157,9 +149,8 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 			_exit(127);
 	}
 	start_time = time(NULL);
-	close_wrapper(pipe_out[1]);
-	close_wrapper(body_fd);
 	freeEnvp(envp);
+	read_guard.release();
 	return (true);
 }
 
