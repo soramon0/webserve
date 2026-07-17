@@ -426,15 +426,10 @@ State stateBodyChunked(Context &ctx) {
         ctx.offset++;
         continue;
       } else if (isxdigit(c)) {
-        int val = (c >= 'a')   ? (c - 'a' + 10)
-                  : (c >= 'A') ? (c - 'A' + 10)
-                               : (c - '0');
-
-        if (ctx.fsm.chunk_size > (SIZE_MAX / 16)) {
-          ctx.fsm.setMalformed400(); // Overflow!
+        if (!ctx.fsm.appendChunkSizeDigit(c)) {
+          ctx.fsm.setMalformed400();
           return stateError(ctx);
         }
-        ctx.fsm.chunk_size = (ctx.fsm.chunk_size * 16) + val;
         ctx.offset++;
         continue;
       }

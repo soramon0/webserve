@@ -95,6 +95,7 @@ public:
   bool consumeCRLF(const char *buf, size_t len, size_t &offset) const;
   bool isCRLF(unsigned char c) const { return c == '\r' || c == '\n'; }
   bool isOWS(unsigned char c) const { return c == ' ' || c == '\t'; }
+  bool appendChunkSizeDigit(unsigned char c);
   bool consumeOWS(const char *buf, size_t len, size_t &offset) const;
 
   void dumpState() const {
