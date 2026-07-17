@@ -7,9 +7,9 @@ CgiManager::CgiManager(int epoll_fd) : epoll_fd(epoll_fd) {}
 
 CgiManager::~CgiManager()
 {
-	for (std::vector<CgiHandler*>::size_type i = 0; i < pending_reap.size(); i++)
+	for (std::vector<CgiHandler *>::size_type i = 0; i < pending_reap.size(); i++)
 		delete (pending_reap[i]);
-	for (std::vector<CgiHandler*>::size_type i = 0; i < handlers.size(); i++)
+	for (std::vector<CgiHandler *>::size_type i = 0; i < handlers.size(); i++)
 		delete (handlers[i]);
 }
 
@@ -27,63 +27,74 @@ bool CgiManager::registerHandler(const HttpRequest *request,
 								 const std::string &interpreter_path, const std::string &script_path,
 								 const std::string &server_name, const std::string &server_port)
 {
-	CgiHandler* handler = new CgiHandler(request);
+	CgiHandler *handler = new CgiHandler(request);
+	bool success = false;
+
 	if (handler->start(interpreter_path, script_path, server_name, server_port))
 	{
-		if (fcntl(handler->getReadFd(), F_SETFL, O_NONBLOCK) == -1) { delete handler; return (false);}
-
-		struct epoll_event ev;
-		ev.events = EPOLLIN;
-		ev.data.ptr = handler;
-		if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, handler->getReadFd(), &ev) == -1) { delete handler; return (false);}
-		handlers.push_back(handler);
-		return (true);
+		if (fcntl(handler->getReadFd(), F_SETFL, O_NONBLOCK) != -1)
+		{
+			struct epoll_event ev;
+			ev.events = EPOLLIN;
+			ev.data.ptr = handler;
+			if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, handler->getReadFd(), &ev) != -1)
+			{
+				handlers.push_back(handler);
+				success = true;
+			}
+		}
 	}
-	delete handler;
-	return (false);
+	if (success == false)
+		delete handler;
+	return (success);
 }
 
-void CgiManager::deregisterEpoll(CgiHandler* handler)
+void CgiManager::deregisterEpoll(CgiHandler *handler)
 {
 	if (handler->getReadFd() != -1)
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, handler->getReadFd(), NULL);
 }
 
-void CgiManager::removeHandler(CgiHandler* handler)
+void CgiManager::removeHandler(CgiHandler *handler)
 {
 	deregisterEpoll(handler);
-	std::vector<CgiHandler*>::iterator it = std::find(handlers.begin(), handlers.end(), handler);
+	std::vector<CgiHandler *>::iterator it = std::find(handlers.begin(), handlers.end(), handler);
 	if (it != handlers.end())
 		handlers.erase(it);
 	delete handler;
 }
 
-void CgiManager::dispatch(struct epoll_event& ev)
+void CgiManager::moveToPendingReap(CgiHandler *handler)
 {
-	CgiHandler* handler = static_cast<CgiHandler*>(ev.data.ptr);
+	std::vector<CgiHandler *>::iterator it = std::find(handlers.begin(), handlers.end(), handler);
+	if (it != handlers.end())
+		handlers.erase(it);
+	pending_reap.push_back(handler);
+}
 
-	if (handler->getCgiState() == READING_OUTPUT)
+void CgiManager::dispatch(struct epoll_event &ev)
+{
+	CgiHandler *handler = static_cast<CgiHandler *>(ev.data.ptr);
+
+	if (handler->getCgiState() != READING_OUTPUT)
+		return;
+
+	handler->readOutput();
+
+	if (handler->getCgiState() == CGI_ERROR)
 	{
-		handler->readOutput();
-		if (handler->getCgiState() == CGI_ERROR)
-		{
-			deregisterEpoll(handler);
-			return ;
-		}
-		if (handler->getCgiState() == READING_OUTPUT && handler->getReadFd() == -1)
-		{
-			std::vector<CgiHandler*>::iterator it = std::find(handlers.begin(), handlers.end(), handler);
-			if (it != handlers.end())
-				handlers.erase(it);
-			pending_reap.push_back(handler);
-		}
+		deregisterEpoll(handler);
+		return;
 	}
-	return ;
+
+	bool eof_but_not_reaped = (handler->getCgiState() == READING_OUTPUT && handler->getReadFd() == -1) if (eof_but_not_reaped)
+		moveToPendingReap(handler);
+	return;
 }
 
 void CgiManager::reapPending()
 {
-	std::vector<CgiHandler*>::iterator it = pending_reap.begin();
+	std::vector<CgiHandler *>::iterator it = pending_reap.begin();
 	while (it != pending_reap.end())
 	{
 		if ((*it)->reap())
@@ -96,13 +107,13 @@ void CgiManager::reapPending()
 	}
 }
 
-CgiHandler* CgiManager::claim(const HttpRequest* request)
+CgiHandler *CgiManager::claim(const HttpRequest *request)
 {
 	for (std::vector<CgiHandler *>::iterator it = handlers.begin(); it != handlers.end(); it++)
 	{
 		if ((*it)->getRequest() == request && ((*it)->getCgiState() == CGI_DONE || (*it)->getCgiState() == CGI_ERROR))
 		{
-			CgiHandler* result = *it;
+			CgiHandler *result = *it;
 			handlers.erase(it);
 			return (result);
 		}
@@ -113,7 +124,7 @@ CgiHandler* CgiManager::claim(const HttpRequest* request)
 void CgiManager::checkTimeouts()
 {
 	time_t now = time(NULL);
-	for (std::vector<CgiHandler*>::size_type i = 0; i < handlers.size(); i++)
+	for (std::vector<CgiHandler *>::size_type i = 0; i < handlers.size(); i++)
 	{
 		CgiState s = handlers[i]->getCgiState();
 		if (s == READING_OUTPUT && now - handlers[i]->getStartTime() > CGI_TIMEOUT_SECONDS)
@@ -122,8 +133,8 @@ void CgiManager::checkTimeouts()
 			handlers[i]->timeoutKill();
 		}
 	}
-	std::vector<CgiHandler*>::iterator it = pending_reap.begin();
-	while(it != pending_reap.end())
+	std::vector<CgiHandler *>::iterator it = pending_reap.begin();
+	while (it != pending_reap.end())
 	{
 		if (now - (*it)->getStartTime() > CGI_TIMEOUT_SECONDS)
 		{
