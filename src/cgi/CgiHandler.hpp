@@ -8,38 +8,32 @@
 
 enum CgiState
 {
-	WRITING_BODY, READING_OUTPUT, CGI_DONE, CGI_ERROR
+	READING_OUTPUT, CGI_DONE, CGI_ERROR
 };
 
 class CgiHandler
 {
 private:
-	int pipe_in[2];
 	int pipe_out[2];
 	pid_t pid;
 	int exit_status;
-	const char *body; //until it's parsed
-	size_t body_len;
-	size_t body_written;
 	std::string cgi_output;
 	CgiState state;
 	const HttpRequest* request;
 	time_t start_time;
 
 public:
-	CgiHandler(const HttpRequest* request,const char *body, size_t body_len);
+	CgiHandler(const HttpRequest* request);
 	~CgiHandler();
 
 	bool start(const std::string& interpreter_path, const std::string& script_path,
 			const std::string& server_name, const std::string& server_port);
-	void writeBody();
 	void readOutput();
 	bool waitChild();
 	bool reap();
 
 	CgiState getCgiState() const;
 	const std::string& getCgiOutput() const;
-	int getWriteFd() const;
 	int getReadFd() const;
 	int getExitStatus() const;
 	const HttpRequest* getRequest() const;
