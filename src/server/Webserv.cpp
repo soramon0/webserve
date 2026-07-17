@@ -16,7 +16,6 @@ Webserv::Webserv(Config& _conf) : config(_conf) {}
 
 Webserv::~Webserv() {
   close(epoll_fd);
-  // close all sockets before
 
   while (!clients.empty()) {
     removeClient(clients.begin()->first);
@@ -24,6 +23,7 @@ Webserv::~Webserv() {
 
   std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
   while (it_srv != servers.end()) {
+    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it_srv->first, NULL);
     close(it_srv->first);
     ++it_srv;
   }
@@ -211,14 +211,12 @@ void Webserv::checkTimeouts() {
 
     bool drop = false;
 
-    // Idle connection (e.g. client sent nothing for a long time)
     if (now - cl->last_activity > TIMEOUT) {
       Logger::debug("timeout for client(%d)", c);
       drop = true;
     }
 
     if (drop) {
-      // removeClient erases from map; advance iterator carefully
       std::map<SOCKET, Client*>::iterator to_erase = it++;
       timeoutClient(to_erase->first);
     } else {

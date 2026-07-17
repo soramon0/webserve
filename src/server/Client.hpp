@@ -3,6 +3,7 @@
 #include "common.h"
 #include "config/server.hpp"
 #include "http/fsm.hpp"
+#include "Response.hpp"
 #include <ctime>
 
 struct Client
@@ -23,6 +24,9 @@ struct Client
 	//timeouts
 	std::time_t		last_activity;
 	std::time_t		request_start;
+
+	Response		resp;
+
 	Client();
 	~Client();
 };
