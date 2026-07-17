@@ -25,7 +25,7 @@ public:
 						const std::string& interpreter_path, const std::string& script_path,
 						const std::string& server_name, const std::string& server_port);
 	void removeHandler(CgiHandler* handler);
-	void dispatch(struct epoll_event& ev);
+	void onReadable(struct epoll_event& ev);
 	CgiHandler* claim(const HttpRequest* request);
 	void reapPending();
 	void checkTimeouts();

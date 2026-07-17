@@ -72,7 +72,7 @@ void CgiManager::moveToPendingReap(CgiHandler *handler)
 	pending_reap.push_back(handler);
 }
 
-void CgiManager::dispatch(struct epoll_event &ev)
+void CgiManager::onReadable(struct epoll_event &ev)
 {
 	CgiHandler *handler = static_cast<CgiHandler *>(ev.data.ptr);
 
