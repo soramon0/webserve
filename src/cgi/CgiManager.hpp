@@ -21,7 +21,7 @@ public:
 	~CgiManager();
 
 	bool owns(int fd) const;
-	bool registerHandler(const HttpRequest* request, const char* body, size_t body_len,
+	bool registerHandler(const HttpRequest* request,
 						const std::string& interpreter_path, const std::string& script_path,
 						const std::string& server_name, const std::string& server_port);
 	void removeHandler(CgiHandler* handler);
@@ -32,7 +32,6 @@ public:
 
 private:
 	void deregisterEpoll(CgiHandler* handler);
-	void handleWriteResult(CgiHandler* handler);
 
 	CgiManager(const CgiManager& other);
 	CgiManager& operator=(const CgiManager& other);
