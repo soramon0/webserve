@@ -21,6 +21,7 @@
 // Memory macros scaled to size_t for networking buffers
 #define KIB(x) (static_cast<size_t>(x) << 10)
 #define MIB(x) (static_cast<size_t>(x) << 20)
+#define GIB(x) (static_cast<size_t>(x) << 30)
 
 #ifndef DEBUG
 #define DEBUG 1

@@ -1,9 +1,11 @@
 #include "fsm.hpp"
 #include "logger/log.hpp"
 #include "request_state.hpp"
+#include <stdint.h>
 
 FSM::FSM()
-    : server(NULL), req(NULL), state(stateStart), status(FSMStatus::PENDING) {
+    : server(NULL), req(NULL), state(stateStart), status(FSMStatus::PENDING),
+      chunk_state(FSM::CHUNK_SIZE), chunk_size(0) {
   req = new HttpRequest();
 }
 
@@ -19,6 +21,8 @@ void FSM::clear() {
   }
   state = stateStart;
   status = FSMStatus::PENDING;
+  chunk_state = CHUNK_SIZE;
+  chunk_size = 0;
   curr_header_value.clear();
   curr_header_key.clear();
 }
@@ -98,6 +102,22 @@ void FSM::setMalformed400(const char *msg) {
 }
 
 void FSM::setMalformed400() { setMalformed400(NULL); }
+
+bool FSM::appendChunkSizeDigit(unsigned char c) {
+  if (chunk_size > SIZE_MAX / 16)
+    return false;
+
+  int val;
+  if (c >= 'a')
+    val = c - 'a' + 10;
+  else if (c >= 'A')
+    val = c - 'A' + 10;
+  else
+    val = c - '0';
+
+  chunk_size = (chunk_size * 16) + static_cast<size_t>(val);
+  return true;
+}
 
 bool FSM::consumeCRLF(const char *buf, size_t len, size_t &offset) const {
   if (offset >= len) {

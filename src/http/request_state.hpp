@@ -28,6 +28,7 @@ State stateVersion(Context &ctx);
 State stateHeaderKey(Context &ctx);
 State stateHeaderValue(Context &ctx);
 State stateBody(Context &ctx);
+State stateBodyChunked(Context &ctx);
 State stateDone(Context &ctx);
 State stateError(Context &ctx);
 

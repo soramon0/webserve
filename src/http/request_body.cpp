@@ -5,8 +5,8 @@
 #include <string>
 
 RequestBody::RequestBody()
-    : total_size(0), file_read_offset(0), initialized(false), is_file(false),
-      mem_read_done(false) {
+    : total_size(0), file_read_offset(0), max_body_size(0), initialized(false),
+      is_file(false), mem_read_done(false) {
   arena.setAlignment(1);
   arena.setZeroout(false);
 }
@@ -20,12 +20,12 @@ RequestBody::~RequestBody() {
   }
 }
 
-bool RequestBody::init(size_t size) {
+bool RequestBody::init(size_t size, bool useDisk) {
   if (initialized)
     return true;
 
   size_t cap = static_cast<size_t>(KIB(16));
-  if (size > cap) {
+  if (size > cap || useDisk) {
     if (!init_writef()) {
       return false;
     }
@@ -53,7 +53,7 @@ bool RequestBody::append(const char *buf, size_t size) {
 
       if (writef.fail())
         return false;
-      arena.deinit();  // body lives on disk now
+      arena.deinit(); // body lives on disk now
     }
   }
 
@@ -144,11 +144,7 @@ void RequestBody::resetReader() {
   }
 }
 
-void RequestBody::finalize() {
-  if (writef.is_open()) {
-    writef.close();
-  }
-}
+void RequestBody::finalize() { closefile(writef); }
 
 bool RequestBody::init_writef() {
   if (writef.is_open() || is_file)
@@ -157,6 +153,7 @@ bool RequestBody::init_writef() {
   is_file = true;
   filepath = "/tmp/webserv_upload_" + to_string_patch(rand()) + ".tmp";
   writef.open(filepath.c_str(), std::ios::binary);
+  Logger::debug("filepath: %s", filepath.c_str());
   return writef.is_open();
 }
 
