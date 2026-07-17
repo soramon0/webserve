@@ -412,7 +412,6 @@ State stateBody(Context &ctx) {
 // [Size in Hex] -> \r\n -> [The Data Bytes] -> \r\n
 // states: CHUNK_SIZE, CHUNK_BODY
 State stateBodyChunked(Context &ctx) {
-outer:
   while (ctx.offset < ctx.len) {
     char c = ctx.buf[ctx.offset];
 
@@ -421,11 +420,11 @@ outer:
       if (c == ';') {
         ctx.fsm.chunk_state = FSM::CHUNK_EXTENSION;
         ctx.offset++;
-        goto outer;
+        continue;
       } else if (c == '\r') {
         ctx.fsm.chunk_state = FSM::CHUNK_SIZE_CRLF;
         ctx.offset++;
-        goto outer;
+        continue;
       } else if (isxdigit(c)) {
         int val = (c >= 'a')   ? (c - 'a' + 10)
                   : (c >= 'A') ? (c - 'A' + 10)
@@ -437,7 +436,7 @@ outer:
         }
         ctx.fsm.chunk_size = (ctx.fsm.chunk_size * 16) + val;
         ctx.offset++;
-        goto outer;
+        continue;
       }
       ctx.fsm.setMalformed400();
       return stateError(ctx);
@@ -450,7 +449,7 @@ outer:
           ctx.fsm.chunk_state = FSM::CHUNK_BODY;
         }
         ctx.offset++;
-        goto outer;
+        continue;
       }
       ctx.fsm.setMalformed400();
       return stateError(ctx);
@@ -460,7 +459,7 @@ outer:
         ctx.fsm.chunk_state = FSM::CHUNK_SIZE_CRLF;
       }
       ctx.offset++;
-      goto outer;
+      continue;
 
     case FSM::CHUNK_BODY: {
       size_t available = ctx.len - ctx.offset;
@@ -484,14 +483,14 @@ outer:
       if (ctx.fsm.chunk_size == 0) {
         ctx.fsm.chunk_state = FSM::CHUNK_BODY_CRLF;
       }
-      goto outer;
+      continue;
     }
 
     case FSM::CHUNK_BODY_CRLF:
       if (c == '\r') {
         ctx.fsm.chunk_state = FSM::CHUNK_BODY_LF;
         ctx.offset++;
-        goto outer;
+        continue;
       }
       ctx.fsm.setMalformed400();
       return stateError(ctx);
@@ -500,7 +499,7 @@ outer:
       if (c == '\n') {
         ctx.fsm.chunk_state = FSM::CHUNK_SIZE;
         ctx.offset++;
-        goto outer;
+        continue;
       }
       ctx.fsm.setMalformed400();
       return stateError(ctx);
