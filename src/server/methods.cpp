@@ -61,7 +61,7 @@ void handleGet(Client* cl) {
 					}
 					closedir(dir);
 					listing << "</ul></body></html>";
-					cl->response_body = listing.str();
+					cl->response.body = listing.str();
 					cl->file_path = "";
 					req->status = HttpStatus::OK;
 					return;
@@ -76,7 +76,7 @@ void handleGet(Client* cl) {
 	std::string body((std::istreambuf_iterator<char>(file)),
 		std::istreambuf_iterator<char>()); // reads all of it into "body"
 
-	cl->response_body = body;
+	cl->response.body = body;
 	cl->file_path = file_path;
 	req->status = HttpStatus::OK;
 }

@@ -6,6 +6,7 @@
 #include "Response.hpp"
 #include <ctime>
 
+
 struct Client
 {
 	socklen_t		addrlen;
@@ -16,7 +17,7 @@ struct Client
 	//new fields
 	Location*		location;
 	std::string		redirect_url;
-	std::string		response_body;
+	// std::string		response_body;
 	std::string		file_path;
 
 	FSM				machine;
@@ -25,7 +26,7 @@ struct Client
 	std::time_t		last_activity;
 	std::time_t		request_start;
 
-	Response		resp;
+	Response		response;
 
 	Client();
 	~Client();

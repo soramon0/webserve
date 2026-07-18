@@ -96,9 +96,6 @@ void Webserv::eventLoop() {
 }
 //TODO: send chuncked response
 //TODO handle internal server errors
-// GET / HTTP/1.1
-// headers ....
-// GET / ...
 SOCKET Webserv::createSocket(int id) {
   struct addrinfo hints;
   std::memset(&hints, 0, sizeof(hints));
@@ -257,80 +254,18 @@ void Webserv::handleHttpResponse(SOCKET c) {
   Client* cl = clients[c];
   HttpRequest* req = cl->machine.getRequest();
 
-  if (cl->machine.status.isPending()) {
-    Logger::debug("no request yet");
-    return;
-  }
-
-  //if the request is malformed
-  if (cl->machine.status.isMalformed()) {
-    std::string body = "<html><body><h1>" + std::string(req->status.toString()) + "</h1></body></html>";
-    std::ostringstream resp;
-    resp << "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
-          << "Content-Length: " << body.size() << "\r\n"
-          << "Connection: close\r\n"
-          << "\r\n"
-          << body;
-    std::string r = resp.str();
-    send(c, r.c_str(), r.size(), 0);
-    removeClient(c);
-    return;
-  }
-  //processing kima galia karim, ndirha hna 
   processRequest(cl);
 
-  // REDIRECT
-  if (isRedirect(req->status)) {
-    std::string body = "";
-    std::string resp =
-        "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
-        "Location: " + cl->redirect_url + "\r\n"
-        "Content-Length: 0\r\n"
-        "Connection: close\r\n"
-        "\r\n";
-    send(c, resp.c_str(), resp.size(), 0);
-    removeClient(c);
-    return;
+  if (cl->response.buffer.empty()) {
+    std::string content_type = getContentType(cl->file_path);
+    cl->response.build(req->status, cl, content_type, cl->redirect_url);
   }
 
-  // 4** errors
-  if (req->status == HttpStatus::NOT_FOUND
-    || req->status == HttpStatus::FORBIDDEN
-    || req->status == HttpStatus::METHOD_NOT_ALLOWED) {
-    std::string body = "<html><body><h1>" + std::string(req->status.toString()) + "</h1></body></html>";
-    std::ostringstream resp;
-    resp << "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
-          << "Content-Length: " << body.size() << "\r\n"
-          << "Connection: close\r\n"
-          << "\r\n"
-          << body;
-    std::string r = resp.str();
-    send(c, r.c_str(), r.size(), 0);
-    removeClient(c);
-    return;
-  }
+  ssize_t sent = send(c, cl->response.buffer.c_str() + cl->response.offset,
+                  cl->response.buffer.size() - cl->response.offset, 0);
+  if (sent > 0)
+    cl->response.offset += sent;
 
-  if (req->status == HttpStatus::NO_CONTENT) {
-    std::string resp = "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n";
-    send(c, resp.c_str(), resp.size(), 0);
+  if (cl->response.offset >= cl->response.buffer.size())
     removeClient(c);
-    return;
-  }
-
-	if (req->status == HttpStatus::OK) {
-		std::ostringstream resp;
-		resp << "HTTP/1.1 200 OK\r\n"
-			<< "Content-Length: " << cl->response_body.size() << "\r\n"
-      << "Content-Type: " << getContentType(cl->file_path) << "\r\n"
-			<< "Connection: close\r\n"
-			<< "\r\n"
-			<< cl->response_body;
-		std::string r = resp.str();
-		send(c, r.c_str(), r.size(), 0);
-    cl->last_activity = time(NULL);
-		removeClient(c);
-		return;
-	}
-  //TODO : update last activity after every send 
-  //TODO : change the response's logic
 }

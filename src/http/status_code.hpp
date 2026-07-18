@@ -59,7 +59,9 @@ public:
     return *this;
   }
   bool operator==(HttpStatus other) const { return value_ == other.value_; }
+  bool operator>=(HttpStatus other) const { return value_ >= other.value_; }
   bool operator==(Code v) const { return value_ == v; }
+  bool operator>=(Code v) const { return value_ >= v; }
   bool operator!=(HttpStatus other) const { return value_ != other.value_; }
   bool operator!=(Code v) const { return value_ != v; }
 

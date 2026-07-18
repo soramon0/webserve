@@ -1,10 +1,12 @@
-#include "common.h"
 #include "utils.hpp"
 #include "logger/log.hpp"
+#include "Client.hpp"
 #include <fcntl.h>
 #include <sys/epoll.h>
 #include <cstring>
 #include <string>
+#include <fstream>
+#include <map>
 
 int set_nonblocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);// TODO: remove get
@@ -96,4 +98,30 @@ std::string getContentType(const std::string& path)
     if (ext == "txt") return "text/plain";
 
     return "application/octet-stream";
+}
+// TODO: fix the error by appending the file name to the root
+std::string getErrorBody(Client* cl, HttpStatus status)
+{
+    if (cl->location && cl->location->shared_config)
+    {
+        std::map<int, std::string>& pages = cl->location->shared_config->error_page;
+        std::map<int, std::string>::iterator it = pages.find(status.asInt());
+        if (it != pages.end())
+        {
+            Logger::debug("found custom error page: %s", it->second.c_str());
+            std::ifstream file(it->second.c_str());
+            if (!file.is_open()) {
+                Logger::debug("Can't open the file %s", it->second.c_str());
+            }
+            if (file.good())
+            {
+                Logger::debug("reading the custom 404...");
+                std::string body((std::istreambuf_iterator<char>(file)),
+                                  std::istreambuf_iterator<char>());
+                return body;
+            }
+        }
+    }
+    // fallback to default
+    return "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";
 }
