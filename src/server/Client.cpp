@@ -91,3 +91,13 @@ size_t Client::getMaxSize()
 		body_size = srv->locations[request.path].shared_config->client_max_body_size;
 	return (header_size + body_size);
 }
+
+Server* Client::getServer() const
+{
+	return srv;
+}
+
+void Client::setServer(Server* server)
+{
+	srv = server;
+}

@@ -53,12 +53,14 @@ void CgiHandler::addBodyVars(std::vector<std::string> &vect_envp) const
 		vect_envp.push_back("CONTENT_TYPE=" + std::string(ct->data(), ct->length()));
 }
 
-void CgiHandler::addUriVars(std::vector<std::string> &vect_envp) const
+void CgiHandler::addUriVars(std::vector<std::string> &vect_envp, const std::string& path_info) const
 {
 	std::string path, query_string;
 	splitQueryString(request->uri, path, query_string);
 	vect_envp.push_back("SCRIPT_NAME=" + path);
 	vect_envp.push_back("QUERY_STRING=" + query_string);
+	if (!path_info.empty())
+		vect_envp.push_back("PATH_INFO=" + path_info);
 }
 
 void CgiHandler::addHeaderVars(std::vector<std::string> &vect_envp) const
@@ -83,20 +85,21 @@ void CgiHandler::addHeaderVars(std::vector<std::string> &vect_envp) const
 	}
 }
 
-char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &server_port) const
+char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &server_port, const std::string& path_info) const
 {
 	std::vector<std::string> vect_envp;
 
 	addStandardVars(vect_envp, server_name, server_port);
 	addBodyVars(vect_envp);
-	addUriVars(vect_envp);
+	addUriVars(vect_envp, path_info);
 	addHeaderVars(vect_envp);
 
 	return (vectorToEnvp(vect_envp));
 }
 
 bool CgiHandler::start(const std::string &interpreter_path, const std::string &script_path,
-					   const std::string &server_name, const std::string &server_port)
+					   const std::string &server_name, const std::string &server_port,
+						const std::string& path_info)
 {
 	if (pipe(pipe_out) == -1)
 	{
@@ -130,7 +133,7 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 	argv[0] = const_cast<char *>(interpreter_path.c_str());
 	argv[1] = const_cast<char *>(script_path.c_str());
 	argv[2] = NULL;
-	char **envp = buildEnvp(server_name, server_port);
+	char **envp = buildEnvp(server_name, server_port, path_info);
 
 	size_t pos = script_path.find_last_of('/');
 	if (pos == std::string::npos)

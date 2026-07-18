@@ -28,7 +28,8 @@ public:
 	~CgiHandler();
 
 	bool start(const std::string& interpreter_path, const std::string& script_path,
-			const std::string& server_name, const std::string& server_port);
+			const std::string& server_name, const std::string& server_port,
+			const std::string& path_info);
 	void readOutput();
 	bool waitChild();
 	bool reap();
@@ -46,9 +47,9 @@ public:
 private:
 	void addStandardVars(std::vector<std::string>& vect_envp, const std::string& server_name, const std::string& server_port) const;
 	void addBodyVars(std::vector<std::string>& vect_envp) const;
-	void addUriVars(std::vector<std::string>& vect_envp) const;
+	void addUriVars(std::vector<std::string>& vect_envp, const std::string& path_info) const;
 	void addHeaderVars(std::vector<std::string>& vect_envp) const;
-	char** buildEnvp(const std::string& server_name, const std::string& server_port) const;
+	char** buildEnvp(const std::string& server_name, const std::string& server_port, const std::string& path_info) const;
 
 	CgiHandler(const CgiHandler& other);
 	CgiHandler& operator=(const CgiHandler& other);

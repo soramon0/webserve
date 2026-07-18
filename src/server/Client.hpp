@@ -36,4 +36,6 @@ public:
 	void	checkRequest();
 	size_t	getMaxSize();
 
+	Server* getServer() const;
+	void setServer(Server* server);
 };

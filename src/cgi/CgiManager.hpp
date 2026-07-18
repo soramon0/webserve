@@ -23,7 +23,7 @@ public:
 	bool owns(int fd) const;
 	bool registerHandler(const HttpRequest* request,
 						const std::string& interpreter_path, const std::string& script_path,
-						const std::string& server_name, const std::string& server_port);
+						const std::string& server_name, const std::string& server_port, const std::string& path_info);
 	void removeHandler(CgiHandler* handler);
 	void onReadable(struct epoll_event& ev);
 	CgiHandler* claim(const HttpRequest* request);

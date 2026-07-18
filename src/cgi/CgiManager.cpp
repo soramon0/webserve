@@ -25,12 +25,13 @@ bool CgiManager::owns(int fd) const
 
 bool CgiManager::registerHandler(const HttpRequest *request,
 								 const std::string &interpreter_path, const std::string &script_path,
-								 const std::string &server_name, const std::string &server_port)
+								 const std::string &server_name, const std::string &server_port,
+								 const std::string& path_info)
 {
 	CgiHandler *handler = new CgiHandler(request);
 	bool success = false;
 
-	if (handler->start(interpreter_path, script_path, server_name, server_port))
+	if (handler->start(interpreter_path, script_path, server_name, server_port, path_info))
 	{
 		if (fcntl(handler->getReadFd(), F_SETFL, O_NONBLOCK) != -1)
 		{
