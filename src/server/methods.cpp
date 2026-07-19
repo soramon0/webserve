@@ -113,6 +113,10 @@ void handleDelete(Client *cl)
 
 void handlePost(Client *cl)
 {
+	CgiManager cgiManager;
+	if (tryDispatchCgi(cl, cgiManager))
+		return;
+
 }
 
  

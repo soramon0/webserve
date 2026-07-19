@@ -2,6 +2,7 @@
 #define CGI_UTILS
 
 #include "CgiHandler.hpp"
+#include "CgiManager.hpp"
 #include <vector>
 class Client;
 
@@ -25,5 +26,7 @@ void resolveServerVars(const Client *cl, std::string &server_name, std::string &
 bool dispatchCgi(const std::string &root, const std::string &uri_path,
 				 const std::map<std::string, std::string> &cgi_pass,
 				 CgiDispatchInfo &info);
+
+bool tryDispatchCgi(Client *cl, CgiManager &manager);
 
 #endif

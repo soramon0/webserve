@@ -88,3 +88,20 @@ bool dispatchCgi(const std::string &root, const std::string &uri_path,
 		return (false);
 	return (true);
 }
+
+bool tryDispatchCgi(Client *cl, CgiManager &manager)
+{
+	HttpRequest *req = cl->machine.getRequest();
+	std::string uri_path(req->uri.data(), req->uri.length());
+
+	CgiDispatchInfo info;
+	if (!dispatchCgi(cl->location->shared_config->root, uri_path,
+					 cl->location->shared_config->cgi_pass, info))
+		return (false);
+	
+	resolveScriptPath(cl, info.server_name, info.server_port);
+	if (!manager.registerHandler(req, info.interpreter_path, infor.script_path,
+				info.server_name, info.server_port, info.path_info))
+				return (false);
+	return (true);
+}
