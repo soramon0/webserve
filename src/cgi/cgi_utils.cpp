@@ -5,67 +5,6 @@
 #include <sstream>
 #include "../server/Client.hpp"
 
-static size_t findChar(const StringView &sv, char c)
-{
-	for (size_t pos = 0; pos < sv.length(); pos++)
-	{
-		if (c == sv.data()[pos])
-			return (pos);
-	}
-	return (sv.length());
-}
-
-void splitQueryString(const StringView &uri, std::string &path, std::string &query_string)
-{
-	size_t pos = findChar(uri, '?');
-	path = std::string(uri.data(), pos);
-	if (pos == uri.length())
-	{
-		query_string = "";
-		return;
-	}
-	else
-	{
-		query_string = std::string(uri.data() + pos + 1, uri.length() - pos - 1);
-		return;
-	}
-}
-
-std::string toHttpEnvName(const std::string &key)
-{
-	std::string env_name = key;
-
-	for (size_t i = 0; i < key.length(); i++)
-	{
-		if (key[i] == '-')
-			env_name[i] = '_';
-		else
-			env_name[i] = std::toupper(static_cast<unsigned char>(key[i]));
-	}
-	env_name = "HTTP_" + env_name;
-	return (env_name);
-}
-
-char **vectorToEnvp(const std::vector<std::string> &vect)
-{
-	char **envp = new char *[vect.size() + 1];
-	size_t i = 0;
-	for (i = 0; i < vect.size(); i++)
-	{
-		envp[i] = new char[vect[i].size() + 1];
-		std::strcpy(envp[i], vect[i].c_str());
-	}
-	envp[i] = NULL;
-	return (envp);
-}
-
-void freeEnvp(char **envp)
-{
-	for (size_t i = 0; envp[i] != NULL; i++)
-		delete[] envp[i];
-	delete[] envp;
-}
-
 void close_wrapper(int &fd)
 {
 	if (fd == -1)
@@ -139,3 +78,30 @@ void resolveServerVars(const Client *cl, std::string &server_name, std::string &
 	server_port = oss.str();
 }
 
+bool dispatchCgi(const std::string &root, const std::string &uri_path,
+				 const std::map<std::string, std::string> &cgi_pass,
+				 CgiDispatchInfo &info)
+{
+	if (!resolveScriptPath(root, uri_path, info.script_path, info.path_info))
+		return (false);
+	if (!lookupInterpreter(cgi_pass, info.script_path, info.interpreter_path))
+		return (false);
+	return (true);
+}
+
+bool tryDispatchCgi(Client *cl, CgiManager &manager)
+{
+	HttpRequest *req = cl->machine.getRequest();
+	std::string uri_path(req->uri.data(), req->uri.length());
+
+	CgiDispatchInfo info;
+	if (!dispatchCgi(cl->location->shared_config->root, uri_path,
+					 cl->location->shared_config->cgi_pass, info))
+		return (false);
+	
+	resolveServerVars(cl, info.server_name, info.server_port);
+	if (!manager.registerHandler(req, info.interpreter_path, info.script_path,
+				info.server_name, info.server_port, info.path_info))
+				return (false);
+	return (true);
+}
