@@ -7,6 +7,8 @@
 #include <vector>
 #include "../http/http_request.hpp"
 
+class Client;
+
 enum CgiState
 {
 	READING_OUTPUT, CGI_DONE, CGI_ERROR
@@ -21,10 +23,11 @@ private:
 	std::string cgi_output;
 	CgiState state;
 	const HttpRequest* request;
+	Client* client;
 	time_t start_time;
 
 public:
-	CgiHandler(const HttpRequest* request);
+	CgiHandler(const HttpRequest* request, Client* client);
 	~CgiHandler();
 
 	bool start(const std::string& interpreter_path, const std::string& script_path,
@@ -42,6 +45,7 @@ public:
 	int getReadFd() const;
 	int getExitStatus() const;
 	const HttpRequest* getRequest() const;
+	Client* getClient() const;
 	time_t getStartTime() const;
 
 private:

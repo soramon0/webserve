@@ -11,8 +11,8 @@
 #include <sstream>
 #include <vector>
 
-CgiHandler::CgiHandler(const HttpRequest *request)
-	: pid(-1), exit_status(0), cgi_output(""), state(READING_OUTPUT), request(request)
+CgiHandler::CgiHandler(const HttpRequest *request, Client *client)
+	: pid(-1), exit_status(0), cgi_output(""), state(READING_OUTPUT), request(request), client(client), start_time(0)
 {
 	pipe_out[0] = -1;
 	pipe_out[1] = -1;
@@ -281,5 +281,7 @@ int CgiHandler::getReadFd() const { return (pipe_out[0]); }
 int CgiHandler::getExitStatus() const { return (exit_status); }
 
 const HttpRequest *CgiHandler::getRequest() const { return (request); }
+
+Client* CgiHandler::getClient() const { return (client); }
 
 time_t CgiHandler::getStartTime() const { return (start_time); }
