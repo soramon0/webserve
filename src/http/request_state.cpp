@@ -109,6 +109,7 @@ State stateURI(Context &ctx) {
 
   // Origin-from
   if (ctx.req->uri[0] == '/') {
+    ctx.req->splitQueryParams();
     return stateVersion;
   }
 
@@ -135,10 +136,13 @@ State stateURI(Context &ctx) {
 
     if (!path) {
       // e.g., "https://example.com"|"https://e" -> defaults to "/"
+      // split query/fragment if any before setting default
+      ctx.req->splitQueryParams();
       ctx.req->uri = StringView("/", 1);
     } else {
       size_t new_len = (ctx.req->uri.data() + ctx.req->uri.length()) - path;
       ctx.req->uri = StringView(path, new_len);
+      ctx.req->splitQueryParams();
     }
 
     return stateVersion;

@@ -31,6 +31,8 @@ public:
 
   StringView method_view;
   StringView uri;
+  StringView uriQuery;
+  StringView uriFragment;
   StringView version_view;
   StringView error;
 
@@ -41,6 +43,7 @@ public:
 
   void printRequest();
   bool updateField(StringView &field, const char *buf, size_t size);
+  void splitQueryParams();
   void finishRequestLine();
   void dumpState();
   bool getStateReady() const { return ready; }

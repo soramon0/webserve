@@ -17,7 +17,7 @@ TEST_CASE("FSM parses complete HTTP request line across arbitrary chunks") {
 
   CHECK(req->status == HttpStatus::OK);
   CHECK(req->method.toString() == "GET");
-  CHECK(std::string(req->uri.data(), req->uri.length()) == "/api/products");
+  CHECK(req->uri == "/api/products");
   CHECK(req->version.toString() == "HTTP/1.1");
 }
 
@@ -33,8 +33,124 @@ TEST_CASE("FSM correctly extracts path from Absolute URI format") {
   CHECK(req->status == HttpStatus::OK);
   CHECK(req->method.toString() == "GET");
 
-  CHECK(std::string(req->uri.data(), req->uri.length()) == "/api/products");
+  CHECK(req->uri == "/api/products");
   CHECK(req->version.toString() == "HTTP/1.1");
+}
+
+TEST_CASE("FSM correctly handles uri with query params") {
+  FSM fsm;
+
+  SUBCASE("extracts uri") {
+    fsm.restart();
+
+    std::string input = "GET /products HTTP/1.1\r\n";
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isPending());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->uri == "/products");
+    CHECK(req->uriQuery.empty());
+    CHECK(req->uriFragment.empty());
+  }
+
+  SUBCASE("extracts query params") {
+    fsm.restart();
+
+    std::string input = "GET /search?age=15&name=sora HTTP/1.1\r\n";
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isPending());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->uri == "/search");
+    CHECK(req->uriQuery == "?age=15&name=sora");
+    CHECK(req->uriFragment.empty());
+  }
+
+  SUBCASE("extracts query hash") {
+    fsm.restart();
+
+    std::string input = "GET /website#aboutus HTTP/1.1\r\n";
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isPending());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->uri == "/website");
+    CHECK(req->uriQuery.empty());
+    CHECK(req->uriFragment == "#aboutus");
+  }
+
+  SUBCASE("extracts query params with hash") {
+    fsm.restart();
+
+    std::string input = "GET /search?age=15&name=sora#aboutus HTTP/1.1\r\n";
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isPending());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->uri == "/search");
+    CHECK(req->uriQuery == "?age=15&name=sora");
+    CHECK(req->uriFragment == "#aboutus");
+  }
+
+  SUBCASE("extracts hash with query params after hash") {
+    fsm.restart();
+
+    std::string input = "GET /website#aboutus?name=age HTTP/1.1\r\n";
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isPending());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->uri == "/website");
+    CHECK(req->uriQuery.empty());
+    CHECK(req->uriFragment == "#aboutus?name=age");
+  }
+
+  SUBCASE("extracts absolute-uri query params") {
+    fsm.restart();
+
+    std::string input = "GET https://example.com/dashboard?page=1&pageSize=10 HTTP/1.1\r\n";
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isPending());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->uri == "/dashboard");
+    CHECK(req->uriQuery == "?page=1&pageSize=10");
+    CHECK(req->uriFragment.empty());
+  }
+
+  SUBCASE("extracts absolute-uri query params with no starting /") {
+    fsm.restart();
+
+    std::string input = "GET https://example.com?page=1&pageSize=10 HTTP/1.1\r\n";
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isPending());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->uri == "/");
+    CHECK(req->uriQuery == "?page=1&pageSize=10");
+    CHECK(req->uriFragment.empty());
+  }
+
+  SUBCASE("extracts absolute-uri fragment with no starting /") {
+    fsm.restart();
+
+    std::string input = "GET https://example.com#frag HTTP/1.1\r\n";
+    CHECK(fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isPending());
+
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->uri == "/");
+    CHECK(req->uriQuery.empty());
+    CHECK(req->uriFragment == "#frag");
+  }
 }
 
 TEST_CASE("FSM parses absolute URI split across chunks") {
@@ -50,7 +166,7 @@ TEST_CASE("FSM parses absolute URI split across chunks") {
   HttpRequest *req = fsm.getRequest();
   REQUIRE(req != nullptr);
   CHECK(req->status == HttpStatus::OK);
-  CHECK(std::string(req->uri.data(), req->uri.length()) == "/api/products");
+  CHECK(req->uri == "/api/products");
 }
 
 TEST_CASE("FSM handles absolute URI with missing trailing path") {
@@ -62,7 +178,7 @@ TEST_CASE("FSM handles absolute URI with missing trailing path") {
 
   HttpRequest *req = fsm.getRequest();
   REQUIRE(req != nullptr);
-  CHECK(std::string(req->uri.data(), req->uri.length()) == "/");
+  CHECK(req->uri == "/");
 }
 
 TEST_CASE("FSM handles incomplete CRLF") {
@@ -80,7 +196,7 @@ TEST_CASE("FSM handles incomplete CRLF") {
   REQUIRE(req != nullptr);
   CHECK(req->status == HttpStatus::OK);
   CHECK(req->version == HttpVersion::V1_0);
-  CHECK(std::string(req->uri.data(), req->uri.length()) == "/");
+  CHECK(req->uri == "/");
 }
 
 TEST_CASE("FSM rejects missing uri") {
