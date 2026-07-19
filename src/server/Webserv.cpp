@@ -257,7 +257,8 @@ void Webserv::handleHttpResponse(SOCKET c) {
   processRequest(cl);
 
   if (cl->response.buffer.empty()) {
-    std::string content_type = getContentType(cl->file_path);
+    mimetype_map& types = cl->location->shared_config->types;
+    std::string content_type = getContentType(cl->file_path, types);
     cl->response.build(req->status, cl, content_type, cl->redirect_url);
   }
 

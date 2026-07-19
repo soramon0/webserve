@@ -73,14 +73,30 @@ std::string getExt(const std::string& path)
     return path.substr(pos + 1);
 }
 
-std::string getContentType(const std::string& path)
+std::string getMimeTypeFromConfig(const std::string& ext, const mimetype_map& types)
+{
+    if (ext.empty())
+        return "application/octet-stream";
+
+    mimetype_map::const_iterator it = types.begin();
+    while (it != types.end())
+    {
+        if (it->second.count(ext))
+            return it->first;
+        ++it;
+    }
+    return ""; // TODO: make sure to deal with the case when there no types in conf
+}
+
+std::string getContentType(const std::string& path, const mimetype_map& types)
 {
     if (path.empty())
         return "text/html";
-    size_t pos = path.rfind('.');
-    if (pos == std::string::npos)
-        return "application/octet-stream";
-    std::string ext = path.substr(pos + 1); // handle if last '.' + 1 = '\0'
+
+    std::string ext = getExt(path);
+
+    std::string type = getMimeTypeFromConfig(ext, types);
+    if (!type.empty()) return type;
 
     if (ext == "css") return "text/css";
     if (ext == "csv") return "text/csv";
@@ -114,13 +130,10 @@ std::string getErrorBody(Client* cl, HttpStatus status)
             if (!file.is_open()) {
                 Logger::debug("Can't open the file %s", error_page_file.c_str());
             }
-            if (file.good())
-            {
-                Logger::debug("reading the custom 404...");
-                std::string body((std::istreambuf_iterator<char>(file)),
-                                  std::istreambuf_iterator<char>());
-                return body;
-            }
+            Logger::debug("reading the custom 404...");
+            std::string body((std::istreambuf_iterator<char>(file)),
+                                std::istreambuf_iterator<char>());
+            return body;
         }
     }
     // fallback to default
