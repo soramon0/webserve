@@ -50,6 +50,9 @@ private:
 	void addUriVars(std::vector<std::string>& vect_envp, const std::string& path_info) const;
 	void addHeaderVars(std::vector<std::string>& vect_envp) const;
 	char** buildEnvp(const std::string& server_name, const std::string& server_port, const std::string& path_info) const;
+	static std::string toHttpEnvName(const std::string &key);
+	static char **vectorToEnvp(const std::vector<std::string> &vect);
+	static void freeEnvp(char **envp);
 
 	CgiHandler(const CgiHandler& other);
 	CgiHandler& operator=(const CgiHandler& other);

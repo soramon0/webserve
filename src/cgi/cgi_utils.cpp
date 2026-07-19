@@ -31,41 +31,6 @@ void splitQueryString(const StringView &uri, std::string &path, std::string &que
 	}
 }
 
-std::string toHttpEnvName(const std::string &key)
-{
-	std::string env_name = key;
-
-	for (size_t i = 0; i < key.length(); i++)
-	{
-		if (key[i] == '-')
-			env_name[i] = '_';
-		else
-			env_name[i] = std::toupper(static_cast<unsigned char>(key[i]));
-	}
-	env_name = "HTTP_" + env_name;
-	return (env_name);
-}
-
-char **vectorToEnvp(const std::vector<std::string> &vect)
-{
-	char **envp = new char *[vect.size() + 1];
-	size_t i = 0;
-	for (i = 0; i < vect.size(); i++)
-	{
-		envp[i] = new char[vect[i].size() + 1];
-		std::strcpy(envp[i], vect[i].c_str());
-	}
-	envp[i] = NULL;
-	return (envp);
-}
-
-void freeEnvp(char **envp)
-{
-	for (size_t i = 0; envp[i] != NULL; i++)
-		delete[] envp[i];
-	delete[] envp;
-}
-
 void close_wrapper(int &fd)
 {
 	if (fd == -1)
@@ -139,3 +104,13 @@ void resolveServerVars(const Client *cl, std::string &server_name, std::string &
 	server_port = oss.str();
 }
 
+bool dispatchCgi(const std::string &root, const std::string &uri_path,
+				 const std::map<std::string, std::string> &cgi_pass,
+				 CgiDispatchInfo &info)
+{
+	if (!resolveScriptPath(root, uri_path, info.script_path, info.path_info))
+		return (false);
+	if (!lookupInterpreter(cgi_pass, info.script_path, info.interpreter_path))
+		return (false);
+	return (true);
+}
