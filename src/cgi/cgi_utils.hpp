@@ -10,6 +10,8 @@ struct CgiDispatchInfo
 	std::string script_path;
 	std::string path_info;
 	std::string interpreter_path;
+	std::string server_name;
+	std::string server_port;
 };
 
 void close_wrapper(int &fd);
