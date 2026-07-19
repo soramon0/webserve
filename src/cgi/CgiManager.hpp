@@ -7,6 +7,8 @@
 #include <vector>
 #include <fcntl.h>
 
+class Client;
+
 #define CGI_TIMEOUT_SECONDS  10
 
 class CgiManager
@@ -21,14 +23,15 @@ public:
 	~CgiManager();
 
 	bool owns(int fd) const;
-	bool registerHandler(const HttpRequest* request,
+	bool registerHandler(const HttpRequest* request, Client* client,
 						const std::string& interpreter_path, const std::string& script_path,
 						const std::string& server_name, const std::string& server_port, const std::string& path_info);
 	void removeHandler(CgiHandler* handler);
 	void onReadable(struct epoll_event& ev);
-	CgiHandler* claim(const HttpRequest* request);
+	//CgiHandler* claim(const HttpRequest* request);
 	void reapPending();
 	void checkTimeouts();
+	std::vector<CgiHandler*> claimAllFinished();
 
 private:
 	void deregisterEpoll(CgiHandler* handler);

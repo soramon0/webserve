@@ -23,12 +23,12 @@ bool CgiManager::owns(int fd) const
 	return (false);
 }
 
-bool CgiManager::registerHandler(const HttpRequest *request,
+bool CgiManager::registerHandler(const HttpRequest *request, Client* client,
 								 const std::string &interpreter_path, const std::string &script_path,
 								 const std::string &server_name, const std::string &server_port,
 								 const std::string& path_info)
 {
-	CgiHandler *handler = new CgiHandler(request);
+	CgiHandler *handler = new CgiHandler(request, client);
 	bool success = false;
 
 	if (handler->start(interpreter_path, script_path, server_name, server_port, path_info))
@@ -109,19 +109,19 @@ void CgiManager::reapPending()
 	}
 }
 
-CgiHandler *CgiManager::claim(const HttpRequest *request)
-{
-	for (std::vector<CgiHandler *>::iterator it = handlers.begin(); it != handlers.end(); it++)
-	{
-		if ((*it)->getRequest() == request && ((*it)->getCgiState() == CGI_DONE || (*it)->getCgiState() == CGI_ERROR))
-		{
-			CgiHandler *result = *it;
-			handlers.erase(it);
-			return (result);
-		}
-	}
-	return (NULL);
-}
+// CgiHandler *CgiManager::claim(const HttpRequest *request)
+// {
+// 	for (std::vector<CgiHandler *>::iterator it = handlers.begin(); it != handlers.end(); it++)
+// 	{
+// 		if ((*it)->getRequest() == request && ((*it)->getCgiState() == CGI_DONE || (*it)->getCgiState() == CGI_ERROR))
+// 		{
+// 			CgiHandler *result = *it;
+// 			handlers.erase(it);
+// 			return (result);
+// 		}
+// 	}
+// 	return (NULL);
+// }
 
 void CgiManager::timeoutActiveHandlers(time_t now)
 {
@@ -157,4 +157,22 @@ void CgiManager::checkTimeouts()
 	time_t now = time(NULL);
 	timeoutActiveHandlers(now);
 	timeoutPendingReap(now);
+}
+
+std::vector<CgiHandler*> CgiManager::claimAllFinished()
+{
+	std::vector<CgiHandler*> finished;
+	std::vector<CgiHandler*>::iterator it = handlers.begin();
+	while (it != handlers.end())
+	{
+		CgiState s = (*it)->getCgiState();
+		if (s == CGI_ERROR || s == CGI_DONE)
+		{
+			finished.push_back(*it);
+			it = handlers.erase(it);
+		}
+		else
+			++it;
+	}
+	return (finished);
 }
