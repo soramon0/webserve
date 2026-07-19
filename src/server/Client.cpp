@@ -10,8 +10,7 @@ Client::Client()
 	  srv(NULL),
 	  location(NULL),
 	  machine(),
-	  last_activity(0),
-	  request_start(0)
+	  last_activity(0)
 {
 	std::memset(&addr, 0, sizeof(addr));
 	machine.setServer(this->srv);

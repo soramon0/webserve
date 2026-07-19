@@ -15,6 +15,8 @@ public:
     std::string body;
     std::string buffer;
     size_t      offset; // bytes sent
+    size_t      file_size;
+    int         file_fd;
 
     Response();
     ~Response();

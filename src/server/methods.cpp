@@ -14,22 +14,21 @@ std::string getFilePath(Client* cl) {
 	// TODO: strip the query from the uri string
 	return file_path;
 }
+// TODO : fix the autoindex prb i.e : on click it routs to 404
 
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 	std::string file_path = getFilePath(cl);
 	Logger::info("uri is : %s", file_path.c_str());
 
-	// check the file existance
 	struct stat file_stat;
 	if (stat(file_path.c_str(), &file_stat) == -1)
 	{
-		Logger::info("HERE I CAN NOT FIND the path");
-		// file doesn't exist
+		Logger::info("This uri doesn't exist");
 		req->status = HttpStatus::NOT_FOUND;
 		return;
 	}
-	// durectory handling
+
 	if (S_ISDIR(file_stat.st_mode))
 	{
 		// try each index file in order
@@ -44,34 +43,34 @@ void handleGet(Client* cl) {
 				break;
 			}
 		}
-		// if indx found is  a directory after checking indexes
+		// is indx found is a directory after checking indexes
 		struct stat check;
 		if (stat(file_path.c_str(), &check) == -1 || S_ISDIR(check.st_mode))
 		{
 			if (cl->location->shared_config->autoindex == SharedConfig::INDEX_ON)
 			{
-					// generate directory listing
-					DIR* dir = opendir(file_path.c_str());
-					if (dir == NULL) {
-							req->status = HttpStatus::FORBIDDEN;
-							return;
-					}
-					std::ostringstream listing;
-					listing << "<html><body><h1>Index of " << req->uri << "</h1><ul>";
-					struct dirent* entry;
-					while ((entry = readdir(dir)) != NULL)
-					{
-							std::string name = entry->d_name;
-							if (name == "." || name == "..")
-    						continue;
-							listing << "<li><a href=\"" << name << "\">" << name << "</a></li>";
-					}
-					closedir(dir);
-					listing << "</ul></body></html>";
-					cl->response.body = listing.str();
-					cl->file_path = "";
-					req->status = HttpStatus::OK;
+				// generate directory listing
+				DIR* dir = opendir(file_path.c_str());
+				if (dir == NULL) {
+					req->status = HttpStatus::FORBIDDEN;
 					return;
+				}
+				std::ostringstream listing;
+				listing << "<html><body><h1>Index of " << req->uri << "</h1><ul>";
+				struct dirent* entry;
+				while ((entry = readdir(dir)) != NULL)
+				{
+					std::string name = entry->d_name;
+					if (name == "." || name == "..")
+					continue;
+					listing << "<li><a href=\"" << name << "\">" << name << "</a></li>";
+				}
+				closedir(dir);
+				listing << "</ul></body></html>";
+				cl->response.body = listing.str();
+				cl->file_path = "";
+				req->status = HttpStatus::OK;
+				return;
 			}
 			req->status = HttpStatus::FORBIDDEN;
 			return;

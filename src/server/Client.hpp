@@ -17,14 +17,12 @@ struct Client
 	//new fields
 	Location*		location;
 	std::string		redirect_url;
-	// std::string		response_body;
 	std::string		file_path;
 
 	FSM				machine;
 
 	//timeouts
 	std::time_t		last_activity;
-	std::time_t		request_start;
 
 	Response		response;
 

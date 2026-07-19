@@ -259,11 +259,21 @@ void Webserv::handleHttpResponse(SOCKET c) {
   if (cl->response.buffer.empty()) {
     mimetype_map& types = cl->location->shared_config->types;
     std::string content_type = getContentType(cl->file_path, types);
-    cl->response.build(req->status, cl, content_type, cl->redirect_url);
+    cl->response.build(
+      req->status,
+      cl,
+      content_type,
+      cl->redirect_url
+    );
   }
 
-  ssize_t sent = send(c, cl->response.buffer.c_str() + cl->response.offset,
-                  cl->response.buffer.size() - cl->response.offset, 0);
+  ssize_t sent = send(
+    c,
+    cl->response.buffer.c_str() + cl->response.offset,
+    cl->response.buffer.size() - cl->response.offset,
+    0
+  );
+  
   if (sent > 0)
     cl->response.offset += sent;
 
