@@ -12,7 +12,6 @@ struct CgiDispatchInfo
 	std::string interpreter_path;
 };
 
-void splitQueryString(const StringView &uri, std::string &path, std::string &query_string);
 void close_wrapper(int &fd);
 
 bool resolveScriptPath(const std::string &root, const std::string &uri_path,

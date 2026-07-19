@@ -83,10 +83,8 @@ void CgiHandler::addBodyVars(std::vector<std::string> &vect_envp) const
 
 void CgiHandler::addUriVars(std::vector<std::string> &vect_envp, const std::string& path_info) const
 {
-	std::string path, query_string;
-	splitQueryString(request->uri, path, query_string);
-	vect_envp.push_back("SCRIPT_NAME=" + path);
-	vect_envp.push_back("QUERY_STRING=" + query_string);
+	vect_envp.push_back("SCRIPT_NAME=" + std::string(request->uri.data(), request->uri.length()));
+	vect_envp.push_back("QUERY_STRING=" + std::string(request->uriQuery.data(), request->uriQuery.length()));
 	if (!path_info.empty())
 		vect_envp.push_back("PATH_INFO=" + path_info);
 }
