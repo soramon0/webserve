@@ -108,10 +108,11 @@ std::string getErrorBody(Client* cl, HttpStatus status)
         std::map<int, std::string>::iterator it = pages.find(status.asInt());
         if (it != pages.end())
         {
+            std::string error_page_file = cl->location->shared_config->root + "/" + it->second;
             Logger::debug("found custom error page: %s", it->second.c_str());
-            std::ifstream file(it->second.c_str());
+            std::ifstream file(error_page_file.c_str());
             if (!file.is_open()) {
-                Logger::debug("Can't open the file %s", it->second.c_str());
+                Logger::debug("Can't open the file %s", error_page_file.c_str());
             }
             if (file.good())
             {

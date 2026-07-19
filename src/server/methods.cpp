@@ -5,12 +5,19 @@
 #include <sstream>
 #include <cstdio> // remove
 
-void handleGet(Client* cl) {
+std::string getFilePath(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 	std::string uri(req->uri.data(), req->uri.length());
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	std::string file_path = cl->location->shared_config->root + "/" + uri_suffix;
 
+	// TODO: strip the query from the uri string
+	return file_path;
+}
+
+void handleGet(Client* cl) {
+	HttpRequest* req = cl->machine.getRequest();
+	std::string file_path = getFilePath(cl);
 	Logger::info("uri is : %s", file_path.c_str());
 
 	// check the file existance
@@ -50,7 +57,7 @@ void handleGet(Client* cl) {
 							return;
 					}
 					std::ostringstream listing;
-					listing << "<html><body><h1>Index of " << uri << "</h1><ul>";
+					listing << "<html><body><h1>Index of " << req->uri << "</h1><ul>";
 					struct dirent* entry;
 					while ((entry = readdir(dir)) != NULL)
 					{
@@ -81,13 +88,10 @@ void handleGet(Client* cl) {
 	req->status = HttpStatus::OK;
 }
 
-void handleDelete(Client* cl)
-{
+void handleDelete(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
-	std::string uri(req->uri.data(), req->uri.length());
-	std::string uri_suffix = uri.substr(cl->location->path.size());
-	std::string file_path = cl->location->shared_config->root + "/" + uri_suffix;
-	// TODO: strip the query from the uri string
+	std::string file_path = getFilePath(cl);
+
 	Logger::info("uri is : %s", file_path.c_str());
 
 	// check the file existance
