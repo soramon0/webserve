@@ -109,15 +109,15 @@ ssize_t Parser::parseHttp(Config &cfg) {
 
     if (type == Directive::SERVER) {
       const Token &token = advance();
-      Server srv;
-      if (parseServer(srv) != 0)
+      Server *srv = new Server();
+      if (parseServer(*srv) != 0)
         return -1;
-      if (cfg.hasServer(srv)) {
+      if (cfg.hasServer(*srv)) {
         // TODO: add better error indicator;
         reportParseError(token, "server has a used host:port.");
         return -1;
       }
-      if (srv.interface.empty()) {
+      if (srv->interface.empty()) {
         reportParseError(token, "server requires `listen` directive.");
         return -1;
       }

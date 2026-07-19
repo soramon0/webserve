@@ -1,6 +1,9 @@
+#include "common.h"
 #include "lib/utils.hpp"
 #include "parser.hpp"
+#include <cerrno>
 #include <cstdlib>
+#include <stdint.h>
 
 ssize_t Parser::handleRoot(DirectiveCtx &ctx) {
   const Token &dir = previous();
@@ -90,18 +93,51 @@ ssize_t Parser::handleClientMaxBodySize(DirectiveCtx &ctx) {
                "expected size after `client_max_body_size` directive."))
     return -1;
 
-  if (previous().lexeme.find_first_not_of("0123456789") != std::string::npos) {
+  const std::string &lexeme = previous().lexeme;
+  size_t i = 0;
+  while (i < lexeme.size() && lexeme[i] >= '0' && lexeme[i] <= '9')
+    ++i;
+
+  if (i == 0) {
     reportParseError(previous(), "size must be a valid number.");
     return -1;
   }
 
-  long long size = std::atoll(previous().lexeme.c_str());
-  if (size <= 0) {
+  const std::string unit = strToLower(lexeme.substr(i));
+  size_t mult = 1;
+  if (unit.empty() || unit == "b")
+    mult = 1;
+  else if (unit == "kib")
+    mult = KIB(1);
+  else if (unit == "mib")
+    mult = MIB(1);
+  else if (unit == "gib")
+    mult = GIB(1);
+  else {
+    reportParseError(previous(), "unknown size unit.");
+    return -1;
+  }
+
+  const std::string num = lexeme.substr(0, i);
+  errno = 0;
+  unsigned long parsed = std::strtoul(num.c_str(), NULL, 10);
+
+  if (errno == ERANGE) {
+    reportParseError(previous(), "size overflows.");
+    return -1;
+  }
+
+  if (parsed == 0) {
     reportParseError(previous(), "size must be greater than 0.");
     return -1;
   }
 
-  ctx.shared->client_max_body_size = size;
+  if (parsed > SIZE_MAX / mult) {
+    reportParseError(previous(), "size overflows.");
+    return -1;
+  }
+
+  ctx.shared->client_max_body_size = static_cast<size_t>(parsed) * mult;
 
   return expectDirectiveArgsCount(dir);
 }
@@ -221,14 +257,14 @@ ssize_t Parser::handleMethods(DirectiveCtx &ctx) {
   }
 
   std::map<std::string, int> store;
-  store["get"] = 0;
-  store["post"] = 0;
-  store["delete"] = 0;
+  store["GET"] = 0;
+  store["POST"] = 0;
+  store["DELETE"] = 0;
 
   ctx.loc->methods.clear();
   while (check(Directive::WORD)) {
     const Token &t = peek();
-    const std::string httpMethod = strToLower(t.lexeme);
+    const std::string httpMethod = strToUpper(t.lexeme);
     std::map<std::string, int>::iterator it = store.find(httpMethod);
     if (it == store.end()) {
       reportParseError(t, "unsupported http method.");

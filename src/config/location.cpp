@@ -1,16 +1,17 @@
 #include "location.hpp"
 #include "lib/utils.hpp"
 #include "redirect.hpp"
+#include <algorithm>
 #include <sstream>
 
 Location::Location() : path(), return_rule(NULL) {
   shared_config = new SharedConfig();
-  methods.push_back("get");
+  methods.push_back("GET");
 };
 
 Location::Location(const std::string &path) : path(path), return_rule(NULL) {
   shared_config = new SharedConfig();
-  methods.push_back("get");
+  methods.push_back("GET");
 };
 
 Location::~Location() {
@@ -68,6 +69,15 @@ Location &Location::withPath(const std::string &path) {
   return *this;
 }
 
+Location &Location::withMethod(const std::string &method) {
+  std::string m = strToUpper(method);
+  if (std::find(this->methods.begin(), this->methods.end(), m) ==
+      this->methods.end()) {
+    this->methods.push_back(m);
+  }
+  return *this;
+}
+
 Location &Location::withRedirect(uint16_t code, const std::string &url) {
   if (this->return_rule) {
     delete this->return_rule;
@@ -122,4 +132,11 @@ std::string Location::toString(int indent) const {
   }
   oss << tab << "}\n";
   return oss.str();
+}
+
+bool Location::hasMethod(const StringView &method) const {
+  std::vector<std::string>::const_iterator it =
+      std::find(methods.begin(), methods.end(), method);
+
+  return it != methods.end();
 }

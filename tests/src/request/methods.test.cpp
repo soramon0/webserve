@@ -1,3 +1,4 @@
+#include "config/server.hpp"
 #include "doctest.h"
 #include "http/fsm.hpp"
 #include <string>
@@ -6,6 +7,9 @@ TEST_CASE("FSM accepts supported HTTP methods") {
   FSM fsm;
 
   SUBCASE("POST") {
+    Server server;
+    fsm.setServer(&server.withLocation("/", Location().withPath("/").withMethod("POST")));
+
     std::string input =
         "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n";
     CHECK(fsm.feedChunk(input.data(), input.length()));
