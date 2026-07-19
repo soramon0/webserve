@@ -99,6 +99,28 @@ bool HttpRequest::updateField(StringView &field, const char *buf, size_t size) {
   return true;
 }
 
+void HttpRequest::splitQueryParams() {
+  size_t i = 0;
+  while (i < uri.length() && uri[i] != '?' && uri[i] != '#')
+    i++;
+
+  if (i == uri.length())
+    return;
+
+  if (uri[i] == '?') {
+    size_t j = i;
+    while (j < uri.length() && uri[j] != '#')
+      j++;
+    uriQuery = StringView(uri.data() + i, j - i);
+    if (j < uri.length())
+      uriFragment = StringView(uri.data() + j, uri.length() - j);
+  } else {
+    uriFragment = StringView(uri.data() + i, uri.length() - i);
+  }
+
+  uri = StringView(uri.data(), i);
+}
+
 bool HttpRequest::expandArena(size_t size) {
   if (!request_line_complete) {
     status = HttpStatus::URI_TOO_LONG;
