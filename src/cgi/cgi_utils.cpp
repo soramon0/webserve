@@ -99,8 +99,8 @@ bool tryDispatchCgi(Client *cl, CgiManager &manager)
 					 cl->location->shared_config->cgi_pass, info))
 		return (false);
 	
-	resolveScriptPath(cl, info.server_name, info.server_port);
-	if (!manager.registerHandler(req, info.interpreter_path, infor.script_path,
+	resolveServerVars(cl, info.server_name, info.server_port);
+	if (!manager.registerHandler(req, info.interpreter_path, info.script_path,
 				info.server_name, info.server_port, info.path_info))
 				return (false);
 	return (true);
