@@ -31,5 +31,9 @@ public:
 	void	eventLoop();
 	void	checkTimeouts();
 	void	timeoutClient(SOCKET c);
+
+private:
+	//to process finished cgi requests 
+	void processFinishedCgi();
 };
 

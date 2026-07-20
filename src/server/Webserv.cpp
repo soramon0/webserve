@@ -69,6 +69,34 @@ void sigHandler(int sig)
 	running = false;
 }
 
+void Webserv::processFinishedCgi()
+{
+	cgiManager->reapPending();
+	cgiManager->checkTimeouts();
+	std::vector<CgiHandler *> finished = cgiManager->claimAllFinished();
+	for (size_t i = 0; i < finished.size(); i++)
+	{
+		CgiHandler *h = finished[i];
+		Client *client = h->getClient();
+		CgiState s = h->getCgiState();
+		Logger::debug("cgi handler finished exit_status= %d", h->getExitStatus());
+		if (s == CGI_ERROR)
+		{
+			// 502 for all CGI_ERROR (timeout, read()/pipe/fork/dup2/exec failure)
+			std::string body = "<html><body><h1>502 Bad Gateway</h1></body></html>";
+			client->cgiResponse.status_code = 502;
+			client->cgiResponse.headers.clear();
+			client->cgiResponse.body = body;
+		}
+		else // CGI_DONE
+			client->cgiResponse = parseCgiOutput(h->getCgiOutput());
+		client->cgi_pending = false;
+		client->response_from_cgi = true;
+		modify_epoll(epoll_fd, client->socket, EPOLLOUT);
+		delete h;
+	}
+}
+
 void Webserv::eventLoop()
 {
 	struct epoll_event events[MAX_EVENTS];
@@ -93,7 +121,10 @@ void Webserv::eventLoop()
 
 			if (ev & (EPOLLERR | EPOLLHUP))
 			{
-				removeClient(fd);
+				if (cgiManager->owns(fd))
+					cgiManager->onReadable(events[i]);
+				else
+					removeClient(fd);
 				continue;
 			}
 
@@ -101,6 +132,8 @@ void Webserv::eventLoop()
 			{
 				if (servers.count(fd))
 					handleNewConnection(fd);
+				else if (cgiManager->owns(fd))
+					cgiManager->onReadable(events[i]);
 				else
 					handleClientData(fd);
 			}
@@ -110,6 +143,7 @@ void Webserv::eventLoop()
 				handleHttpResponse(fd);
 			}
 		}
+		proccessFinishedCgi();
 	}
 }
 // TODO: send chuncked response
@@ -241,6 +275,13 @@ void Webserv::checkTimeouts()
 		SOCKET c = it->first;
 		Client *cl = it->second;
 
+		// skip timeout for clients with cgi still running (CgiManager handles it)
+		if (cl->cgi_pending)
+		{
+			++it;
+			continue;
+		}
+
 		bool drop = false;
 
 		// Idle connection (e.g. client sent nothing for a long time)
@@ -320,11 +361,11 @@ void Webserv::handleHttpResponse(SOCKET c)
 		return;
 	}
 
-	//if cgi is still running should wait for it to finish before responding
+	// if cgi is still running should wait for it to finish before responding
 	if (cl->cgi_pending)
 		return;
 
-	//if cgi finished send its response
+	// if cgi finished send its response
 	if (cl->response_from_cgi)
 	{
 		std::string status_line = HttpStatus(cl->cgiResponse.status_code).toString();
@@ -332,22 +373,22 @@ void Webserv::handleHttpResponse(SOCKET c)
 		std::ostringstream resp;
 		resp << "HTTP/1.1 " << status_line << "\r\n";
 		for (std::multimap<std::string, std::string>::const_iterator it = cl->cgiResponse.headers.begin();
-			it != cl->cgiResponse.headers.end(); ++it)
+			 it != cl->cgiResponse.headers.end(); ++it)
 		{
 			if (it->first == "content-length")
 				continue;
 			resp << it->first << ": " << it->second << "\r\n";
 		}
 		resp << "Content-Length: " << cl->cgiResponse.body.size() << "\r\n"
-			<< "Connection: close\r\n"
-			<< "\r\n"
-			<< cl->cgiResponse.body;
+			 << "Connection: close\r\n"
+			 << "\r\n"
+			 << cl->cgiResponse.body;
 
 		std::string r = resp.str();
 		send(c, r.c_str(), r.size(), 0);
-		cl->last_activity = time(NULL); //coppied from other OK branch (is it usefull here?)
+		cl->last_activity = time(NULL); // coppied from other OK branch (is it usefull here?)
 		removeClient(c);
-		return ;
+		return;
 	}
 
 	// processing kima galia karim, ndirha hna
