@@ -112,7 +112,10 @@ std::string getContentType(const std::string& path, const mimetype_map& types)
     if (ext == "pdf") return "application/pdf";
     if (ext == "svg") return "image/svg+xml";
     if (ext == "txt") return "text/plain";
-
+    if (ext == "mp4")  return "video/mp4";
+    if (ext == "webm") return "video/webm";
+    if (ext == "ogg")  return "video/ogg";
+    
     return "application/octet-stream";
 }
 // TODO: fix the error by appending the file name to the root

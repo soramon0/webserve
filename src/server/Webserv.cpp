@@ -255,8 +255,11 @@ void Webserv::handleHttpResponse(SOCKET c) {
 
   Client* cl = clients[c];
   HttpRequest* req = cl->machine.getRequest();
-
-  if (cl->machine.status.isMalformed()
+  
+  Logger::debug("handleHttpResponse: chunked=%d headers_sent=%d buffer_size=%zu", 
+    cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
+  
+    if (cl->machine.status.isMalformed()
       || (cl->response.buffer.empty() 
           && !cl->response.chunked 
           && !cl->response.headers_sent)) {
@@ -274,6 +277,7 @@ void Webserv::handleHttpResponse(SOCKET c) {
       cl->response.build(req->status, cl, content_type, cl->redirect_url);
     }
   } else {
+    Logger::debug("Sending chunck...: offset=%zu", cl->response.offset);
     if (!cl->response.headers_sent) {
       send(c, cl->response.headers.c_str(), 
             cl->response.headers.size(), 0);
