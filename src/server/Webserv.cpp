@@ -225,6 +225,7 @@ void Webserv::checkTimeouts() {
 
 void Webserv::timeoutClient(SOCKET c)
 {
+  //TODO add body
     std::string resp =
         "HTTP/1.1 408 Request Timeout\r\n"
         "Content-Length: 0\r\n"
@@ -299,7 +300,6 @@ void Webserv::handleHttpResponse(SOCKET c) {
     }
     return;
   }
-
 
   ssize_t sent = send(
     c, cl->response.buffer.c_str() + cl->response.offset,

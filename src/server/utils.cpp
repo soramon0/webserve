@@ -11,7 +11,7 @@
 int set_nonblocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);// TODO: remove get
     if (flags == -1) return -1;
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    return fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC);
 }
 
 int epoll_instance()
@@ -115,7 +115,7 @@ std::string getContentType(const std::string& path, const mimetype_map& types)
     if (ext == "mp4")  return "video/mp4";
     if (ext == "webm") return "video/webm";
     if (ext == "ogg")  return "video/ogg";
-    
+
     return "application/octet-stream";
 }
 // TODO: fix the error by appending the file name to the root

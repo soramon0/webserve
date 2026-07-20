@@ -3,7 +3,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <sstream>
-#include <cstdio> // remove
+#include <cstdio>
 #include <fcntl.h>
 
 std::string getFilePath(Client* cl) {
@@ -14,17 +14,16 @@ std::string getFilePath(Client* cl) {
 
 	return file_path;
 }
-// TODO : fix the autoindex prb i.e : on click it routs to 404
-
+// TODO : .. : reject in get & delete: qlbi ktr
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 	std::string file_path = getFilePath(cl);
-	Logger::info("uri is : %s", file_path.c_str());
+	Logger::debug("uri is : %s", file_path.c_str());
 
 	struct stat file_stat;
 	if (stat(file_path.c_str(), &file_stat) == -1)
 	{
-		Logger::info("This uri doesn't exist");
+		Logger::debug("This uri doesn't exist");
 		req->status = HttpStatus::NOT_FOUND;
 		return;
 	}
@@ -80,8 +79,6 @@ void handleGet(Client* cl) {
 		cl->response.file_size = check.st_size;
 	}
 
-	//try again
-	// // next : open file -> read it in a string -> send response
 	cl->response.chunked = 1;
 	Logger::debug("the size stat give is : %zu", cl->response.file_size);
 	cl->response.file_fd = open(file_path.c_str(), O_RDONLY);
@@ -94,14 +91,7 @@ void handleGet(Client* cl) {
 		? cl->location->shared_config->types 
 		: empty_types;
 	cl->response.buildHeaders(*req, getContentType(file_path, types));
-	cl->file_path = file_path;// useless now after this new approach
 	req->status = HttpStatus::OK;
-
-	// std::ifstream file(file_path.c_str(), std::ios::binary);// opens file (to avoid system translation)
-	// std::string body((std::istreambuf_iterator<char>(file)),
-	// 	std::istreambuf_iterator<char>()); // reads all of it into "body"
-
-	// cl->response.body = body;
 }
 
 void handleDelete(Client* cl) {
