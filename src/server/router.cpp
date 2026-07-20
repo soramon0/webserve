@@ -22,10 +22,6 @@ Location* matchLocation(std::map<std::string, Location>& locations, const std::s
 }
 void      processRequest(Client* c)
 {
-	if (c->machine.status.isMalformed()) {
-		return;
-	}
-	
 	HttpRequest* req = c->machine.getRequest();
 	std::string uri(req->uri.data(), req->uri.length());
 	Location* loc = matchLocation(c->srv->locations, uri);

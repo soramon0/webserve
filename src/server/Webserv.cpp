@@ -256,24 +256,55 @@ void Webserv::handleHttpResponse(SOCKET c) {
   Client* cl = clients[c];
   HttpRequest* req = cl->machine.getRequest();
 
-  processRequest(cl);
-
-  if (cl->response.buffer.empty()) {
-    mimetype_map& types = cl->location->shared_config->types;
-    std::string content_type = getContentType(cl->file_path, types);
-    cl->response.build(
-      req->status,
-      cl,
-      content_type,
-      cl->redirect_url
-    );
+  if (cl->machine.status.isMalformed()
+      || (cl->response.buffer.empty() 
+          && !cl->response.chunked 
+          && !cl->response.headers_sent)) {
+    processRequest(cl);
   }
 
+  if (!cl->response.chunked) {
+    if (cl->response.buffer.empty()) {
+      // the 5 lines below become useless after handling content type inside get
+      mimetype_map empty_types;
+      mimetype_map& types = (cl->location && cl->location->shared_config) 
+      ? cl->location->shared_config->types 
+      : empty_types;
+      std::string content_type = getContentType(cl->file_path, types);
+      cl->response.build(
+        req->status,
+        cl,
+        content_type,
+        cl->redirect_url
+      );
+    }
+  } else {
+    if (!cl->response.headers_sent) {
+      send(c, cl->response.headers.c_str(), 
+            cl->response.headers.size(), 0);
+      cl->response.headers_sent = true;
+      return;
+    }
+    // send next chunk of file
+    char chunk[KIB(8)];
+    ssize_t bytes = read(cl->response.file_fd, chunk, sizeof(chunk));
+    if (bytes > 0) {
+      send(c, chunk, bytes, 0);
+      cl->response.offset += bytes;
+    }
+
+    if (bytes <= 0 || cl->response.offset >= cl->response.file_size) {
+      close(cl->response.file_fd);
+      cl->response.file_fd = -1;
+      removeClient(c);
+    }
+    return;
+  }
+
+
   ssize_t sent = send(
-    c,
-    cl->response.buffer.c_str() + cl->response.offset,
-    cl->response.buffer.size() - cl->response.offset,
-    0
+    c, cl->response.buffer.c_str() + cl->response.offset,
+    cl->response.buffer.size() - cl->response.offset, 0
   );
   
   if (sent > 0)
@@ -281,24 +312,5 @@ void Webserv::handleHttpResponse(SOCKET c) {
 
   if (cl->response.offset >= cl->response.buffer.size())
     removeClient(c);
-  // HttpRequest *req = clients[c]->machine.getRequest();
-  // if (status.isMalformed()) {
-  //   // request had an error
-  //   std::ostringstream stream;
 
-  //   stream << req->version.toString();
-  //   stream << " ";
-  //   stream << req->status.asInt();
-  //   stream << " ";
-  //   stream << HttpStatus::reasonPhrase(req->status.value());
-  //   stream << "\r\n";
-  //   stream << "Content-Type: text/plain\r\n";
-  //   stream << "Content-Length: ";
-  //   stream << req->error.length();
-  //   stream << "\r\n\r\n";
-  //   stream << req->error;
-  //   std::string response = stream.str();
-  //   int n = send(c, response.c_str(), response.size(), 0);
-  //   (void)n;
-  // }
 }

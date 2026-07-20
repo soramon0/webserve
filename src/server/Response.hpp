@@ -17,10 +17,13 @@ public:
     size_t      offset; // bytes sent
     size_t      file_size;
     int         file_fd;
+    bool        headers_sent;
+    bool        chunked;
 
     Response();
     ~Response();
 
+    void buildHeaders(const HttpRequest& req, const std::string& content_type);
     void build(HttpStatus status,
         Client* cl,  
         const std::string& content_type,

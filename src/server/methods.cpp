@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstdio> // remove
+#include <fcntl.h>
 
 std::string getFilePath(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
@@ -11,7 +12,6 @@ std::string getFilePath(Client* cl) {
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	std::string file_path = cl->location->shared_config->root + "/" + uri_suffix;
 
-	// TODO: strip the query from the uri string
 	return file_path;
 }
 // TODO : fix the autoindex prb i.e : on click it routs to 404
@@ -77,14 +77,28 @@ void handleGet(Client* cl) {
 		}
 	}
 
-	// next : open file -> read it in a string -> send response
-	std::ifstream file(file_path.c_str(), std::ios::binary);// opens file (to avoid system translation)
-	std::string body((std::istreambuf_iterator<char>(file)),
-		std::istreambuf_iterator<char>()); // reads all of it into "body"
-
-	cl->response.body = body;
-	cl->file_path = file_path;
+	//try again
+	// // next : open file -> read it in a string -> send response
+	cl->response.chunked = 1;
+	cl->response.file_size = file_stat.st_size;
+	cl->response.file_fd = open(file_path.c_str(), O_RDONLY);
+	if (cl->response.file_fd == -1) {
+		req->status = HttpStatus::FORBIDDEN;
+		return;
+	}
+	mimetype_map empty_types;
+	mimetype_map& types = (cl->location && cl->location->shared_config) 
+		? cl->location->shared_config->types 
+		: empty_types;
+	cl->response.buildHeaders(*req, getContentType(file_path, types));
+	cl->file_path = file_path;// useless now after this new approach
 	req->status = HttpStatus::OK;
+
+	// std::ifstream file(file_path.c_str(), std::ios::binary);// opens file (to avoid system translation)
+	// std::string body((std::istreambuf_iterator<char>(file)),
+	// 	std::istreambuf_iterator<char>()); // reads all of it into "body"
+
+	// cl->response.body = body;
 }
 
 void handleDelete(Client* cl) {
