@@ -244,6 +244,12 @@ TEST_CASE("FSM correctly rejects various malformed request lines") {
     CHECK(!fsm.feedChunk(bad_input.data(), bad_input.length()));
   }
 
+  SUBCASE("Missing space split across chunks does not hang") {
+    CHECK(fsm.feedChunk("GET", 3));
+    REQUIRE(fsm.status.isPending());
+    CHECK(!fsm.feedChunk("/", 1));
+  }
+
   SUBCASE("Tabs instead of spaces") {
     bad_input = "GET\t/api/products\tHTTP/1.1\r\n";
     CHECK(!fsm.feedChunk(bad_input.data(), bad_input.length()));

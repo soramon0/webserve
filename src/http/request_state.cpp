@@ -23,7 +23,6 @@ State stateMethod(Context &ctx) {
   size_t start = ctx.offset;
 
   int sp = 0;
-  bool hasChar = false;
   while (ctx.offset < ctx.len) {
     if (ctx.buf[ctx.offset] == ' ') {
       sp = 1;
@@ -36,16 +35,11 @@ State stateMethod(Context &ctx) {
       return stateError(ctx);
     }
 
-    hasChar = std::isalpha(static_cast<unsigned char>(ctx.buf[ctx.offset]));
-    if (!hasChar) {
-      break;
+    if (!std::isalpha(static_cast<unsigned char>(ctx.buf[ctx.offset]))) {
+      ctx.fsm.setMalformed400("invalid request method");
+      return stateError(ctx);
     }
     ctx.offset++;
-  }
-
-  if (!hasChar && ctx.req->method_view.empty()) {
-    ctx.fsm.setMalformed400("invalid request method");
-    return stateError(ctx);
   }
 
   size_t size = ctx.offset - sp - start;
@@ -56,6 +50,11 @@ State stateMethod(Context &ctx) {
 
   if (!sp) {
     return stateMethod;
+  }
+
+  if (ctx.req->method_view.empty()) {
+    ctx.fsm.setMalformed400("invalid request method");
+    return stateError(ctx);
   }
 
   ctx.req->method = HttpMethod(ctx.req->method_view);
@@ -422,10 +421,18 @@ State stateBodyChunked(Context &ctx) {
     switch (ctx.fsm.chunk_state) {
     case FSM::CHUNK_SIZE:
       if (c == ';') {
+        if (!ctx.fsm.chunk_size_seen) {
+          ctx.fsm.setMalformed400("chunk size required");
+          return stateError(ctx);
+        }
         ctx.fsm.chunk_state = FSM::CHUNK_EXTENSION;
         ctx.offset++;
         continue;
       } else if (c == '\r') {
+        if (!ctx.fsm.chunk_size_seen) {
+          ctx.fsm.setMalformed400("chunk size required");
+          return stateError(ctx);
+        }
         ctx.fsm.chunk_state = FSM::CHUNK_SIZE_CRLF;
         ctx.offset++;
         continue;
@@ -434,6 +441,7 @@ State stateBodyChunked(Context &ctx) {
           ctx.fsm.setMalformed400();
           return stateError(ctx);
         }
+        ctx.fsm.chunk_size_seen = true;
         ctx.offset++;
         continue;
       }
@@ -497,6 +505,8 @@ State stateBodyChunked(Context &ctx) {
     case FSM::CHUNK_BODY_LF:
       if (c == '\n') {
         ctx.fsm.chunk_state = FSM::CHUNK_SIZE;
+        ctx.fsm.chunk_size = 0;
+        ctx.fsm.chunk_size_seen = false;
         ctx.offset++;
         continue;
       }
@@ -504,9 +514,16 @@ State stateBodyChunked(Context &ctx) {
       return stateError(ctx);
     case FSM::CHUNK_TRAILERS:
       ctx.req->body.finalize();
-      // security issue
-      // TODO: implement trailer parsing
-      return stateHeaderKey;
+      // Trailer fields are not supported yet; only the terminating empty
+      // line after the last-chunk is accepted.
+      if (!ctx.fsm.isCRLF(static_cast<unsigned char>(c))) {
+        ctx.fsm.setMalformed400("trailers are not supported");
+        return stateError(ctx);
+      }
+      if (!ctx.fsm.consumeCRLF(ctx.buf, ctx.len, ctx.offset)) {
+        return stateBodyChunked;
+      }
+      return stateDone(ctx);
     }
   }
 

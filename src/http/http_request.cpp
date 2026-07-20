@@ -245,12 +245,12 @@ bool HttpRequest::validateHeaders(StringView &key, StringView &value) {
   }
   if (key == "user-agent") {
     if (headers.has(key)) {
-      StringView("duplicate user-agent header");
+      error = StringView("duplicate user-agent header");
       status = HttpStatus::BAD_REQUEST;
       return false;
     }
     if (value.empty()) {
-      StringView("user-agent cannot be empty");
+      error = StringView("user-agent cannot be empty");
       status = HttpStatus::BAD_REQUEST;
       return false;
     }
@@ -258,12 +258,12 @@ bool HttpRequest::validateHeaders(StringView &key, StringView &value) {
   }
   if (key == "date") {
     if (headers.has(key)) {
-      StringView("duplicate date header");
+      error = StringView("duplicate date header");
       status = HttpStatus::BAD_REQUEST;
       return false;
     }
     if (value.empty()) {
-      StringView("date cannot be empty");
+      error = StringView("date cannot be empty");
       status = HttpStatus::BAD_REQUEST;
       return false;
     }
@@ -272,7 +272,7 @@ bool HttpRequest::validateHeaders(StringView &key, StringView &value) {
 
   if (key == "content-type") {
     if (headers.has(key)) {
-      StringView("duplicate content-type header");
+      error = StringView("duplicate content-type header");
       status = HttpStatus::BAD_REQUEST;
       return false;
     }
@@ -291,6 +291,15 @@ bool HttpRequest::parseContentLength(const StringView &value,
                                      size_t &out) const {
   if (value.empty() || value.length() > 20) {
     return false;
+  }
+
+  // Digits only — reject signs/whitespace that strtoul would otherwise accept
+  // (e.g. "-1" becoming SIZE_MAX).
+  for (size_t i = 0; i < value.length(); ++i) {
+    unsigned char c = static_cast<unsigned char>(value[i]);
+    if (c < '0' || c > '9') {
+      return false;
+    }
   }
 
   char buf[32];

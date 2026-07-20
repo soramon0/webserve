@@ -68,6 +68,7 @@ public:
 
   ChunkState chunk_state;
   size_t chunk_size;
+  bool chunk_size_seen;
 
   StringView curr_header_key;
   StringView curr_header_value;

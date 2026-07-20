@@ -68,6 +68,18 @@ TEST_CASE("FSM rejects unsupported but recognized HTTP methods") {
   }
 }
 
+TEST_CASE("FSM treats HTTP methods as case-sensitive") {
+  FSM fsm;
+  std::string input = "get / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+  CHECK(!fsm.feedChunk(input.data(), input.length()));
+  REQUIRE(fsm.status.isMalformed());
+
+  HttpRequest *req = fsm.getRequest();
+  REQUIRE(req != nullptr);
+  CHECK(req->status == HttpStatus::NOT_IMPLEMENTED);
+}
+
 TEST_CASE("FSM rejects unknown HTTP methods") {
   FSM fsm;
   std::string input = "FOOBAR / HTTP/1.1\r\nHost: localhost\r\n\r\n";

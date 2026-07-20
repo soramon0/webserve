@@ -450,6 +450,56 @@ TEST_CASE("FSM rejects chunked POST with overflowing chunk size") {
   CHECK(req->status == HttpStatus::BAD_REQUEST);
 }
 
+TEST_CASE("FSM rejects chunked POST with empty chunk size line") {
+  FSM fsm;
+  Server server;
+  setupUploadServer(server, 100);
+  fsm.setServer(&server);
+
+  // Empty size before CRLF must not be treated as the final 0-chunk
+  const std::string input = "POST /upload HTTP/1.1\r\n"
+                            "Host: localhost\r\n"
+                            "Transfer-Encoding: chunked\r\n"
+                            "\r\n"
+                            "5\r\n"
+                            "hello\r\n"
+                            "\r\n\r\n";
+
+  CHECK(!fsm.feedChunk(input.data(), input.length()));
+  REQUIRE(fsm.status.isMalformed());
+
+  HttpRequest *req = fsm.getRequest();
+  REQUIRE(req != nullptr);
+  CHECK(req->status == HttpStatus::BAD_REQUEST);
+  CHECK(req->error == "chunk size required");
+}
+
+TEST_CASE("FSM rejects chunked POST trailer fields") {
+  FSM fsm;
+  Server server;
+  setupUploadServer(server, 100);
+  fsm.setServer(&server);
+
+  const std::string input = "POST /upload HTTP/1.1\r\n"
+                            "Host: localhost\r\n"
+                            "Transfer-Encoding: chunked\r\n"
+                            "\r\n"
+                            "5\r\n"
+                            "hello\r\n"
+                            "0\r\n"
+                            "X-Injected: evil\r\n"
+                            "\r\n";
+
+  CHECK(!fsm.feedChunk(input.data(), input.length()));
+  REQUIRE(fsm.status.isMalformed());
+
+  HttpRequest *req = fsm.getRequest();
+  REQUIRE(req != nullptr);
+  CHECK(req->status == HttpStatus::BAD_REQUEST);
+  CHECK(req->error == "trailers are not supported");
+  CHECK(req->headers.get("x-injected") == nullptr);
+}
+
 TEST_CASE("FSM accepts multi-chunk body with useDisk") {
   FSM fsm;
   Server server;
