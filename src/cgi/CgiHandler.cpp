@@ -148,7 +148,11 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 		return (false);
 	}
 
-	int body_fd = open(request->body.getFilePath().c_str(), O_RDONLY);
+	int body_fd;
+	if (request->body.isFile())
+		body_fd = open(request->body.getFilePath().c_str(), O_RDONLY);
+	else
+		body_fd = open("/dev/null", O_RDONLY);
 	if (body_fd == -1)
 	{
 		state = CGI_ERROR;
