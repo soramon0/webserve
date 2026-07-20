@@ -4,6 +4,7 @@
 #include "config/server.hpp"
 #include "http/fsm.hpp"
 #include <ctime>
+#include "cgi/CgiResponse.hpp"
 
 class CgiManager;
 
@@ -22,8 +23,12 @@ struct Client
 
 	FSM				machine;
 
+	//cgi fields
 	CgiManager*		cgiManager;
 	bool			cgi_pending;
+	bool			response_from_cgi;
+	CgiResponse		cgiResponse;
+
 	//timeouts
 	std::time_t		last_activity;
 	std::time_t		request_start;

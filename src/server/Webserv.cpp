@@ -10,6 +10,7 @@
 #include <sys/epoll.h>
 #include <sys/types.h>
 #include "cgi/CgiManager.hpp"
+#include <map>
 
 static int running = true;
 
@@ -318,6 +319,37 @@ void Webserv::handleHttpResponse(SOCKET c)
 		removeClient(c);
 		return;
 	}
+
+	//if cgi is still running should wait for it to finish before responding
+	if (cl->cgi_pending)
+		return;
+
+	//if cgi finished send its response
+	if (cl->response_from_cgi)
+	{
+		std::string status_line = HttpStatus(cl->cgiResponse.status_code).toString();
+
+		std::ostringstream resp;
+		resp << "HTTP/1.1 " << status_line << "\r\n";
+		for (std::multimap<std::string, std::string>::const_iterator it = cl->cgiResponse.headers.begin();
+			it != cl->cgiResponse.headers.end(); ++it)
+		{
+			if (it->first == "content-length")
+				continue;
+			resp << it->first << ": " << it->second << "\r\n";
+		}
+		resp << "Content-Length: " << cl->cgiResponse.body.size() << "\r\n"
+			<< "Connection: close\r\n"
+			<< "\r\n"
+			<< cl->cgiResponse.body;
+
+		std::string r = resp.str();
+		send(c, r.c_str(), r.size(), 0);
+		cl->last_activity = time(NULL); //coppied from other OK branch (is it usefull here?)
+		removeClient(c);
+		return ;
+	}
+
 	// processing kima galia karim, ndirha hna
 	processRequest(cl);
 

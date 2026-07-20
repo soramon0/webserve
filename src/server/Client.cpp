@@ -12,6 +12,8 @@ Client::Client()
 	  machine(),
 	  cgiManager(NULL),
 	  cgi_pending(false),
+	  response_from_cgi(false),
+	  cgiResponse(),
 	  last_activity(0),
 	  request_start(0)
 {
