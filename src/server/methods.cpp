@@ -130,7 +130,6 @@ static bool hasParentDirTraversal(const std::string &path)
 	}
 	return (false);
 }
-						 
 
 void handlePost(Client *cl)
 {
@@ -139,7 +138,7 @@ void handlePost(Client *cl)
 	HttpRequest *req = cl->machine.getRequest();
 	std::string uri(req->uri.data(), req->uri.length());
 	std::string uri_suffix = uri.substr(cl->location->path.size());
-	if (cl->location->shared_config->upload_store.empty()) //if upload is not supported 
+	if (cl->location->shared_config->upload_store.empty()) // if upload is not supported
 	{
 		req->status = HttpStatus::FORBIDDEN;
 		return;
@@ -147,6 +146,14 @@ void handlePost(Client *cl)
 	if (hasParentDirTraversal(uri_suffix))
 	{
 		req->status = HttpStatus::FORBIDDEN;
+		return;
+	}
+	std::string target_path = cl->location->shared_config->root + "/" +
+							  cl->location->shared_config->upload_store + "/" + uri_suffix;
+	std::ofstream outfile(target_path.c_str(), std::ios::binary | std::ios::trunc);
+	if (!outfile.is_open())
+	{
+		req->status = HttpStatus::INTERNAL_SERVER_ERROR;
 		return;
 	}
 }
