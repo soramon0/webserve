@@ -111,9 +111,42 @@ void handleDelete(Client *cl)
 	req->status = HttpStatus::NO_CONTENT; // deleted succssesfully
 }
 
+static bool hasParentDirTraversal(const std::string &path)
+{
+	size_t pos = 0;
+	while (pos <= path.length())
+	{
+		size_t next_slash = path.find('/', pos);
+		std::string segment;
+		if (next_slash == std::string::npos)
+			segment = path.substr(pos);
+		else
+			segment = path.substr(pos, next_slash - pos);
+		if (segment == "..")
+			return (true);
+		if (next_slash == std::string::npos)
+			break;
+		pos = next_slash + 1;
+	}
+	return (false);
+}
+						 
+
 void handlePost(Client *cl)
 {
-	if (tryDispatchCgi(cl, *cl->cgiManager)) return;
+	if (tryDispatchCgi(cl, *cl->cgiManager))
+		return;
+	HttpRequest *req = cl->machine.getRequest();
+	std::string uri(req->uri.data(), req->uri.length());
+	std::string uri_suffix = uri.substr(cl->location->path.size());
+	if (cl->location->shared_config->upload_store.empty()) //if upload is not supported 
+	{
+		req->status = HttpStatus::FORBIDDEN;
+		return;
+	}
+	if (hasParentDirTraversal(uri_suffix))
+	{
+		req->status = HttpStatus::FORBIDDEN;
+		return;
+	}
 }
-
- 
