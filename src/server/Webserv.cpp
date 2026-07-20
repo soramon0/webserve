@@ -271,12 +271,7 @@ void Webserv::handleHttpResponse(SOCKET c) {
       ? cl->location->shared_config->types 
       : empty_types;
       std::string content_type = getContentType(cl->file_path, types);
-      cl->response.build(
-        req->status,
-        cl,
-        content_type,
-        cl->redirect_url
-      );
+      cl->response.build(req->status, cl, content_type, cl->redirect_url);
     }
   } else {
     if (!cl->response.headers_sent) {

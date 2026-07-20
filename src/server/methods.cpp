@@ -28,6 +28,7 @@ void handleGet(Client* cl) {
 		req->status = HttpStatus::NOT_FOUND;
 		return;
 	}
+	cl->response.file_size = file_stat.st_size;
 
 	if (S_ISDIR(file_stat.st_mode))
 	{
@@ -75,12 +76,13 @@ void handleGet(Client* cl) {
 			req->status = HttpStatus::FORBIDDEN;
 			return;
 		}
+		cl->response.file_size = check.st_size;
 	}
 
 	//try again
 	// // next : open file -> read it in a string -> send response
 	cl->response.chunked = 1;
-	cl->response.file_size = file_stat.st_size;
+	Logger::debug("the size stat give is : %zu", cl->response.file_size);
 	cl->response.file_fd = open(file_path.c_str(), O_RDONLY);
 	if (cl->response.file_fd == -1) {
 		req->status = HttpStatus::FORBIDDEN;
