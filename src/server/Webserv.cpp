@@ -1,6 +1,7 @@
 #include "Webserv.hpp"
 #include "logger/log.hpp"
 #include "utils.hpp"
+#include "router.hpp"
 #include <cstring>
 #include <iostream>
 #include <signal.h>
@@ -11,7 +12,7 @@
 
 static int running = true;
 
-Webserv::Webserv(Config _conf) : config(_conf) {}
+Webserv::Webserv(Config& _conf) : config(_conf) {}
 
 Webserv::~Webserv() {
   close(epoll_fd);
@@ -61,10 +62,11 @@ void Webserv::eventLoop() {
 
   signal(SIGINT, sigHandler);
   signal(SIGTERM, sigHandler);
-
+  // TODO: handle timeout
   while (running) {
-    int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
-
+    int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, 5000);
+    checkTimeouts();
+    //TODO: drop clients if timeout (now - last_activity > timout)
     if (n_ev <= 0) // possible error : EINTR
       continue;
 
@@ -92,7 +94,11 @@ void Webserv::eventLoop() {
     }
   }
 }
-
+//TODO: send chuncked response
+//TODO handle internal server errors
+// GET / HTTP/1.1
+// headers ....
+// GET / ...
 SOCKET Webserv::createSocket(int id) {
   struct addrinfo hints;
   std::memset(&hints, 0, sizeof(hints));
@@ -115,7 +121,7 @@ SOCKET Webserv::createSocket(int id) {
       socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
   if (!ISVALIDSOCKET(socket_listen))
     Logger::fatal("socket failed");
-
+// TODO: check why bind fails
   int opt = 1;
   if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
                  sizeof(opt)))
@@ -136,36 +142,40 @@ void Webserv::handleNewConnection(SOCKET srv) {
   int max_accepts = 32;
 
   while (max_accepts-- > 0) {
-    Client *c = new Client();
+    Client *c = new Client(); //TODO: there is a conditional jump here
     c->socket = accept(srv, &c->addr, &c->addrlen);
-    c->received = 0;
 
     if (c->socket == -1) {
       delete c;
-      if (errno == EAGAIN || errno == EWOULDBLOCK)
+      if (errno == EAGAIN || errno == EWOULDBLOCK)// TODO check if this is allowed
         break;
 
       Logger::error("accept failed");
       break;
     }
+
+    c->srv = servers[srv];
+    c->last_activity = time(NULL);
+
     if (set_nonblocking(c->socket) == -1) {
-      Logger::error("fcntl failed");
-      close(c->socket);
+      Logger::error("fcntl failed");// ash waq3 hna
       delete c;
+      close(c->socket);
       continue;
     }
     if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1) {
       delete c;
       continue;
     }
-    c->srv = servers[srv];
-    c->machine.setServer(c->srv);
+
     clients[c->socket] = c;
     Logger::info("client Connected...");
   }
 }
 
 void Webserv::handleClientData(SOCKET c) {
+  if (!clients.count(c))
+    return;
   Client *cl = clients[c];
 
   char buf[KIB(1) / 2];
@@ -174,6 +184,8 @@ void Webserv::handleClientData(SOCKET c) {
     removeClient(c);
     return;
   }
+  // Timeout updates
+  cl->last_activity = time(NULL);
 
   HttpRequest *req = cl->machine.getRequest();
   if (cl->machine.status.isPending() && !cl->machine.feedChunk(buf, bytes)) {
@@ -187,6 +199,43 @@ void Webserv::handleClientData(SOCKET c) {
     req->printRequest();
     modify_epoll(epoll_fd, c, EPOLLOUT);
   }
+}
+
+void Webserv::checkTimeouts() {
+  time_t now = time(NULL);
+
+  std::map<SOCKET, Client*>::iterator it = clients.begin();
+  while (it != clients.end()) {
+    SOCKET c = it->first;
+    Client* cl = it->second;
+
+    bool drop = false;
+
+    // Idle connection (e.g. client sent nothing for a long time)
+    if (now - cl->last_activity > TIMEOUT) {
+      Logger::debug("timeout for client(%d)", c);
+      drop = true;
+    }
+
+    if (drop) {
+      // removeClient erases from map; advance iterator carefully
+      std::map<SOCKET, Client*>::iterator to_erase = it++;
+      timeoutClient(to_erase->first);
+    } else {
+      ++it;
+    }
+  }
+}
+
+void Webserv::timeoutClient(SOCKET c)
+{
+    std::string resp =
+        "HTTP/1.1 408 Request Timeout\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+    send(c, resp.c_str(), resp.size(), 0);
+    removeClient(c);
 }
 
 void Webserv::removeClient(SOCKET c) {
@@ -205,36 +254,85 @@ void Webserv::removeClient(SOCKET c) {
 }
 
 void Webserv::handleHttpResponse(SOCKET c) {
-  FSMStatus status = clients[c]->machine.status;
-
-  if (status.isPending())
+  if (!clients.count(c))
     return;
+  Client* cl = clients[c];
+  HttpRequest* req = cl->machine.getRequest();
 
-  HttpRequest *req = clients[c]->machine.getRequest();
-  if (status.isMalformed()) {
-    // request had an error
-    std::ostringstream stream;
-
-    stream << req->version.toString();
-    stream << " ";
-    stream << req->status.asInt();
-    stream << " ";
-    stream << HttpStatus::reasonPhrase(req->status.value());
-    stream << "\r\n";
-    stream << "Content-Type: text/plain\r\n";
-    stream << "Content-Length: ";
-    stream << req->error.length();
-    stream << "\r\n\r\n";
-    stream << req->error;
-    std::string response = stream.str();
-    int n = send(c, response.c_str(), response.size(), 0);
-    (void)n;
-  } else {
-    std::string response = HELLO_WORLD_RESPONSE;
-
-    int n = send(c, response.c_str(), response.size(), 0);
-    (void)n;
+  if (cl->machine.status.isPending()) {
+    Logger::debug("no request yet");
+    return;
   }
 
-  removeClient(c);
+  //if the request is malformed
+  if (cl->machine.status.isMalformed()) {
+    std::string body = "<html><body><h1>" + std::string(req->status.toString()) + "</h1></body></html>";
+    std::ostringstream resp;
+    resp << "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
+          << "Content-Length: " << body.size() << "\r\n"
+          << "Connection: close\r\n"
+          << "\r\n"
+          << body;
+    std::string r = resp.str();
+    send(c, r.c_str(), r.size(), 0);
+    removeClient(c);
+    return;
+  }
+  //processing kima galia karim, ndirha hna 
+  processRequest(cl);
+
+  // REDIRECT
+  if (isRedirect(req->status)) {
+    std::string body = "";
+    std::string resp =
+        "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
+        "Location: " + cl->redirect_url + "\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+    send(c, resp.c_str(), resp.size(), 0);
+    removeClient(c);
+    return;
+  }
+
+  // 4** errors
+  if (req->status == HttpStatus::NOT_FOUND
+    || req->status == HttpStatus::FORBIDDEN
+    || req->status == HttpStatus::METHOD_NOT_ALLOWED) {
+    std::string body = "<html><body><h1>" + std::string(req->status.toString()) + "</h1></body></html>";
+    std::ostringstream resp;
+    resp << "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
+          << "Content-Length: " << body.size() << "\r\n"
+          << "Connection: close\r\n"
+          << "\r\n"
+          << body;
+    std::string r = resp.str();
+    send(c, r.c_str(), r.size(), 0);
+    removeClient(c);
+    return;
+  }
+
+  if (req->status == HttpStatus::NO_CONTENT) {
+    std::string resp = "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n";
+    send(c, resp.c_str(), resp.size(), 0);
+    removeClient(c);
+    return;
+  }
+
+	if (req->status == HttpStatus::OK) {
+		std::ostringstream resp;
+		resp << "HTTP/1.1 200 OK\r\n"
+			<< "Content-Length: " << cl->response_body.size() << "\r\n"
+      << "Content-Type: " << getContentType(cl->file_path) << "\r\n"
+			<< "Connection: close\r\n"
+			<< "\r\n"
+			<< cl->response_body;
+		std::string r = resp.str();
+		send(c, r.c_str(), r.size(), 0);
+    cl->last_activity = time(NULL);
+		removeClient(c);
+		return;
+	}
+  //TODO : update last activity after every send 
+  //TODO : change the response's logic
 }

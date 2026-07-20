@@ -1,12 +1,13 @@
 #include "common.h"
 #include "utils.hpp"
+#include "logger/log.hpp"
 #include <fcntl.h>
 #include <sys/epoll.h>
-#include "logger/log.hpp"
 #include <cstring>
+#include <string>
 
 int set_nonblocking(int fd) {
-    int flags = fcntl(fd, F_GETFL, 0);
+    int flags = fcntl(fd, F_GETFL, 0);// TODO: remove get
     if (flags == -1) return -1;
     return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
@@ -51,4 +52,48 @@ int modify_epoll(int epoll_fd, int c, int flag)
         return -1;
     }
     return 0;
+}
+
+bool isRedirect(HttpStatus& status) {
+  return (
+    status == HttpStatus::MOVED_PERMANENTLY
+    || status == HttpStatus::FOUND
+    || status == HttpStatus::TEMPORARY_REDIRECT
+    || status == HttpStatus::PERMANENT_REDIRECT
+  );
+}
+
+std::string getExt(const std::string& path)
+{
+    size_t pos = path.rfind('.');
+    if (pos == std::string::npos)
+        return "";
+    return path.substr(pos + 1);
+}
+
+std::string getContentType(const std::string& path)
+{
+    if (path.empty())
+        return "text/html";
+    size_t pos = path.rfind('.');
+    if (pos == std::string::npos)
+        return "application/octet-stream";
+    std::string ext = path.substr(pos + 1); // handle if last '.' + 1 = '\0'
+
+    if (ext == "css") return "text/css";
+    if (ext == "csv") return "text/csv";
+    if (ext == "gif") return "image/gif";
+    if (ext == "htm") return "text/html";
+    if (ext == "html") return "text/html";
+    if (ext == "ico") return "image/x-icon";
+    if (ext == "jpeg") return "image/jpeg";
+    if (ext == "jpg") return "image/jpeg";
+    if (ext == "js") return "application/javascript";
+    if (ext == "json") return "application/json";
+    if (ext == "png") return "image/png";
+    if (ext == "pdf") return "application/pdf";
+    if (ext == "svg") return "image/svg+xml";
+    if (ext == "txt") return "text/plain";
+
+    return "application/octet-stream";
 }
