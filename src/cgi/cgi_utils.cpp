@@ -100,8 +100,9 @@ bool tryDispatchCgi(Client *cl, CgiManager &manager)
 		return (false);
 	
 	resolveServerVars(cl, info.server_name, info.server_port);
-	if (!manager.registerHandler(req, info.interpreter_path, info.script_path,
+	if (!manager.registerHandler(req, cl, info.interpreter_path, info.script_path,
 				info.server_name, info.server_port, info.path_info))
 				return (false);
+	cl->cgi_pending = true;
 	return (true);
 }

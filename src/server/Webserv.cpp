@@ -394,6 +394,10 @@ void Webserv::handleHttpResponse(SOCKET c)
 	// processing kima galia karim, ndirha hna
 	processRequest(cl);
 
+	//processRequest() might have dispatched a cgi script
+	if (cl->cgi_pending)
+		return;
+	
 	// REDIRECT
 	if (isRedirect(req->status))
 	{
