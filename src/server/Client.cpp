@@ -10,6 +10,8 @@ Client::Client()
 	  srv(NULL),
 	  location(NULL),
 	  machine(),
+	  cgiManager(NULL),
+	  cgi_pending(false),
 	  last_activity(0),
 	  request_start(0)
 {
@@ -18,13 +20,3 @@ Client::Client()
 }
 
 Client::~Client() {}
-
-Server* Client::getServer() const
-{
-	return srv;
-}
-
-void Client::setServer(Server* server)
-{
-	srv = server;
-}

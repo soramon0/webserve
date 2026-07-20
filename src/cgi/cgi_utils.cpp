@@ -71,10 +71,10 @@ bool lookupInterpreter(const std::map<std::string, std::string> &cgi_pass,
 
 void resolveServerVars(const Client *cl, std::string &server_name, std::string &server_port)
 {
-	server_name = cl->getServer()->interface;
+	server_name = cl->srv->interface;
 
 	std::ostringstream oss;
-	oss << cl->getServer()->port;
+	oss << cl->srv->port;
 	server_port = oss.str();
 }
 

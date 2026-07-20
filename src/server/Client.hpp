@@ -5,6 +5,8 @@
 #include "http/fsm.hpp"
 #include <ctime>
 
+class CgiManager;
+
 struct Client
 {
 	socklen_t		addrlen;
@@ -20,12 +22,12 @@ struct Client
 
 	FSM				machine;
 
+	CgiManager*		cgiManager;
+	bool			cgi_pending;
 	//timeouts
 	std::time_t		last_activity;
 	std::time_t		request_start;
 	Client();
 	~Client();
 
-	Server* getServer() const;
-	void setServer(Server* server);
 };

@@ -9,330 +9,373 @@
 #include <string>
 #include <sys/epoll.h>
 #include <sys/types.h>
+#include "cgi/CgiManager.hpp"
 
 static int running = true;
 
-Webserv::Webserv(Config& _conf) : config(_conf) {}
+Webserv::Webserv(Config &_conf) : config(_conf), cgiManager(NULL) {}
 
-Webserv::~Webserv() {
-  close(epoll_fd);
-  // close all sockets before
+Webserv::~Webserv()
+{
+	delete cgiManager;
+	close(epoll_fd);
+	// close all sockets before
 
-  while (!clients.empty()) {
-    removeClient(clients.begin()->first);
-  }
+	while (!clients.empty())
+	{
+		removeClient(clients.begin()->first);
+	}
 
-  std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
-  while (it_srv != servers.end()) {
-    close(it_srv->first);
-    ++it_srv;
-  }
+	std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
+	while (it_srv != servers.end())
+	{
+		close(it_srv->first);
+		++it_srv;
+	}
 }
 
-void Webserv::start() {
-  int srvlen = config.servers.size();
+void Webserv::start()
+{
+	int srvlen = config.servers.size();
 
-  epoll_fd = epoll_instance();
-  for (int i = 0; i < srvlen; i++) {
-    SOCKET listen_sock = createSocket(i);
-    if (set_nonblocking(listen_sock) == -1) {
-      Logger::error("Can't set non-blocking");
-      continue;
-    }
-    if (add_to_epoll(epoll_fd, listen_sock, EPOLLIN) == -1)
-      continue;
-    servers[listen_sock] = config.servers[i];
-  }
+	epoll_fd = epoll_instance();
+	cgiManager = new CgiManager(epoll_fd);
+	for (int i = 0; i < srvlen; i++)
+	{
+		SOCKET listen_sock = createSocket(i);
+		if (set_nonblocking(listen_sock) == -1)
+		{
+			Logger::error("Can't set non-blocking");
+			continue;
+		}
+		if (add_to_epoll(epoll_fd, listen_sock, EPOLLIN) == -1)
+			continue;
+		servers[listen_sock] = config.servers[i];
+	}
 
-  if (servers.size() == 0) {
-    Logger::error("could not register servers.");
-    return;
-  }
+	if (servers.size() == 0)
+	{
+		Logger::error("could not register servers.");
+		return;
+	}
 
-  eventLoop();
+	eventLoop();
 }
 
-void sigHandler(int sig) {
-  (void)sig;
-  running = false;
+void sigHandler(int sig)
+{
+	(void)sig;
+	running = false;
 }
 
-void Webserv::eventLoop() {
-  struct epoll_event events[MAX_EVENTS];
+void Webserv::eventLoop()
+{
+	struct epoll_event events[MAX_EVENTS];
 
-  signal(SIGINT, sigHandler);
-  signal(SIGTERM, sigHandler);
-  // TODO: handle timeout
-  while (running) {
-    int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, 5000);
-    checkTimeouts();
-    //TODO: drop clients if timeout (now - last_activity > timout)
-    if (n_ev <= 0) // possible error : EINTR
-      continue;
+	signal(SIGINT, sigHandler);
+	signal(SIGTERM, sigHandler);
+	// TODO: handle timeout
+	while (running)
+	{
+		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, 5000);
+		checkTimeouts();
+		// TODO: drop clients if timeout (now - last_activity > timout)
+		if (n_ev <= 0) // possible error : EINTR
+			continue;
 
-    int ev;
-    SOCKET fd;
-    for (int i = 0; i < n_ev; i++) {
-      ev = events[i].events;
-      fd = static_cast<SOCKET>(events[i].data.fd);
+		int ev;
+		SOCKET fd;
+		for (int i = 0; i < n_ev; i++)
+		{
+			ev = events[i].events;
+			fd = static_cast<SOCKET>(events[i].data.fd);
 
-      if (ev & (EPOLLERR | EPOLLHUP)) {
-        removeClient(fd);
-        continue;
-      }
+			if (ev & (EPOLLERR | EPOLLHUP))
+			{
+				removeClient(fd);
+				continue;
+			}
 
-      if (ev & EPOLLIN) {
-        if (servers.count(fd))
-          handleNewConnection(fd);
-        else
-          handleClientData(fd);
-      }
+			if (ev & EPOLLIN)
+			{
+				if (servers.count(fd))
+					handleNewConnection(fd);
+				else
+					handleClientData(fd);
+			}
 
-      if (ev & EPOLLOUT) {
-        handleHttpResponse(fd);
-      }
-    }
-  }
+			if (ev & EPOLLOUT)
+			{
+				handleHttpResponse(fd);
+			}
+		}
+	}
 }
-//TODO: send chuncked response
-//TODO handle internal server errors
-// GET / HTTP/1.1
-// headers ....
-// GET / ...
-SOCKET Webserv::createSocket(int id) {
-  struct addrinfo hints;
-  std::memset(&hints, 0, sizeof(hints));
+// TODO: send chuncked response
+// TODO handle internal server errors
+//  GET / HTTP/1.1
+//  headers ....
+//  GET / ...
+SOCKET Webserv::createSocket(int id)
+{
+	struct addrinfo hints;
+	std::memset(&hints, 0, sizeof(hints));
 
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
 
-  std::ostringstream os;
-  os << config.servers[id]->port;
-  std::string port = os.str();
-  std::string host = config.servers[id]->interface;
+	std::ostringstream os;
+	os << config.servers[id]->port;
+	std::string port = os.str();
+	std::string host = config.servers[id]->interface;
 
-  struct addrinfo *addr;
-  if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr)) {
-    Logger::fatal("getaddrinfo failed");
-  }
+	struct addrinfo *addr;
+	if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr))
+	{
+		Logger::fatal("getaddrinfo failed");
+	}
 
-  int socket_listen =
-      socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-  if (!ISVALIDSOCKET(socket_listen))
-    Logger::fatal("socket failed");
-// TODO: check why bind fails
-  int opt = 1;
-  if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
-                 sizeof(opt)))
-    Logger::error("setsockopt failed");
+	int socket_listen =
+		socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+	if (!ISVALIDSOCKET(socket_listen))
+		Logger::fatal("socket failed");
+	// TODO: check why bind fails
+	int opt = 1;
+	if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+				   sizeof(opt)))
+		Logger::error("setsockopt failed");
 
-  if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen))
-    Logger::fatal("bind failed");
-  freeaddrinfo(addr);
+	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen))
+		Logger::fatal("bind failed");
+	freeaddrinfo(addr);
 
-  Logger::info("Listening on http://%s:%s ...", host.c_str(), port.c_str());
-  if (listen(socket_listen, SOMAXCONN))
-    Logger::fatal("listen failed");
+	Logger::info("Listening on http://%s:%s ...", host.c_str(), port.c_str());
+	if (listen(socket_listen, SOMAXCONN))
+		Logger::fatal("listen failed");
 
-  return socket_listen;
-}
-
-void Webserv::handleNewConnection(SOCKET srv) {
-  int max_accepts = 32;
-
-  while (max_accepts-- > 0) {
-    Client *c = new Client(); //TODO: there is a conditional jump here
-    c->socket = accept(srv, &c->addr, &c->addrlen);
-
-    if (c->socket == -1) {
-      delete c;
-      if (errno == EAGAIN || errno == EWOULDBLOCK)// TODO check if this is allowed
-        break;
-
-      Logger::error("accept failed");
-      break;
-    }
-
-    c->srv = servers[srv];
-    c->last_activity = time(NULL);
-
-    if (set_nonblocking(c->socket) == -1) {
-      Logger::error("fcntl failed");// ash waq3 hna
-      delete c;
-      close(c->socket);
-      continue;
-    }
-    if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1) {
-      delete c;
-      continue;
-    }
-
-    clients[c->socket] = c;
-    Logger::info("client Connected...");
-  }
+	return socket_listen;
 }
 
-void Webserv::handleClientData(SOCKET c) {
-  if (!clients.count(c))
-    return;
-  Client *cl = clients[c];
+void Webserv::handleNewConnection(SOCKET srv)
+{
+	int max_accepts = 32;
 
-  char buf[KIB(1) / 2];
-  ssize_t bytes = recv(cl->socket, buf, sizeof(buf), 0);
-  if (bytes <= 0) {
-    removeClient(c);
-    return;
-  }
-  // Timeout updates
-  cl->last_activity = time(NULL);
+	while (max_accepts-- > 0)
+	{
+		Client *c = new Client(); // TODO: there is a conditional jump here
+		c->socket = accept(srv, &c->addr, &c->addrlen);
 
-  HttpRequest *req = cl->machine.getRequest();
-  if (cl->machine.status.isPending() && !cl->machine.feedChunk(buf, bytes)) {
-    Logger::debug("request status: %d", req->status.asInt());
-    Logger::debug("request error: %.*s", (int)req->error.length(),
-                  req->error.data());
-  }
+		if (c->socket == -1)
+		{
+			delete c;
+			if (errno == EAGAIN || errno == EWOULDBLOCK) // TODO check if this is allowed
+				break;
 
-  // notify client to send a response
-  if (!cl->machine.status.isPending()) {
-    req->printRequest();
-    modify_epoll(epoll_fd, c, EPOLLOUT);
-  }
+			Logger::error("accept failed");
+			break;
+		}
+
+		c->srv = servers[srv];
+		c->cgiManager = cgiManager;
+		c->last_activity = time(NULL);
+
+		if (set_nonblocking(c->socket) == -1)
+		{
+			Logger::error("fcntl failed"); // ash waq3 hna
+			delete c;
+			close(c->socket);
+			continue;
+		}
+		if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1)
+		{
+			delete c;
+			continue;
+		}
+
+		clients[c->socket] = c;
+		Logger::info("client Connected...");
+	}
 }
 
-void Webserv::checkTimeouts() {
-  time_t now = time(NULL);
+void Webserv::handleClientData(SOCKET c)
+{
+	if (!clients.count(c))
+		return;
+	Client *cl = clients[c];
 
-  std::map<SOCKET, Client*>::iterator it = clients.begin();
-  while (it != clients.end()) {
-    SOCKET c = it->first;
-    Client* cl = it->second;
+	char buf[KIB(1) / 2];
+	ssize_t bytes = recv(cl->socket, buf, sizeof(buf), 0);
+	if (bytes <= 0)
+	{
+		removeClient(c);
+		return;
+	}
+	// Timeout updates
+	cl->last_activity = time(NULL);
 
-    bool drop = false;
+	HttpRequest *req = cl->machine.getRequest();
+	if (cl->machine.status.isPending() && !cl->machine.feedChunk(buf, bytes))
+	{
+		Logger::debug("request status: %d", req->status.asInt());
+		Logger::debug("request error: %.*s", (int)req->error.length(),
+					  req->error.data());
+	}
 
-    // Idle connection (e.g. client sent nothing for a long time)
-    if (now - cl->last_activity > TIMEOUT) {
-      Logger::debug("timeout for client(%d)", c);
-      drop = true;
-    }
+	// notify client to send a response
+	if (!cl->machine.status.isPending())
+	{
+		req->printRequest();
+		modify_epoll(epoll_fd, c, EPOLLOUT);
+	}
+}
 
-    if (drop) {
-      // removeClient erases from map; advance iterator carefully
-      std::map<SOCKET, Client*>::iterator to_erase = it++;
-      timeoutClient(to_erase->first);
-    } else {
-      ++it;
-    }
-  }
+void Webserv::checkTimeouts()
+{
+	time_t now = time(NULL);
+
+	std::map<SOCKET, Client *>::iterator it = clients.begin();
+	while (it != clients.end())
+	{
+		SOCKET c = it->first;
+		Client *cl = it->second;
+
+		bool drop = false;
+
+		// Idle connection (e.g. client sent nothing for a long time)
+		if (now - cl->last_activity > TIMEOUT)
+		{
+			Logger::debug("timeout for client(%d)", c);
+			drop = true;
+		}
+
+		if (drop)
+		{
+			// removeClient erases from map; advance iterator carefully
+			std::map<SOCKET, Client *>::iterator to_erase = it++;
+			timeoutClient(to_erase->first);
+		}
+		else
+		{
+			++it;
+		}
+	}
 }
 
 void Webserv::timeoutClient(SOCKET c)
 {
-    std::string resp =
-        "HTTP/1.1 408 Request Timeout\r\n"
-        "Content-Length: 0\r\n"
-        "Connection: close\r\n"
-        "\r\n";
-    send(c, resp.c_str(), resp.size(), 0);
-    removeClient(c);
+	std::string resp =
+		"HTTP/1.1 408 Request Timeout\r\n"
+		"Content-Length: 0\r\n"
+		"Connection: close\r\n"
+		"\r\n";
+	send(c, resp.c_str(), resp.size(), 0);
+	removeClient(c);
 }
 
-void Webserv::removeClient(SOCKET c) {
-  Logger::debug("dropping client(%d)", c);
+void Webserv::removeClient(SOCKET c)
+{
+	Logger::debug("dropping client(%d)", c);
 
-  std::map<SOCKET, Client *>::iterator it = clients.find(c);
-  if (it == clients.end()) {
-    return;
-  }
+	std::map<SOCKET, Client *>::iterator it = clients.find(c);
+	if (it == clients.end())
+	{
+		return;
+	}
 
-  epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
-  Client *cl = it->second;
-  clients.erase(c);
-  close(c);
-  delete cl;
+	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
+	Client *cl = it->second;
+	clients.erase(c);
+	close(c);
+	delete cl;
 }
 
-void Webserv::handleHttpResponse(SOCKET c) {
-  if (!clients.count(c))
-    return;
-  Client* cl = clients[c];
-  HttpRequest* req = cl->machine.getRequest();
+void Webserv::handleHttpResponse(SOCKET c)
+{
+	if (!clients.count(c))
+		return;
+	Client *cl = clients[c];
+	HttpRequest *req = cl->machine.getRequest();
 
-  if (cl->machine.status.isPending()) {
-    Logger::debug("no request yet");
-    return;
-  }
+	if (cl->machine.status.isPending())
+	{
+		Logger::debug("no request yet");
+		return;
+	}
 
-  //if the request is malformed
-  if (cl->machine.status.isMalformed()) {
-    std::string body = "<html><body><h1>" + std::string(req->status.toString()) + "</h1></body></html>";
-    std::ostringstream resp;
-    resp << "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
-          << "Content-Length: " << body.size() << "\r\n"
-          << "Connection: close\r\n"
-          << "\r\n"
-          << body;
-    std::string r = resp.str();
-    send(c, r.c_str(), r.size(), 0);
-    removeClient(c);
-    return;
-  }
-  //processing kima galia karim, ndirha hna 
-  processRequest(cl);
-
-  // REDIRECT
-  if (isRedirect(req->status)) {
-    std::string body = "";
-    std::string resp =
-        "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
-        "Location: " + cl->redirect_url + "\r\n"
-        "Content-Length: 0\r\n"
-        "Connection: close\r\n"
-        "\r\n";
-    send(c, resp.c_str(), resp.size(), 0);
-    removeClient(c);
-    return;
-  }
-
-  // 4** errors
-  if (req->status == HttpStatus::NOT_FOUND
-    || req->status == HttpStatus::FORBIDDEN
-    || req->status == HttpStatus::METHOD_NOT_ALLOWED) {
-    std::string body = "<html><body><h1>" + std::string(req->status.toString()) + "</h1></body></html>";
-    std::ostringstream resp;
-    resp << "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
-          << "Content-Length: " << body.size() << "\r\n"
-          << "Connection: close\r\n"
-          << "\r\n"
-          << body;
-    std::string r = resp.str();
-    send(c, r.c_str(), r.size(), 0);
-    removeClient(c);
-    return;
-  }
-
-  if (req->status == HttpStatus::NO_CONTENT) {
-    std::string resp = "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n";
-    send(c, resp.c_str(), resp.size(), 0);
-    removeClient(c);
-    return;
-  }
-
-	if (req->status == HttpStatus::OK) {
+	// if the request is malformed
+	if (cl->machine.status.isMalformed())
+	{
+		std::string body = "<html><body><h1>" + std::string(req->status.toString()) + "</h1></body></html>";
 		std::ostringstream resp;
-		resp << "HTTP/1.1 200 OK\r\n"
-			<< "Content-Length: " << cl->response_body.size() << "\r\n"
-      << "Content-Type: " << getContentType(cl->file_path) << "\r\n"
-			<< "Connection: close\r\n"
-			<< "\r\n"
-			<< cl->response_body;
+		resp << "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
+			 << "Content-Length: " << body.size() << "\r\n"
+			 << "Connection: close\r\n"
+			 << "\r\n"
+			 << body;
 		std::string r = resp.str();
 		send(c, r.c_str(), r.size(), 0);
-    cl->last_activity = time(NULL);
 		removeClient(c);
 		return;
 	}
-  //TODO : update last activity after every send 
-  //TODO : change the response's logic
+	// processing kima galia karim, ndirha hna
+	processRequest(cl);
+
+	// REDIRECT
+	if (isRedirect(req->status))
+	{
+		std::string body = "";
+		std::string resp =
+			"HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
+																"Location: " +
+			cl->redirect_url + "\r\n"
+							   "Content-Length: 0\r\n"
+							   "Connection: close\r\n"
+							   "\r\n";
+		send(c, resp.c_str(), resp.size(), 0);
+		removeClient(c);
+		return;
+	}
+
+	// 4** errors
+	if (req->status == HttpStatus::NOT_FOUND || req->status == HttpStatus::FORBIDDEN || req->status == HttpStatus::METHOD_NOT_ALLOWED)
+	{
+		std::string body = "<html><body><h1>" + std::string(req->status.toString()) + "</h1></body></html>";
+		std::ostringstream resp;
+		resp << "HTTP/1.1 " + std::string(req->status.toString()) + "\r\n"
+			 << "Content-Length: " << body.size() << "\r\n"
+			 << "Connection: close\r\n"
+			 << "\r\n"
+			 << body;
+		std::string r = resp.str();
+		send(c, r.c_str(), r.size(), 0);
+		removeClient(c);
+		return;
+	}
+
+	if (req->status == HttpStatus::NO_CONTENT)
+	{
+		std::string resp = "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n";
+		send(c, resp.c_str(), resp.size(), 0);
+		removeClient(c);
+		return;
+	}
+
+	if (req->status == HttpStatus::OK)
+	{
+		std::ostringstream resp;
+		resp << "HTTP/1.1 200 OK\r\n"
+			 << "Content-Length: " << cl->response_body.size() << "\r\n"
+			 << "Content-Type: " << getContentType(cl->file_path) << "\r\n"
+			 << "Connection: close\r\n"
+			 << "\r\n"
+			 << cl->response_body;
+		std::string r = resp.str();
+		send(c, r.c_str(), r.size(), 0);
+		cl->last_activity = time(NULL);
+		removeClient(c);
+		return;
+	}
+	// TODO : update last activity after every send
+	// TODO : change the response's logic
 }
