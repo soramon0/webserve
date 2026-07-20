@@ -63,8 +63,9 @@ void handleGet(Client* cl) {
 				{
 					std::string name = entry->d_name;
 					if (name == "." || name == "..")
-					continue;
-					listing << "<li><a href=\"" << name << "\">" << name << "</a></li>";
+						continue;
+					listing << "<li><a href=\"" << req->uri << "/" << name << "\">"
+							<< name << "</a></li>";
 				}
 				closedir(dir);
 				listing << "</ul></body></html>";
