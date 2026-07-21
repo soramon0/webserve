@@ -156,4 +156,32 @@ void handlePost(Client *cl)
 		req->status = HttpStatus::INTERNAL_SERVER_ERROR;
 		return;
 	}
+	RequestBody::ReadResult res;
+	do
+	{
+		res = req->body.read();
+		if (res.status == RequestBody::READ_ERROR)
+		{
+			outfile.close();
+			std::remove(target_path.c_str());
+			req->body.resetReader();
+			req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+			return;
+		}
+		if (res.block)
+		{
+			outfile.write(reinterpret_cast<const char *>(res.block->getBuffer()), res.block->consumed());
+			if (outfile.fail())
+			{
+				outfile.close();
+				std::remove(target_path.c_str());
+				req->body.resetReader();
+				req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+				return;
+			}
+		}
+	} while (res.status != RequestBody::READ_DONE);
+	req->body.resetReader();
+	outfile.close();
+	req->status = HttpStatus::CREATED;	
 }
