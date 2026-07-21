@@ -120,7 +120,7 @@ SOCKET Webserv::createSocket(int id) {
     Logger::fatal("socket failed");
 // TODO: check why bind fails
   int opt = 1;
-  if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+  if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR, &opt,
                  sizeof(opt)))
     Logger::error("setsockopt failed");
 
