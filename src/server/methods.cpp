@@ -1,4 +1,5 @@
 #include "methods.hpp"
+#include "cgi/cgi_utils.hpp"
 #include <algorithm>
 #include <sys/stat.h>
 #include <fstream>
@@ -14,6 +15,7 @@ std::string getFilePath(Client* cl) {
 
 	return file_path;
 }
+
 // TODO : .. : reject in get & delete: qlbi ktr
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
@@ -113,12 +115,82 @@ void handleDelete(Client* cl) {
 	{
 		Logger::info("DELETE : can't delete this file/dir '%s'", file_path.c_str());
 		req->status = HttpStatus::FORBIDDEN;
-		return ;
+		return;
 	}
-	req->status = HttpStatus::NO_CONTENT;// deleted succssesfully
+	req->status = HttpStatus::NO_CONTENT; // deleted succssesfully
 }
 
-void handlePost(Client* cl)
+static bool hasParentDirTraversal(const std::string &path)
 {
-	cl->machine.getRequest()->status = HttpStatus::NOT_IMPLEMENTED;
+	size_t pos = 0;
+	while (pos <= path.length())
+	{
+		size_t next_slash = path.find('/', pos);
+		std::string segment;
+		if (next_slash == std::string::npos)
+			segment = path.substr(pos);
+		else
+			segment = path.substr(pos, next_slash - pos);
+		if (segment == "..")
+			return (true);
+		if (next_slash == std::string::npos)
+			break;
+		pos = next_slash + 1;
+	}
+	return (false);
+}
+
+void handlePost(Client *cl)
+{
+	if (tryDispatchCgi(cl, *cl->cgiManager))
+		return;
+	HttpRequest *req = cl->machine.getRequest();
+	std::string uri(req->uri.data(), req->uri.length());
+	std::string uri_suffix = uri.substr(cl->location->path.size());
+	if (cl->location->shared_config->upload_store.empty()) // if upload is not supported
+	{
+		req->status = HttpStatus::FORBIDDEN;
+		return;
+	}
+	if (hasParentDirTraversal(uri_suffix))
+	{
+		req->status = HttpStatus::FORBIDDEN;
+		return;
+	}
+	std::string target_path = cl->location->shared_config->root + "/" +
+							  cl->location->shared_config->upload_store + "/" + uri_suffix;
+	std::ofstream outfile(target_path.c_str(), std::ios::binary | std::ios::trunc);
+	if (!outfile.is_open())
+	{
+		req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+		return;
+	}
+	RequestBody::ReadResult res;
+	do
+	{
+		res = req->body.read();
+		if (res.status == RequestBody::READ_ERROR)
+		{
+			outfile.close();
+			std::remove(target_path.c_str());
+			req->body.resetReader();
+			req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+			return;
+		}
+		if (res.block)
+		{
+			outfile.write(reinterpret_cast<const char *>(res.block->getBuffer()), res.block->consumed());
+			if (outfile.fail())
+			{
+				outfile.close();
+				std::remove(target_path.c_str());
+				req->body.resetReader();
+				req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+				return;
+			}
+		}
+	} while (res.status != RequestBody::READ_DONE);
+	req->body.resetReader();
+	outfile.close();
+	req->status = HttpStatus::CREATED;	
 }

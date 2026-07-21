@@ -10,6 +10,8 @@ Client::Client()
 	  srv(NULL),
 	  location(NULL),
 	  machine(),
+	  cgiManager(NULL),
+	  cgi_pending(false),
 	  last_activity(0)
 {
 	std::memset(&addr, 0, sizeof(addr));

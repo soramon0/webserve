@@ -24,7 +24,8 @@ public:
     NOT_IMPLEMENTED = 501,
     BAD_GATEWAY = 502,
     SERVICE_UNAVAILABLE = 503,
-    GATEWAY_TIMEOUT = 504
+    GATEWAY_TIMEOUT = 504,
+	CREATED = 201 //for post
   };
 
   HttpStatus() : value_(OK) {}
@@ -53,6 +54,7 @@ public:
       case BAD_GATEWAY:                   return "502 Bad Gateway";
       case SERVICE_UNAVAILABLE:           return "503 Service Unavailable";
       case GATEWAY_TIMEOUT:               return "504 Gateway Timeout";
+	  case CREATED:						  return "201 Created";
       default:                            return "500 Internal Server Error";
     }
 }
@@ -95,6 +97,8 @@ public:
       return StringView("Service Unavailable");
     case GATEWAY_TIMEOUT:
       return StringView("Gateway Timeout");
+	case CREATED:
+	  return StringView("Created");
     default:
       return StringView("Internal Server Error");
     }
