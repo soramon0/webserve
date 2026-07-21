@@ -66,7 +66,7 @@ void Webserv::eventLoop() {
   while (running) {
     int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, 5000);
     checkTimeouts();
-    //TODO: drop clients if timeout (now - last_activity > timout)
+
     if (n_ev <= 0) // possible error : EINTR
       continue;
 
@@ -118,7 +118,7 @@ SOCKET Webserv::createSocket(int id) {
       socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
   if (!ISVALIDSOCKET(socket_listen))
     Logger::fatal("socket failed");
-// TODO: check why bind fails
+
   int opt = 1;
   if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR, &opt,
                  sizeof(opt)))
@@ -139,7 +139,7 @@ void Webserv::handleNewConnection(SOCKET srv) {
   int max_accepts = 32;
 
   while (max_accepts-- > 0) {
-    Client *c = new Client(); //TODO: there is a conditional jump here
+    Client *c = new Client();
     c->socket = accept(srv, &c->addr, &c->addrlen);
 
     if (c->socket == -1) {

@@ -14,6 +14,13 @@ std::string getFilePath(Client* cl) {
 
 	return file_path;
 }
+
+HttpStatus::Code getHttpStatusError() {
+	if (errno == ENOENT) return HttpStatus::NOT_FOUND;
+	if (errno == EACCES) return HttpStatus::FORBIDDEN;
+	return HttpStatus::INTERNAL_SERVER_ERROR;
+}
+
 // TODO : .. : reject in get & delete: qlbi ktr
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
@@ -24,7 +31,7 @@ void handleGet(Client* cl) {
 	if (stat(file_path.c_str(), &file_stat) == -1)
 	{
 		Logger::debug("This uri doesn't exist");
-		req->status = HttpStatus::NOT_FOUND;
+		req->status = getHttpStatusError();
 		return;
 	}
 	cl->response.file_size = file_stat.st_size;
@@ -52,7 +59,7 @@ void handleGet(Client* cl) {
 				// generate directory listing
 				DIR* dir = opendir(file_path.c_str());
 				if (dir == NULL) {
-					req->status = HttpStatus::FORBIDDEN;
+					req->status = getHttpStatusError();
 					return;
 				}
 				std::ostringstream listing;
@@ -83,7 +90,7 @@ void handleGet(Client* cl) {
 	Logger::debug("the size stat give is : %zu", cl->response.file_size);
 	cl->response.file_fd = open(file_path.c_str(), O_RDONLY);
 	if (cl->response.file_fd == -1) {
-		req->status = HttpStatus::FORBIDDEN;
+		req->status = getHttpStatusError();
 		return;
 	}
 	mimetype_map empty_types;
@@ -105,14 +112,14 @@ void handleDelete(Client* cl) {
 	if (stat(file_path.c_str(), &file_stat) == -1)
 	{
 		Logger::info("DELETE: the path is not  found");
-		req->status = HttpStatus::NOT_FOUND;
+		req->status = getHttpStatusError();
 		return;
 	}
 
 	if (std::remove(file_path.c_str()))
 	{
 		Logger::info("DELETE : can't delete this file/dir '%s'", file_path.c_str());
-		req->status = HttpStatus::FORBIDDEN;
+		req->status = getHttpStatusError();
 		return ;
 	}
 	req->status = HttpStatus::NO_CONTENT;// deleted succssesfully
