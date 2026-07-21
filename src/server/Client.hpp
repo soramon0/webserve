@@ -27,8 +27,6 @@ struct Client
 	//cgi fields
 	CgiManager*		cgiManager;
 	bool			cgi_pending;
-	bool			response_from_cgi;
-	CgiResponse		cgiResponse;
 
 	//timeouts
 	std::time_t		last_activity;

@@ -356,16 +356,14 @@ void Webserv::handleHttpResponse(SOCKET c)
 	if (!clients.count(c))
 		return;
 
-	Client* cl = clients[c];
-	HttpRequest* req = cl->machine.getRequest();
+	Client *cl = clients[c];
+	HttpRequest *req = cl->machine.getRequest();
 
 	Logger::debug("handleHttpResponse: chunked=%d headers_sent=%d buffer_size=%zu",
-		cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
-
-	if (cl->machine.status.isMalformed()
-		|| (cl->response.buffer.empty()
-			&& !cl->response.chunked
-			&& !cl->response.headers_sent))
+				  cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
+	if (cl->cgi_pending == false &&
+		(cl->machine.status.isMalformed()
+		|| (cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)))
 	{
 		processRequest(cl);
 	}
@@ -379,9 +377,9 @@ void Webserv::handleHttpResponse(SOCKET c)
 		if (cl->response.buffer.empty())
 		{
 			mimetype_map empty_types;
-			mimetype_map& types = (cl->location && cl->location->shared_config)
-				? cl->location->shared_config->types
-				: empty_types;
+			mimetype_map &types = (cl->location && cl->location->shared_config)
+									  ? cl->location->shared_config->types
+									  : empty_types;
 			std::string content_type = getContentType(cl->file_path, types);
 			cl->response.build(req->status, cl, content_type, cl->redirect_url);
 		}
@@ -392,7 +390,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 		if (!cl->response.headers_sent)
 		{
 			send(c, cl->response.headers.c_str(),
-				cl->response.headers.size(), 0);
+				 cl->response.headers.size(), 0);
 			cl->response.headers_sent = true;
 			return;
 		}
@@ -416,8 +414,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 
 	ssize_t sent = send(
 		c, cl->response.buffer.c_str() + cl->response.offset,
-		cl->response.buffer.size() - cl->response.offset, 0
-	);
+		cl->response.buffer.size() - cl->response.offset, 0);
 
 	if (sent > 0)
 		cl->response.offset += sent;
