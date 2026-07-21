@@ -95,12 +95,23 @@ void handleGet(Client* cl) {
 	}
 	mimetype_map empty_types;
 	mimetype_map& types = (cl->location && cl->location->shared_config) 
-		? cl->location->shared_config->types 
+		? cl->location->shared_config->types
 		: empty_types;
 	cl->response.buildHeaders(*req, getContentType(file_path, types));
 	req->status = HttpStatus::OK;
 }
+// TODO : add Date header to DELETE response
+/**
+ * What Nginx does
 
+Nginx normalizes the URI and ensures the resulting
+filesystem path stays inside the configured root (or alias)
+directory. Requests containing unsafe traversal sequences
+are rejected before filesystem operations occur.
+
+You should implement the same idea.
+decode...
+ */
 void handleDelete(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 	std::string file_path = getFilePath(cl);
