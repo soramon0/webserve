@@ -15,12 +15,7 @@ CgiManager::~CgiManager()
 
 bool CgiManager::owns(int fd) const
 {
-	for (std::vector<CgiHandler *>::size_type i = 0; i < handlers.size(); i++)
-	{
-		if (fd == handlers[i]->getReadFd())
-			return (true);
-	}
-	return (false);
+	return (fd_to_handler.count(fd) > 0);
 }
 
 bool CgiManager::registerHandler(const HttpRequest *request, Client* client,
@@ -36,11 +31,13 @@ bool CgiManager::registerHandler(const HttpRequest *request, Client* client,
 		if (fcntl(handler->getReadFd(), F_SETFL, O_NONBLOCK) != -1)
 		{
 			struct epoll_event ev;
+			std::memset(&ev, 0, sizeof(ev));
 			ev.events = EPOLLIN;
-			ev.data.ptr = handler;
+			ev.data.fd = handler->getReadFd();
 			if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, handler->getReadFd(), &ev) != -1)
 			{
 				handlers.push_back(handler);
+				fd_to_handler[handler->getReadFd()] = handler;
 				success = true;
 			}
 		}
@@ -53,7 +50,10 @@ bool CgiManager::registerHandler(const HttpRequest *request, Client* client,
 void CgiManager::deregisterEpoll(CgiHandler *handler)
 {
 	if (handler->getReadFd() != -1)
+	{
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, handler->getReadFd(), NULL);
+		fd_to_handler.erase(handler->getReadFd());
+	}
 }
 
 void CgiManager::removeHandler(CgiHandler *handler)
@@ -67,6 +67,7 @@ void CgiManager::removeHandler(CgiHandler *handler)
 
 void CgiManager::moveToPendingReap(CgiHandler *handler)
 {
+	fd_to_handler.erase(handler->getReadFd());
 	std::vector<CgiHandler *>::iterator it = std::find(handlers.begin(), handlers.end(), handler);
 	if (it != handlers.end())
 		handlers.erase(it);
@@ -75,8 +76,10 @@ void CgiManager::moveToPendingReap(CgiHandler *handler)
 
 void CgiManager::onReadable(struct epoll_event &ev)
 {
-	CgiHandler *handler = static_cast<CgiHandler *>(ev.data.ptr);
-
+	std::map<int, CgiHandler*>::iterator found = fd_to_handler.find(ev.data.fd);
+	if (found == fd_to_handler.end())
+		return;
+	CgiHandler *handler = found->second;
 	if (handler->getCgiState() != READING_OUTPUT)
 		return;
 

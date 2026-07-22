@@ -6,6 +6,7 @@
 #include "../config/shared_config.hpp"
 #include <vector>
 #include <fcntl.h>
+#include <map>
 
 class Client;
 
@@ -17,6 +18,7 @@ private:
 	const int epoll_fd;
 	std::vector<CgiHandler*> handlers;
 	std::vector<CgiHandler*> pending_reap;
+	std::map<int, CgiHandler*> fd_to_handler;
 
 public:
 	CgiManager(int epoll_fd);

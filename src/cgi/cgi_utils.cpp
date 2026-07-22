@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 #include <sstream>
 #include "../server/Client.hpp"
+#include "logger/log.hpp"
+#include <cerrno>
 
 void close_wrapper(int &fd)
 {
@@ -16,6 +18,7 @@ void close_wrapper(int &fd)
 bool resolveScriptPath(const std::string &root, const std::string &uri_path,
 					   std::string &script_path, std::string &path_info)
 {
+	Logger::debug("resolveScriptPath(): root = %s, uri_path = %s", root.c_str(), uri_path.c_str());
 	path_info.clear();
 	script_path.clear();
 	size_t pos = 0;
@@ -42,6 +45,7 @@ bool resolveScriptPath(const std::string &root, const std::string &uri_path,
 		candidate_path += "/" + segment;
 		if (stat(candidate_path.c_str(), &st) == -1)
 			return (false);
+		Logger::debug("resolveScriptPath(): candidate_path = %s, errno_str = %s", candidate_path.c_str(), strerror(errno));
 		if (S_ISREG(st.st_mode))
 		{
 			script_path = candidate_path;
