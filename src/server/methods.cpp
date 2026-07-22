@@ -198,6 +198,22 @@ void handlePost(Client *cl)
 		req->status = HttpStatus::NOT_FOUND;
 		return;
 	}
+	bool existed = false;
+	struct stat target_st;
+	if (stat(target_path.c_str(), &target_st) == 0)
+	{
+		if (S_ISDIR(target_st.st_mode))
+		{
+			req->status = HttpStatus::CONFLICT;
+			return;
+		}
+		existed = true;
+	}
+	else if (errno != ENOENT)
+	{
+		req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+		return;
+	}
 	std::ofstream outfile(target_path.c_str(), std::ios::binary | std::ios::trunc);
 	if (!outfile.is_open())
 	{
@@ -231,5 +247,5 @@ void handlePost(Client *cl)
 	} while (res.status != RequestBody::READ_DONE);
 	req->body.resetReader();
 	outfile.close();
-	req->status = HttpStatus::CREATED;	
+	req->status = existed? HttpStatus::OK : HttpStatus::CREATED;	
 }
