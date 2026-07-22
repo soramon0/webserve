@@ -24,6 +24,8 @@ HttpStatus::Code getHttpStatusError() {
 
 // TODO : .. : reject in get & delete: qlbi ktr
 void handleGet(Client* cl) {
+	if (tryDispatchCgi(cl, *cl->cgiManager))
+		return;
 	HttpRequest* req = cl->machine.getRequest();
 	std::string file_path = getFilePath(cl);
 	Logger::debug("uri is : %s", file_path.c_str());

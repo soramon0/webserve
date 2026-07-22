@@ -11,7 +11,7 @@
 int set_nonblocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);// TODO: remove get
     if (flags == -1) return -1;
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC);
+    return fcntl(fd, F_SETFL, flags | O_NONBLOCK | FD_CLOEXEC);// read about tjis
 }
 
 int epoll_instance()
@@ -116,7 +116,7 @@ std::string getContentType(const std::string& path, const mimetype_map& types)
     if (ext == "webm") return "video/webm";
     if (ext == "ogg")  return "video/ogg";
 
-    return "application/octet-stream";
+    return "text/plain";
 }
 // TODO: fix the error by appending the file name to the root
 std::string getErrorBody(Client* cl, HttpStatus status)
