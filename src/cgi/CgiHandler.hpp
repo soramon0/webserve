@@ -1,0 +1,65 @@
+#ifndef CGIHANDLER_HPP
+#define CGIHANDLER_HPP
+
+#include <ctime>
+#include <string>
+#include <map>
+#include <vector>
+#include "../http/http_request.hpp"
+
+class Client;
+
+enum CgiState
+{
+	READING_OUTPUT, CGI_DONE, CGI_ERROR
+};
+
+class CgiHandler
+{
+private:
+	int pipe_out[2];
+	pid_t pid;
+	int exit_status;
+	std::string cgi_output;
+	CgiState state;
+	const HttpRequest* request;
+	Client* client;
+	time_t start_time;
+
+public:
+	CgiHandler(const HttpRequest* request, Client* client);
+	~CgiHandler();
+
+	bool start(const std::string& interpreter_path, const std::string& script_path,
+			const std::string& server_name, const std::string& server_port,
+			const std::string& path_info);
+	void readOutput();
+	bool waitChild();
+	bool reap();
+	void timeoutKill();
+
+
+	//getters
+	CgiState getCgiState() const;
+	const std::string& getCgiOutput() const;
+	int getReadFd() const;
+	int getExitStatus() const;
+	const HttpRequest* getRequest() const;
+	Client* getClient() const;
+	time_t getStartTime() const;
+
+private:
+	void addStandardVars(std::vector<std::string>& vect_envp, const std::string& server_name, const std::string& server_port) const;
+	void addBodyVars(std::vector<std::string>& vect_envp) const;
+	void addUriVars(std::vector<std::string>& vect_envp, const std::string& path_info) const;
+	void addHeaderVars(std::vector<std::string>& vect_envp) const;
+	char** buildEnvp(const std::string& server_name, const std::string& server_port, const std::string& path_info) const;
+	static std::string toHttpEnvName(const std::string &key);
+	static char **vectorToEnvp(const std::vector<std::string> &vect);
+	static void freeEnvp(char **envp);
+
+	CgiHandler(const CgiHandler& other);
+	CgiHandler& operator=(const CgiHandler& other);
+};
+
+#endif

@@ -8,6 +8,8 @@
 #define MAX_EVENTS 64
 #define TIMEOUT 10
 
+class CgiManager;
+
 class Webserv
 {
 private:
@@ -15,6 +17,7 @@ private:
 	int							epoll_fd;
 	std::map<SOCKET, Client*>	clients;
 	std::map<SOCKET, Server*>	servers;
+	CgiManager*					cgiManager;
 public:
 	Webserv(Config& _conf);
 	~Webserv();
@@ -28,5 +31,9 @@ public:
 	void	eventLoop();
 	void	checkTimeouts();
 	void	timeoutClient(SOCKET c);
+
+private:
+	//to process finished cgi requests 
+	void processFinishedCgi();
 };
 
