@@ -115,6 +115,8 @@ are rejected before filesystem operations occur.
 decode...
  */
 void handleDelete(Client* cl) {
+	if (tryDispatchCgi(cl, *cl->cgiManager))
+		return;
 	HttpRequest* req = cl->machine.getRequest();
 	std::string file_path = getFilePath(cl);
 
