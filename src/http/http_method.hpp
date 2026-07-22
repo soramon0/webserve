@@ -1,7 +1,6 @@
 #pragma once
 
 #include "lib/string_view.hpp"
-#include <cctype>
 #include <cstring>
 #include <ostream>
 #include <string>
@@ -69,10 +68,8 @@ private:
     }
     std::memcpy(buf, method, len);
     buf[len] = '\0';
-    for (size_t i = 0; i < len; i++) {
-      buf[i] = std::toupper(static_cast<unsigned char>(buf[i]));
-    }
 
+    // RFC 7230: method tokens are case-sensitive
     if (std::strcmp(buf, "GET") == 0) {
       value_ = GET;
     } else if (std::strcmp(buf, "POST") == 0) {

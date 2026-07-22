@@ -5,7 +5,7 @@
 
 FSM::FSM()
     : server(NULL), req(NULL), state(stateStart), status(FSMStatus::PENDING),
-      chunk_state(FSM::CHUNK_SIZE), chunk_size(0) {
+      chunk_state(FSM::CHUNK_SIZE), chunk_size(0), chunk_size_seen(false) {
   req = new HttpRequest();
 }
 
@@ -23,6 +23,7 @@ void FSM::clear() {
   status = FSMStatus::PENDING;
   chunk_state = CHUNK_SIZE;
   chunk_size = 0;
+  chunk_size_seen = false;
   curr_header_value.clear();
   curr_header_key.clear();
 }
