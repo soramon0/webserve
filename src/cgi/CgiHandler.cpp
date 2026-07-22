@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <sstream>
 #include <vector>
+#include "logger/log.hpp"
 
 CgiHandler::CgiHandler(const HttpRequest *request, Client *client)
 	: pid(-1), exit_status(0), cgi_output(""), state(READING_OUTPUT), request(request), client(client), start_time(0)
@@ -204,6 +205,7 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 		if (execve(argv[0], argv, envp) == -1)
 			_exit(127);
 	}
+	Logger::debug("in start() pid = %d", pid);
 	start_time = time(NULL);
 	freeEnvp(envp);
 	read_guard.release();

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bem-vindo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
+  </head>
+  <body>
+    <section class="hero is-link is-fullheight">
+      <div class="hero-body">
+        <div class="container">
+          <h1 class="title">Welcome, {{username}}!</h1>
+          <form method="post">
+            <div class="control">
+              <input class="button is-danger" type="submit" name="logout" value="Logout">
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>
