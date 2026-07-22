@@ -3,14 +3,23 @@
 
 Config::Config() { this->shared_config = new SharedConfig(); };
 
-Config::~Config() { delete shared_config; }
+Config::~Config() {
+  for (size_t i = 0; i < servers.size(); ++i) {
+    delete servers[i];
+  }
+  servers.clear();
+  delete shared_config;
+}
 
-Config::Config(const Config &other) {
-  this->servers = other.servers;
+Config::Config(const Config &other) : shared_config(NULL) {
   if (other.shared_config) {
     this->shared_config = other.shared_config->clone();
   } else {
     this->shared_config = new SharedConfig();
+  }
+
+  for (size_t i = 0; i < other.servers.size(); ++i) {
+    this->servers.push_back(new Server(*other.servers[i]));
   }
 }
 
@@ -19,15 +28,24 @@ Config &Config::operator=(const Config &other) {
     return *this;
   }
 
+  for (size_t i = 0; i < servers.size(); ++i) {
+    delete servers[i];
+  }
+  servers.clear();
+
   if (this->shared_config) {
     delete this->shared_config;
     this->shared_config = NULL;
   }
 
-  this->servers = other.servers;
-
   if (other.shared_config) {
     this->shared_config = other.shared_config->clone();
+  } else {
+    this->shared_config = new SharedConfig();
+  }
+
+  for (size_t i = 0; i < other.servers.size(); ++i) {
+    this->servers.push_back(new Server(*other.servers[i]));
   }
   return *this;
 }

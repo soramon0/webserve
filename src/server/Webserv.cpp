@@ -155,6 +155,7 @@ void Webserv::handleNewConnection(SOCKET srv) {
       continue;
     }
     if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1) {
+      close(c->socket);
       delete c;
       continue;
     }
