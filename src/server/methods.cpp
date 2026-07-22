@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cstdio>
 #include <fcntl.h>
+#include <cerrno>
 
 std::string getFilePath(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
@@ -163,6 +164,24 @@ void handlePost(Client *cl)
 	}
 	std::string target_path = cl->location->shared_config->root + "/" +
 							  cl->location->shared_config->upload_store + "/" + uri_suffix;
+	struct stat st;
+	size_t pos = target_path.find_last_of('/');
+	std::string parent_path = target_path.substr(0, pos);
+	if (stat(parent_path.c_str(), &st) == -1)
+	{
+		if (errno == ENOENT)
+			req->status = HttpStatus::NOT_FOUND;
+		else if (errno == EACCES)
+			req->status = HttpStatus::FORBIDDEN;
+		else
+			req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+		return;
+	}
+	else if (!S_ISDIR(st.st_mode))
+	{
+		req->status = HttpStatus::NOT_FOUND;
+		return;
+	}
 	std::ofstream outfile(target_path.c_str(), std::ios::binary | std::ios::trunc);
 	if (!outfile.is_open())
 	{
