@@ -273,6 +273,10 @@ void CgiHandler::timeoutKill()
 		kill(pid, SIGKILL);
 		int status;
 		waitpid(pid, &status, 0);
+		if (WIFSIGNALED(status))
+			exit_status = 128 + WTERMSIG(status);
+		else if (WIFEXITED(status))
+			exit_status = WEXITSTATUS(status);
 		pid = -1;
 	}
 	state = CGI_ERROR;

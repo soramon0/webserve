@@ -112,6 +112,7 @@ void Webserv::processFinishedCgi()
 		client->response.offset = 0;
 		client->response.chunked = false;
 
+		client->last_activity = time(NULL);
 		client->cgi_pending = false;
 		modify_epoll(epoll_fd, client->socket, EPOLLOUT);
 		delete h;
