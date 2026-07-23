@@ -1,2 +1,4 @@
 build/
 obj/
+nginx/www/images/
+nginx/www/videos/

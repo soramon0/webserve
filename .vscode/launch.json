@@ -11,7 +11,7 @@
       "program": "${workspaceFolder}/build/debug/webserv",
       "args": ["${workspaceFolder}/nginx/nginx.conf"],
       "stopAtEntry": false,
-      "cwd": "${fileDirname}",
+      "cwd": "${workspaceFolder}",
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",
@@ -25,17 +25,27 @@
           "description": "Set Disassembly Flavor to Intel",
           "text": "-gdb-set disassembly-flavor intel",
           "ignoreFailures": true
+        },
+        {
+          "description": "Follow child process on fork",
+          "text": "-gdb-set follow-fork-mode child",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Do not detach from parent on fork",
+          "text": "-gdb-set detach-on-fork off",
+          "ignoreFailures": true
         }
       ]
     },
-      {
+    {
       "name": "(gdb) Launch test",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/tests/build/test/webserv",
       "args": [],
       "stopAtEntry": false,
-      "cwd": "${fileDirname}",
+      "cwd": "${workspaceFolder}",
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",
@@ -48,6 +58,16 @@
         {
           "description": "Set Disassembly Flavor to Intel",
           "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Follow child process on fork",
+          "text": "-gdb-set follow-fork-mode child",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Do not detach from parent on fork",
+          "text": "-gdb-set detach-on-fork off",
           "ignoreFailures": true
         }
       ]
