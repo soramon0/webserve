@@ -7,6 +7,7 @@ class HttpStatus {
 public:
   enum Code {
     OK = 200,
+	  CREATED = 201, //for post
     NO_CONTENT = 204,
     MOVED_PERMANENTLY = 301,
     FOUND = 302,
@@ -24,8 +25,7 @@ public:
     NOT_IMPLEMENTED = 501,
     BAD_GATEWAY = 502,
     SERVICE_UNAVAILABLE = 503,
-    GATEWAY_TIMEOUT = 504,
-	CREATED = 201 //for post
+    GATEWAY_TIMEOUT = 504
   };
 
   HttpStatus() : value_(OK) {}
@@ -38,6 +38,8 @@ public:
   const char* toString() const {
     switch (value_) {
       case OK:                            return "200 OK";
+	    case CREATED:						            return "201 Created";
+      case NO_CONTENT:                    return "204 No Content";
       case MOVED_PERMANENTLY:             return "301 Moved Permanently";
       case FOUND:                         return "302 Found";
       case TEMPORARY_REDIRECT:            return "307 Temporary Redirect";
@@ -54,7 +56,6 @@ public:
       case BAD_GATEWAY:                   return "502 Bad Gateway";
       case SERVICE_UNAVAILABLE:           return "503 Service Unavailable";
       case GATEWAY_TIMEOUT:               return "504 Gateway Timeout";
-	  case CREATED:						  return "201 Created";
       default:                            return "500 Internal Server Error";
     }
 }

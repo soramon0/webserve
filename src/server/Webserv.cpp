@@ -128,11 +128,10 @@ void Webserv::eventLoop()
 	while (running)
 	{
 		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, 5000);
-		checkTimeouts();
 		// TODO: drop clients if timeout (now - last_activity > timout)
 		if (n_ev <= 0) // possible error : EINTR
 			continue;
-
+		checkTimeouts();
 		int ev;
 		SOCKET fd;
 		for (int i = 0; i < n_ev; i++)
@@ -167,7 +166,7 @@ void Webserv::eventLoop()
 		processFinishedCgi();
 	}
 }
-// TODO: send chuncked response
+
 // TODO handle internal server errors
 SOCKET Webserv::createSocket(int id)
 {
@@ -216,7 +215,7 @@ void Webserv::handleNewConnection(SOCKET srv)
 
 	while (max_accepts-- > 0)
 	{
-		Client *c = new Client(); // TODO: there is a conditional jump here
+		Client *c = new Client();
 		c->socket = accept(srv, &c->addr, &c->addrlen);
 
 		if (c->socket == -1)
@@ -235,9 +234,9 @@ void Webserv::handleNewConnection(SOCKET srv)
 
 		if (set_nonblocking(c->socket) == -1)
 		{
-			Logger::error("fcntl failed"); // ash waq3 hna
-			delete c;
+			Logger::error("fcntl failed");
 			close(c->socket);
+			delete c;
 			continue;
 		}
 		if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1)
@@ -248,7 +247,7 @@ void Webserv::handleNewConnection(SOCKET srv)
 
 		c->machine.setServer(c->srv);
 		clients[c->socket] = c;
-		Logger::info("client Connected...");
+		Logger::info("client Connected... fd=%d", c->socket);
 	}
 }
 
@@ -260,11 +259,13 @@ void Webserv::handleClientData(SOCKET c)
 
 	char buf[KIB(1) / 2];
 	ssize_t bytes = recv(cl->socket, buf, sizeof(buf), 0);
-	if (bytes <= 0)
+	if (bytes == 0)
 	{
 		removeClient(c);
 		return;
 	}
+	else if (bytes < 0)
+		return ;
 	// Timeout updates
 	cl->last_activity = time(NULL);
 
@@ -325,19 +326,19 @@ void Webserv::checkTimeouts()
 
 void Webserv::timeoutClient(SOCKET c)
 {
+	HttpStatus status = clients[c]->machine.getRequest()->status;
 	std::string resp =
 		"HTTP/1.1 408 Request Timeout\r\n"
 		"Content-Length: 0\r\n"
 		"Connection: close\r\n"
 		"\r\n";
+		// "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";
 	send(c, resp.c_str(), resp.size(), 0);
 	removeClient(c);
 }
 
 void Webserv::removeClient(SOCKET c)
 {
-	Logger::debug("dropping client(%d)", c);
-
 	std::map<SOCKET, Client *>::iterator it = clients.find(c);
 	if (it == clients.end())
 	{
@@ -349,6 +350,7 @@ void Webserv::removeClient(SOCKET c)
 	clients.erase(c);
 	close(c);
 	delete cl;
+	Logger::debug("dropping client(%d)", c);
 }
 
 void Webserv::handleHttpResponse(SOCKET c)
@@ -378,9 +380,10 @@ void Webserv::handleHttpResponse(SOCKET c)
 		{
 			mimetype_map empty_types;
 			mimetype_map &types = (cl->location && cl->location->shared_config)
-									  ? cl->location->shared_config->types
-									  : empty_types;
+								? cl->location->shared_config->types
+								: empty_types;
 			std::string content_type = getContentType(cl->file_path, types);
+			Logger::debug("status code is : %d", req->status.asInt());
 			cl->response.build(req->status, cl, content_type, cl->redirect_url);
 		}
 	}
@@ -392,6 +395,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 			send(c, cl->response.headers.c_str(),
 				 cl->response.headers.size(), 0);
 			cl->response.headers_sent = true;
+			cl->last_activity = time(NULL);
 			return;
 		}
 		// send next chunk of file
@@ -401,6 +405,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 		{
 			send(c, chunk, bytes, 0);
 			cl->response.offset += bytes;
+			cl->last_activity = time(NULL);
 		}
 
 		if (bytes <= 0 || cl->response.offset >= cl->response.file_size)
@@ -415,6 +420,8 @@ void Webserv::handleHttpResponse(SOCKET c)
 	ssize_t sent = send(
 		c, cl->response.buffer.c_str() + cl->response.offset,
 		cl->response.buffer.size() - cl->response.offset, 0);
+	
+	cl->last_activity = time(NULL);
 
 	if (sent > 0)
 		cl->response.offset += sent;

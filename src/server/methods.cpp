@@ -120,20 +120,20 @@ void handleDelete(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 	std::string file_path = getFilePath(cl);
 
-	Logger::info("uri is : %s", file_path.c_str());
+	Logger::debug("uri is : %s", file_path.c_str());
 
 	// check the file existance
 	struct stat file_stat;
 	if (stat(file_path.c_str(), &file_stat) == -1)
 	{
-		Logger::info("DELETE: the path is not  found");
+		Logger::debug("DELETE: the path is not  found");
 		req->status = getHttpStatusError();
 		return;
 	}
 
 	if (std::remove(file_path.c_str()))
 	{
-		Logger::info("DELETE : can't delete this file/dir '%s'", file_path.c_str());
+		Logger::debug("DELETE : can't delete this file/dir '%s'", file_path.c_str());
 		req->status = getHttpStatusError();
 		return ;
 	}
