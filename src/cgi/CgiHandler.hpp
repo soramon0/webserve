@@ -32,7 +32,7 @@ public:
 
 	bool start(const std::string& interpreter_path, const std::string& script_path,
 			const std::string& server_name, const std::string& server_port,
-			const std::string& path_info);
+			const std::string& path_info, const std::string& root);
 	void readOutput();
 	bool waitChild();
 	bool reap();

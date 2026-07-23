@@ -7,6 +7,15 @@
 #include "logger/log.hpp"
 #include <cerrno>
 
+static std::string getCurrentDirectory() {
+    char buffer[4096];
+
+    if (getcwd(buffer, sizeof(buffer)) != NULL) {
+        return std::string(buffer);
+    }
+    return "";
+}
+
 void close_wrapper(int &fd)
 {
 	if (fd == -1)
@@ -43,9 +52,13 @@ bool resolveScriptPath(const std::string &root, const std::string &uri_path,
 		if (segment.empty())
 			continue;
 		candidate_path += "/" + segment;
-		if (stat(candidate_path.c_str(), &st) == -1)
+		Logger::debug("pwd = '%s', path = '%s'\n", getCurrentDirectory().c_str(), candidate_path.c_str());
+		if (stat(candidate_path.c_str(), &st) == -1) {
+			Logger::debug("------------------------");
+			Logger::debug("resolveScriptPath(): candidate_path = %s, errno_str = %s", candidate_path.c_str(), strerror(errno));
+			Logger::debug("------------------------");
 			return (false);
-		Logger::debug("resolveScriptPath(): candidate_path = %s, errno_str = %s", candidate_path.c_str(), strerror(errno));
+		}
 		if (S_ISREG(st.st_mode))
 		{
 			script_path = candidate_path;
@@ -105,7 +118,7 @@ CgiDispatchResult tryDispatchCgi(Client *cl, CgiManager &manager)
 	
 	resolveServerVars(cl, info.server_name, info.server_port);
 	if (!manager.registerHandler(req, cl, info.interpreter_path, info.script_path,
-				info.server_name, info.server_port, info.path_info))
+				info.server_name, info.server_port, info.path_info, cl->location->shared_config->root))
 				return (CGI_DISPATCH_FAILED);
 	cl->cgi_pending = true;
 	return (CGI_DISPATCHED);

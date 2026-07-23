@@ -12,6 +12,15 @@
 #include <vector>
 #include "logger/log.hpp"
 
+static std::string getCurrentDirectory() {
+    char buffer[4096];
+
+    if (getcwd(buffer, sizeof(buffer)) != NULL) {
+        return std::string(buffer);
+    }
+    return "";
+}
+
 CgiHandler::CgiHandler(const HttpRequest *request, Client *client)
 	: pid(-1), exit_status(0), cgi_output(""), state(READING_OUTPUT), request(request), client(client), start_time(0)
 {
@@ -133,7 +142,7 @@ char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &
 
 bool CgiHandler::start(const std::string &interpreter_path, const std::string &script_path,
 					   const std::string &server_name, const std::string &server_port,
-						const std::string& path_info)
+						const std::string& path_info, const std::string &root)
 {
 	if (pipe(pipe_out) == -1)
 	{
@@ -166,10 +175,11 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 		state = CGI_ERROR;
 		return (false);
 	}
-
+	std::string s = script_path.substr(root.size() + 1);
+	(void)s;
 	char *argv[3];
 	argv[0] = const_cast<char *>(interpreter_path.c_str());
-	argv[1] = const_cast<char *>(script_path.c_str());
+	argv[1] = const_cast<char *>(s.c_str());
 	argv[2] = NULL;
 	char **envp = buildEnvp(server_name, server_port, path_info);
 
@@ -181,7 +191,7 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 		return (false);
 	}
 	std::string dir = script_path.substr(0, pos + 1);
-
+	
 	pid = fork();
 	if (pid == -1)
 	{
@@ -199,8 +209,14 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 		close_wrapper(pipe_out[1]);
 		close_wrapper(body_fd);
 
+	std::string curdir = getCurrentDirectory();
+	Logger::debug("pwd = '%s'\n", curdir.c_str());
+
 		if (chdir(dir.c_str()) == -1)
 			_exit(1);
+	curdir = getCurrentDirectory();
+
+	Logger::debug("pwd = '%s'\n", curdir.c_str());
 
 		if (execve(argv[0], argv, envp) == -1)
 			_exit(127);

@@ -2,7 +2,7 @@ CXX      := g++
 CXXFLAGS := -Wall -Wextra -Werror -std=c++98
 LDFLAGS  :=
 NAME     := webserv
-ARGS     ?= nginx/website3.conf
+ARGS     ?= nginx/nginx.conf
 # Colors
 GREEN   := \033[1;32m
 YELLOW  := \033[1;33m
