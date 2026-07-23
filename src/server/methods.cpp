@@ -26,9 +26,17 @@ HttpStatus::Code getHttpStatusError() {
 
 // TODO : .. : reject in get & delete: qlbi ktr
 void handleGet(Client* cl) {
-	if (tryDispatchCgi(cl, *cl->cgiManager))
-		return;
 	HttpRequest* req = cl->machine.getRequest();
+
+	CgiDispatchResult cgi_result = tryDispatchCgi(cl, *cl->cgiManager);
+	if (cgi_result == CGI_DISPATCHED)
+		return;
+	if (cgi_result == CGI_DISPATCH_FAILED)
+	{
+		req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+		return;
+	}
+
 	std::string file_path = getFilePath(cl);
 	Logger::debug("uri is : %s", file_path.c_str());
 
@@ -117,9 +125,17 @@ are rejected before filesystem operations occur.
 decode...
  */
 void handleDelete(Client* cl) {
-	if (tryDispatchCgi(cl, *cl->cgiManager))
-		return;
 	HttpRequest* req = cl->machine.getRequest();
+
+	CgiDispatchResult cgi_result = tryDispatchCgi(cl, *cl->cgiManager);
+	if (cgi_result == CGI_DISPATCHED)
+		return;
+	if (cgi_result == CGI_DISPATCH_FAILED)
+	{
+		req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+		return;
+	}
+
 	std::string file_path = getFilePath(cl);
 
 	Logger::info("uri is : %s", file_path.c_str());
@@ -144,10 +160,16 @@ void handleDelete(Client* cl) {
 
 void handlePost(Client *cl)
 {
-	if (tryDispatchCgi(cl, *cl->cgiManager))
-		return;
-	
 	HttpRequest *req = cl->machine.getRequest();
+
+	CgiDispatchResult cgi_result = tryDispatchCgi(cl, *cl->cgiManager);
+	if (cgi_result == CGI_DISPATCHED)
+		return;
+	if (cgi_result == CGI_DISPATCH_FAILED)
+	{
+		req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+		return;
+	}
 
 	std::string uri(req->uri.data(), req->uri.length());
 	std::string uri_suffix = uri.substr(cl->location->path.size());
