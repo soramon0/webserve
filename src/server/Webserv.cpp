@@ -326,7 +326,7 @@ void Webserv::checkTimeouts()
 
 void Webserv::timeoutClient(SOCKET c)
 {
-	HttpStatus status = clients[c]->machine.getRequest()->status;
+	// HttpStatus status = clients[c]->machine.getRequest()->status;
 	std::string resp =
 		"HTTP/1.1 408 Request Timeout\r\n"
 		"Content-Length: 0\r\n"
