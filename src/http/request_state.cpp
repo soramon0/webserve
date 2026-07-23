@@ -345,6 +345,12 @@ State stateBody(Context &ctx) {
       return stateError(ctx);
     }
 
+    bool isCGI = !loc->shared_config->cgi_pass.empty();
+    if (!ctx.req->body.init(target_length, isCGI)) {
+      ctx.fsm.setMalformed500();
+      return stateError(ctx);
+    }
+
     if (hasCL && target_length == 0) {
       return stateDone(ctx);
     }
@@ -352,12 +358,6 @@ State stateBody(Context &ctx) {
     if (hasCL && target_length > loc->shared_config->client_max_body_size) {
       ctx.fsm.setMalformed(HttpStatus::REQUEST_ENTITY_TOO_LARGE,
                            "request greater than client_max_body_size");
-      return stateError(ctx);
-    }
-
-    bool isCGI = !loc->shared_config->cgi_pass.empty();
-    if (!ctx.req->body.init(target_length, isCGI)) {
-      ctx.fsm.setMalformed500();
       return stateError(ctx);
     }
   }
