@@ -93,7 +93,7 @@ bool dispatchCgi(const std::string &root, const std::string &uri_path,
 	return (true);
 }
 
-bool tryDispatchCgi(Client *cl, CgiManager &manager)
+CgiDispatchResult tryDispatchCgi(Client *cl, CgiManager &manager)
 {
 	HttpRequest *req = cl->machine.getRequest();
 	std::string uri_path(req->uri.data(), req->uri.length());
@@ -101,12 +101,12 @@ bool tryDispatchCgi(Client *cl, CgiManager &manager)
 	CgiDispatchInfo info;
 	if (!dispatchCgi(cl->location->shared_config->root, uri_path,
 					 cl->location->shared_config->cgi_pass, info))
-		return (false);
+		return (NOT_CGI);
 	
 	resolveServerVars(cl, info.server_name, info.server_port);
 	if (!manager.registerHandler(req, cl, info.interpreter_path, info.script_path,
 				info.server_name, info.server_port, info.path_info))
-				return (false);
+				return (CGI_DISPATCH_FAILED);
 	cl->cgi_pending = true;
-	return (true);
+	return (CGI_DISPATCHED);
 }
