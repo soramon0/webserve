@@ -1,5 +1,6 @@
 #include "methods.hpp"
 #include "cgi/cgi_utils.hpp"
+#include "post_helpers.hpp"
 #include <algorithm>
 #include <sys/stat.h>
 #include <fstream>
@@ -141,31 +142,13 @@ void handleDelete(Client* cl) {
 	req->status = HttpStatus::NO_CONTENT; // deleted succssesfully
 }
 
-static bool hasParentDirTraversal(const std::string &path)
-{
-	size_t pos = 0;
-	while (pos <= path.length())
-	{
-		size_t next_slash = path.find('/', pos);
-		std::string segment;
-		if (next_slash == std::string::npos)
-			segment = path.substr(pos);
-		else
-			segment = path.substr(pos, next_slash - pos);
-		if (segment == "..")
-			return (true);
-		if (next_slash == std::string::npos)
-			break;
-		pos = next_slash + 1;
-	}
-	return (false);
-}
-
 void handlePost(Client *cl)
 {
 	if (tryDispatchCgi(cl, *cl->cgiManager))
 		return;
+	
 	HttpRequest *req = cl->machine.getRequest();
+
 	std::string uri(req->uri.data(), req->uri.length());
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	if (cl->location->shared_config->upload_store.empty()) // if upload is not supported
@@ -180,40 +163,21 @@ void handlePost(Client *cl)
 	}
 	std::string target_path = cl->location->shared_config->root + "/" +
 							  cl->location->shared_config->upload_store + "/" + uri_suffix;
-	struct stat st;
-	size_t pos = target_path.find_last_of('/');
-	std::string parent_path = target_path.substr(0, pos);
-	if (stat(parent_path.c_str(), &st) == -1)
+	std::string parent_path = target_path.substr(0, target_path.find_last_of('/'));
+
+	HttpStatus::Code err_status;
+	if (!validateParentDir(parent_path, err_status))
 	{
-		if (errno == ENOENT)
-			req->status = HttpStatus::NOT_FOUND;
-		else if (errno == EACCES)
-			req->status = HttpStatus::FORBIDDEN;
-		else
-			req->status = HttpStatus::INTERNAL_SERVER_ERROR;
-		return;
-	}
-	else if (!S_ISDIR(st.st_mode))
-	{
-		req->status = HttpStatus::NOT_FOUND;
+		req->status = err_status;
 		return;
 	}
 	bool existed = false;
-	struct stat target_st;
-	if (stat(target_path.c_str(), &target_st) == 0)
+	if (!checkTargetPath(target_path, err_status, existed))
 	{
-		if (S_ISDIR(target_st.st_mode))
-		{
-			req->status = HttpStatus::CONFLICT;
-			return;
-		}
-		existed = true;
-	}
-	else if (errno != ENOENT)
-	{
-		req->status = HttpStatus::INTERNAL_SERVER_ERROR;
+		req->status = err_status;
 		return;
 	}
+
 	std::ofstream outfile(target_path.c_str(), std::ios::binary | std::ios::trunc);
 	if (!outfile.is_open())
 	{
@@ -245,6 +209,7 @@ void handlePost(Client *cl)
 			}
 		}
 	} while (res.status != RequestBody::READ_DONE);
+
 	req->body.resetReader();
 	outfile.close();
 	req->status = existed? HttpStatus::OK : HttpStatus::CREATED;	
