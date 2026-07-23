@@ -4,6 +4,9 @@
 #include "CgiHandler.hpp"
 #include "CgiManager.hpp"
 #include <vector>
+
+enum CgiDispatchResult { NOT_CGI, CGI_DISPATCHED, CGI_DISPATCH_FAILED};
+
 class Client;
 
 struct CgiDispatchInfo
@@ -27,6 +30,6 @@ bool dispatchCgi(const std::string &root, const std::string &uri_path,
 				 const std::map<std::string, std::string> &cgi_pass,
 				 CgiDispatchInfo &info);
 
-bool tryDispatchCgi(Client *cl, CgiManager &manager);
+CgiDispatchResult tryDispatchCgi(Client *cl, CgiManager &manager);
 
 #endif
