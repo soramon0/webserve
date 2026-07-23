@@ -263,6 +263,29 @@ TEST_CASE("FSM validates specific header fields") {
     CHECK(req->status == HttpStatus::BAD_REQUEST);
   }
 
+  SUBCASE("Reject signed Content-Length values") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Content-Length: -1\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+    CHECK(req->error == "content-length invalid or overflowed");
+  }
+
+  SUBCASE("Reject Content-Length with leading plus") {
+    std::string input = "GET / HTTP/1.0\r\n"
+                        "Content-Length: +5\r\n\r\n";
+
+    CHECK(!fsm.feedChunk(input.data(), input.length()));
+    REQUIRE(fsm.status.isMalformed());
+    HttpRequest *req = fsm.getRequest();
+    REQUIRE(req != nullptr);
+    CHECK(req->status == HttpStatus::BAD_REQUEST);
+  }
+
   SUBCASE("Accept valid Content-Length header") {
     std::string input = "GET / HTTP/1.0\r\n"
                         "Content-Length: 42\r\n\r\n";
@@ -368,6 +391,7 @@ TEST_CASE("FSM validates specific header fields") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->status == HttpStatus::BAD_REQUEST);
+    CHECK(req->error == "duplicate user-agent header");
   }
 
   SUBCASE("Reject empty User-Agent header") {
@@ -379,6 +403,7 @@ TEST_CASE("FSM validates specific header fields") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->status == HttpStatus::BAD_REQUEST);
+    CHECK(req->error == "user-agent cannot be empty");
   }
 
   SUBCASE("Reject duplicate Date header") {
@@ -391,6 +416,7 @@ TEST_CASE("FSM validates specific header fields") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->status == HttpStatus::BAD_REQUEST);
+    CHECK(req->error == "duplicate date header");
   }
 
   SUBCASE("Reject empty Date header") {
@@ -402,6 +428,7 @@ TEST_CASE("FSM validates specific header fields") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->status == HttpStatus::BAD_REQUEST);
+    CHECK(req->error == "date cannot be empty");
   }
 
   SUBCASE("Reject duplicate Content-Type header") {
@@ -414,6 +441,7 @@ TEST_CASE("FSM validates specific header fields") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->status == HttpStatus::BAD_REQUEST);
+    CHECK(req->error == "duplicate content-type header");
   }
 
   SUBCASE("Reject empty Content-Type header") {
