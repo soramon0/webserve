@@ -39,6 +39,7 @@ std::string resolvePath(const std::string& root, const std::string& uri)
 std::string getFilePath(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 	std::string uri(req->uri.data(), req->uri.length());
+	
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	std::string file_path = cl->location->shared_config->root + "/" + uri_suffix;
 	// std::string file_path = resolvePath(cl->location->shared_config->root, uri);
