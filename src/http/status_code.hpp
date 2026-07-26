@@ -25,8 +25,8 @@ public:
     BAD_GATEWAY = 502,
     SERVICE_UNAVAILABLE = 503,
     GATEWAY_TIMEOUT = 504,
-	CREATED = 201,
-	CONFLICT = 409
+	  CREATED = 201,
+	  CONFLICT = 409
   };
 
   HttpStatus() : value_(OK) {}
@@ -39,6 +39,8 @@ public:
   const char* toString() const {
     switch (value_) {
       case OK:                            return "200 OK";
+	    case CREATED:						            return "201 Created";
+      case NO_CONTENT:                    return "204 No Content";
       case MOVED_PERMANENTLY:             return "301 Moved Permanently";
       case FOUND:                         return "302 Found";
       case TEMPORARY_REDIRECT:            return "307 Temporary Redirect";
@@ -55,8 +57,7 @@ public:
       case BAD_GATEWAY:                   return "502 Bad Gateway";
       case SERVICE_UNAVAILABLE:           return "503 Service Unavailable";
       case GATEWAY_TIMEOUT:               return "504 Gateway Timeout";
-	  case CREATED:						  return "201 Created";
-	  case CONFLICT:					  return "409 Conflict";
+      case CONFLICT:					            return "409 Conflict";
       default:                            return "500 Internal Server Error";
     }
 }

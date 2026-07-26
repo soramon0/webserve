@@ -9,11 +9,39 @@
 #include <fcntl.h>
 #include <cerrno>
 
+std::string resolvePath(const std::string& root, const std::string& uri)
+{
+    std::vector<std::string> parts;
+    std::istringstream stream(uri);
+    std::string part;
+
+    while (std::getline(stream, part, '/'))
+    {
+        if (part.empty() || part == ".")
+            continue;
+        else if (part == "..")
+        {
+            if (parts.empty())
+                return "";
+            parts.pop_back();
+        }
+        else
+            parts.push_back(part);
+    }
+
+    std::string result = root;
+    for (size_t i = 0; i < parts.size(); i++)
+        result += "/" + parts[i];
+
+    return result;
+}
+
 std::string getFilePath(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 	std::string uri(req->uri.data(), req->uri.length());
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	std::string file_path = cl->location->shared_config->root + "/" + uri_suffix;
+	// std::string file_path = resolvePath(cl->location->shared_config->root, uri);
 
 	return file_path;
 }
@@ -144,14 +172,14 @@ void handleDelete(Client* cl) {
 	struct stat file_stat;
 	if (stat(file_path.c_str(), &file_stat) == -1)
 	{
-		Logger::info("DELETE: the path is not  found");
+		Logger::debug("DELETE: the path is not  found");
 		req->status = getHttpStatusError();
 		return;
 	}
 
 	if (std::remove(file_path.c_str()))
 	{
-		Logger::info("DELETE : can't delete this file/dir '%s'", file_path.c_str());
+		Logger::debug("DELETE : can't delete this file/dir '%s'", file_path.c_str());
 		req->status = getHttpStatusError();
 		return ;
 	}
