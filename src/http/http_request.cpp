@@ -108,10 +108,10 @@ void HttpRequest::splitQueryParams() {
     return;
 
   if (uri[i] == '?') {
-    size_t j = i;
+    size_t j = i + 1;
     while (j < uri.length() && uri[j] != '#')
       j++;
-    uriQuery = StringView(uri.data() + i, j - i);
+    uriQuery = StringView(uri.data() + i + 1, j - (i + 1));
     if (j < uri.length())
       uriFragment = StringView(uri.data() + j, uri.length() - j);
   } else {
