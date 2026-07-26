@@ -6,6 +6,7 @@
 #include <map>
 #include <vector>
 #include "../http/http_request.hpp"
+#include "CgiDispatchInfo.hpp"
 
 class Client;
 
@@ -30,9 +31,7 @@ public:
 	CgiHandler(const HttpRequest* request, Client* client);
 	~CgiHandler();
 
-	bool start(const std::string& interpreter_path, const std::string& script_path,
-			const std::string& server_name, const std::string& server_port,
-			const std::string& path_info, const std::string& root);
+	bool start(const CgiDispatchInfo& info);
 	void readOutput();
 	bool waitChild();
 	bool reap();

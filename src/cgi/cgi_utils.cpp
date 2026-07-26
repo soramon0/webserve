@@ -6,15 +6,7 @@
 #include "../server/Client.hpp"
 #include "logger/log.hpp"
 #include <cerrno>
-
-static std::string getCurrentDirectory() {
-    char buffer[4096];
-
-    if (getcwd(buffer, sizeof(buffer)) != NULL) {
-        return std::string(buffer);
-    }
-    return "";
-}
+#include <vector>
 
 void close_wrapper(int &fd)
 {
@@ -24,21 +16,58 @@ void close_wrapper(int &fd)
 	fd = -1;
 }
 
+static std::string normalisePath(const std::string &path)
+{
+	bool absolute = !path.empty() && path[0] == '/';
+	std::vector<std::string> parts;
+	size_t pos = 0;
+
+	while (pos < path.length())
+	{
+		size_t next = path.find('/', pos);
+		std::string segment = (next == std::string::npos) ? path.substr(pos) : path.substr(pos, next - pos);
+		pos = (next == std::string::npos) ? path.length() : next + 1;
+
+		if (segment.empty() || segment == ".")
+			continue;
+		if (segment == "..")
+		{
+			if (!parts.empty() && parts.back() != "..")
+				parts.pop_back();
+			else if (!absolute)
+				parts.push_back(segment);
+			continue;
+		}
+		parts.push_back(segment);
+	}
+
+	std::string result = absolute ? "/" : "";
+	for (size_t i = 0; i < parts.size(); i++)
+	{
+		result += parts[i];
+		if (i + 1 < parts.size())
+			result += "/";
+	}
+	if (result.empty())
+		result = absolute ? "/" : ".";
+	return (result);
+}
+
 bool resolveScriptPath(const std::string &root, const std::string &uri_path,
 					   std::string &script_path, std::string &path_info)
 {
-	Logger::debug("resolveScriptPath(): root = %s, uri_path = %s", root.c_str(), uri_path.c_str());
 	path_info.clear();
 	script_path.clear();
-	size_t pos = 0;
-	if (uri_path[0] == '/')
-		pos++;
+
+	size_t pos = (!uri_path.empty() && uri_path[0] == '/') ? 1 : 0;
 	std::string candidate_path = root;
 	struct stat st;
+
 	while (pos <= uri_path.length())
 	{
 		size_t next_slash = uri_path.find('/', pos);
 		std::string segment;
+
 		if (next_slash == std::string::npos)
 		{
 			segment = uri_path.substr(pos);
@@ -51,21 +80,19 @@ bool resolveScriptPath(const std::string &root, const std::string &uri_path,
 		}
 		if (segment.empty())
 			continue;
+
 		candidate_path += "/" + segment;
-		Logger::debug("pwd = '%s', path = '%s'\n", getCurrentDirectory().c_str(), candidate_path.c_str());
-		if (stat(candidate_path.c_str(), &st) == -1) {
-			Logger::debug("------------------------");
+
+		if (stat(candidate_path.c_str(), &st) == -1)
+		{
 			Logger::debug("resolveScriptPath(): candidate_path = %s, errno_str = %s", candidate_path.c_str(), strerror(errno));
-			Logger::debug("------------------------");
 			return (false);
 		}
+
 		if (S_ISREG(st.st_mode))
 		{
 			script_path = candidate_path;
-			if (next_slash == std::string::npos)
-				path_info = "";
-			else
-				path_info = uri_path.substr(next_slash);
+			path_info = (next_slash == std::string::npos) ? "" : uri_path.substr(next_slash);
 			return (true);
 		}
 	}
@@ -99,7 +126,8 @@ bool dispatchCgi(const std::string &root, const std::string &uri_path,
 				 const std::map<std::string, std::string> &cgi_pass,
 				 CgiDispatchInfo &info)
 {
-	if (!resolveScriptPath(root, uri_path, info.script_path, info.path_info))
+	info.resolved_root = normalisePath(root);
+	if (!resolveScriptPath(info.resolved_root, uri_path, info.script_path, info.path_info))
 		return (false);
 	if (!lookupInterpreter(cgi_pass, info.script_path, info.interpreter_path))
 		return (false);
@@ -115,11 +143,10 @@ CgiDispatchResult tryDispatchCgi(Client *cl, CgiManager &manager)
 	if (!dispatchCgi(cl->location->shared_config->root, uri_path,
 					 cl->location->shared_config->cgi_pass, info))
 		return (NOT_CGI);
-	
+
 	resolveServerVars(cl, info.server_name, info.server_port);
-	if (!manager.registerHandler(req, cl, info.interpreter_path, info.script_path,
-				info.server_name, info.server_port, info.path_info, cl->location->shared_config->root))
-				return (CGI_DISPATCH_FAILED);
+	if (!manager.registerHandler(req, cl, info))
+		return (CGI_DISPATCH_FAILED);
 	cl->cgi_pending = true;
 	return (CGI_DISPATCHED);
 }
