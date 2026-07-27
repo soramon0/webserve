@@ -90,6 +90,7 @@ void CgiHandler::addUriVars(std::vector<std::string> &vect_envp, const std::stri
 	vect_envp.push_back("QUERY_STRING=" + std::string(request->uriQuery.data(), request->uriQuery.length()));
 	if (!path_info.empty())
 		vect_envp.push_back("PATH_INFO=" + path_info);
+	//add SCRIPT_FILENAME
 }
 
 void CgiHandler::addHeaderVars(std::vector<std::string> &vect_envp) const

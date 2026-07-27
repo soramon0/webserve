@@ -163,3 +163,24 @@ CgiDispatchResult tryDispatchCgi(Client *cl, CgiManager &manager)
 	cl->cgi_pending = true;
 	return (CGI_DISPATCHED);
 }
+
+CgiDispatchResult tryDispatchResolvedCgi(Client *cl, CgiManager &manager, const std::string &resolved_file_path)
+{
+	HttpRequest *req = cl->machine.getRequest();
+	CgiDispatchInfo info;
+
+	info.resolved_root = normalisePath(cl->location->shared_config->root);
+	info.script_path = normalisePath(resolved_file_path);
+
+	if (!lookupInterpreter(cl->location->shared_config->cgi_pass, info.script_path, info.interpreter_path))
+		return (NOT_CGI);
+
+	info.path_info = "";
+	resolveServerVars(cl, info.server_name, info.server_port);
+
+	if (!manager.registerHandler(req, cl, info))
+		return (CGI_DISPATCH_FAILED);
+
+	cl->cgi_pending = true;
+	return (CGI_DISPATCHED);
+}

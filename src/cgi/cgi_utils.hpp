@@ -24,4 +24,5 @@ bool dispatchCgi(const std::string &root, const std::string &uri_path,
 
 CgiDispatchResult tryDispatchCgi(Client *cl, CgiManager &manager);
 
+CgiDispatchResult tryDispatchResolvedCgi(Client *cl, CgiManager &manager, const std::string &resolved_file_path);
 #endif
