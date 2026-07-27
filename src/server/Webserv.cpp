@@ -360,8 +360,8 @@ void Webserv::handleHttpResponse(SOCKET c)
 	Client *cl = clients[c];
 	HttpRequest *req = cl->machine.getRequest();
 
-	Logger::debug("handleHttpResponse: chunked=%d headers_sent=%d buffer_size=%zu",
-				  cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
+	//Logger::debug("handleHttpResponse: chunked=%d headers_sent=%d buffer_size=%zu",
+		//		  cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
 	if (cl->cgi_pending == false &&
 		(cl->machine.status.isMalformed()
 		|| (cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)))

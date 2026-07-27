@@ -85,6 +85,8 @@ void CgiHandler::addBodyVars(std::vector<std::string> &vect_envp) const
 void CgiHandler::addUriVars(std::vector<std::string> &vect_envp, const std::string &path_info) const
 {
 	vect_envp.push_back("SCRIPT_NAME=" + std::string(request->uri.data(), request->uri.length()));
+	std::string query = std::string(request->uriQuery.data(), request->uriQuery.length());
+	Logger::debug("CgiHandler::addUriVars(): query = '%s'", query.c_str());
 	vect_envp.push_back("QUERY_STRING=" + std::string(request->uriQuery.data(), request->uriQuery.length()));
 	if (!path_info.empty())
 		vect_envp.push_back("PATH_INFO=" + path_info);
@@ -171,22 +173,20 @@ bool CgiHandler::start(const CgiDispatchInfo &info)
 		state = CGI_ERROR;
 		return (false);
 	}
-	std::string script_arg = info.script_path.substr(info.resolved_root.size() + 1);
+	size_t pos = info.script_path.find_last_of('/');
+	if (pos == std::string::npos)
+	{
+		state = CGI_ERROR;
+		return (false);
+	}
+	std::string dir = info.script_path.substr(0, pos + 1);
+	std::string script_arg = info.script_path.substr(pos + 1);
 
 	char *argv[3];
 	argv[0] = const_cast<char *>(info.interpreter_path.c_str());
 	argv[1] = const_cast<char *>(script_arg.c_str());
 	argv[2] = NULL;
 	char **envp = buildEnvp(info.server_name, info.server_port, info.path_info);
-
-	size_t pos = info.script_path.find_last_of('/');
-	if (pos == std::string::npos)
-	{
-		freeEnvp(envp);
-		state = CGI_ERROR;
-		return (false);
-	}
-	std::string dir = info.script_path.substr(0, pos + 1);
 
 	pid = fork();
 	if (pid == -1)

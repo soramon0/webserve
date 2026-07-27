@@ -139,14 +139,27 @@ CgiDispatchResult tryDispatchCgi(Client *cl, CgiManager &manager)
 	HttpRequest *req = cl->machine.getRequest();
 	std::string uri_path(req->uri.data(), req->uri.length());
 
+	const std::string &loc_path = cl->location->path;
+	std::string dispatch_uri = uri_path;
+
+	// only strip the location prefix for directory locations
+	if (uri_path.size() > loc_path.size() &&
+		uri_path.compare(0, loc_path.size(), loc_path) == 0)
+	{
+		dispatch_uri = uri_path.substr(loc_path.size());
+		if (dispatch_uri.empty() || dispatch_uri[0] != '/')
+			dispatch_uri = "/" + dispatch_uri;
+	}
+
 	CgiDispatchInfo info;
-	if (!dispatchCgi(cl->location->shared_config->root, uri_path,
+	if (!dispatchCgi(cl->location->shared_config->root, dispatch_uri,
 					 cl->location->shared_config->cgi_pass, info))
 		return (NOT_CGI);
 
 	resolveServerVars(cl, info.server_name, info.server_port);
 	if (!manager.registerHandler(req, cl, info))
 		return (CGI_DISPATCH_FAILED);
+
 	cl->cgi_pending = true;
 	return (CGI_DISPATCHED);
 }
