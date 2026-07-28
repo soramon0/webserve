@@ -1,4 +1,48 @@
-const UPLOAD_DIR = "/uploads/";
+// Ensure this matches your config location path (/upload/ or /uploads/)
+const UPLOAD_DIR = "/upload/";
+
+// --- 5. Raw Upload Handler (No multipart/form-data) -------------------
+async function handleRawUpload(event) {
+  event.preventDefault();
+
+  const fileInput = document.getElementById("raw-file-input");
+  const statusDiv = document.getElementById("upload-status");
+
+  if (!fileInput.files.length) {
+    if (statusDiv) statusDiv.textContent = "Please select a file first.";
+    return false;
+  }
+
+  const file = fileInput.files[0];
+  if (statusDiv) statusDiv.textContent = "Uploading...";
+
+  try {
+    // Sends pure raw bytes/text directly to the file's target URL
+    const uploadUrl = `${UPLOAD_DIR}${encodeURIComponent(file.name)}`;
+    const res = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        // Sets MIME type or defaults to raw binary stream
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file // Sends the raw File/Blob payload directly
+    });
+
+    console.log(`POST ${uploadUrl} -> ${res.status}`);
+
+    if (res.ok || res.status === 201) {
+      if (statusDiv) statusDiv.textContent = `Upload successful! (${res.status})`;
+      loadFiles(); // Refresh directory list automatically
+    } else {
+      if (statusDiv) statusDiv.textContent = `Upload failed with status: ${res.status}`;
+    }
+  } catch (err) {
+    console.error("Upload error:", err);
+    if (statusDiv) statusDiv.textContent = `Upload error: ${err.message}`;
+  }
+
+  return false;
+}
 
 // --- 6. List + delete files -------------------------------------------
 // Parses the server's autoindex HTML to get filenames. If your autoindex
@@ -57,8 +101,13 @@ async function testWrongMethod(event) {
 // --- 4. Oversized body -> expect 413 -----------------------------------
 async function testHugeBody(event) {
   event.preventDefault();
-  const bigBody = "x".repeat(50 * 1024 * 1024); // 50MB, adjust vs your client_max_body_size
-  const res = await fetch("/uploads/", { method: "POST", body: bigBody });
+  // Sends a 50MB raw string payload to trigger your 10Mib limit
+  const bigBody = "x".repeat(50 * 1024 * 1024);
+  const res = await fetch(`${UPLOAD_DIR}large_test.txt`, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: bigBody
+  });
   alert(`POST oversized body -> ${res.status} ${res.statusText}`);
   return false;
 }
