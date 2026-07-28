@@ -237,8 +237,8 @@ void Webserv::handleNewConnection(SOCKET srv)
 		if (set_nonblocking(c->socket) == -1)
 		{
 			Logger::error("fcntl failed"); // ash waq3 hna
-			delete c;
 			close(c->socket);
+			delete c;
 			continue;
 		}
 		if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1)
