@@ -364,7 +364,8 @@ void Webserv::handleHttpResponse(SOCKET c)
 		//		  cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
 	if (cl->cgi_pending == false &&
 		(cl->machine.status.isMalformed()
-		|| (cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)))
+		|| 
+		(cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)))
 	{
 		processRequest(cl);
 	}

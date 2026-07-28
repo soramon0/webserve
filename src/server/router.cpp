@@ -39,6 +39,8 @@ void      processRequest(Client* c)
 	}
 	c->location = loc;
 
+	if (c->machine.status.isMalformed())
+		return;
 	if (req->status == HttpStatus::METHOD_NOT_ALLOWED)
     	return;
 
