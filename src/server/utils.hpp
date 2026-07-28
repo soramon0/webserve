@@ -6,7 +6,7 @@
 #include <string>
 #include "../config/shared_config.hpp"
 
-class Client;
+struct Client;
 
 int set_nonblocking(int fd);
 int epoll_instance();

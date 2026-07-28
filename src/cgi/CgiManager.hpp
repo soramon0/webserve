@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <map>
 
-class Client;
+struct Client;
 
 #define CGI_TIMEOUT_SECONDS  10
 

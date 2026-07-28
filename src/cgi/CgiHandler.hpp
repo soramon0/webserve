@@ -8,7 +8,7 @@
 #include "../http/http_request.hpp"
 #include "CgiDispatchInfo.hpp"
 
-class Client;
+struct Client;
 
 enum CgiState
 {

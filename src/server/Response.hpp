@@ -5,7 +5,7 @@
 #include "logger/log.hpp"
 #include <sstream>
 
-class Client;
+struct Client;
 
 class Response
 {

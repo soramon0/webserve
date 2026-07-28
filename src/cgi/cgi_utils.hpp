@@ -8,7 +8,7 @@
 
 enum CgiDispatchResult { NOT_CGI, CGI_DISPATCHED, CGI_DISPATCH_FAILED };
 
-class Client;
+struct Client;
 
 void close_wrapper(int &fd);
 
