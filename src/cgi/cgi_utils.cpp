@@ -125,16 +125,20 @@ bool dispatchCgi(const std::string &root, const std::string &uri_path,
 				 const std::map<std::string, std::string> &cgi_pass,
 				 CgiDispatchInfo &info)
 {
+	Logger::debug("inside dispatchCgi()");
 	info.resolved_root = normalisePath(root);
 	if (!resolveScriptPath(info.resolved_root, uri_path, info.script_path, info.path_info))
 		return (false);
+	Logger::debug("path is resolved : '%s'", info.script_path.c_str());
 	if (!lookupInterpreter(cgi_pass, info.script_path, info.interpreter_path))
 		return (false);
+	Logger::debug("interpreter was found");
 	return (true);
 }
 
 CgiDispatchResult tryDispatchCgi(Client *cl, CgiManager &manager)
 {
+	Logger::debug("inside tryDispatchCgi()");
 	HttpRequest *req = cl->machine.getRequest();
 	std::string uri_path(req->uri.data(), req->uri.length());
 

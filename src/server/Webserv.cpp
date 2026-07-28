@@ -331,7 +331,7 @@ void Webserv::timeoutClient(SOCKET c)
 	// HttpStatus status = clients[c]->machine.getRequest()->status;
 	std::string resp =
 		"HTTP/1.1 408 Request Timeout\r\n"
-		"Content-Length: 0\r\n"
+		"Content-Length: 54\r\n"
 		"Connection: close\r\n"
 		"\r\n";
 		// "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";

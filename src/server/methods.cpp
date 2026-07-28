@@ -57,6 +57,7 @@ HttpStatus::Code getHttpStatusError() {
 
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
+	Logger::debug("GET methos-------------");
 
 	CgiDispatchResult cgi_result = tryDispatchCgi(cl, *cl->cgiManager);
 	if (cgi_result == CGI_DISPATCHED)
@@ -89,6 +90,7 @@ void handleGet(Client* cl) {
 			struct stat index_stat;
 			if (stat(index_path.c_str(), &index_stat) == 0)
 			{
+				Logger::debug("handleGet() : index_path = '%s'", index_path.c_str());
 				CgiDispatchResult cgi_result = tryDispatchResolvedCgi(cl, *cl->cgiManager, index_path);
 				if (cgi_result == CGI_DISPATCHED)
 					return;
@@ -219,6 +221,7 @@ void handlePost(Client *cl)
 		return;
 	}
 
+	Logger::debug("POST method------------");
 	std::string uri(req->uri.data(), req->uri.length());
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	if (cl->location->shared_config->upload_store.empty()) // if upload is not supported
@@ -233,6 +236,7 @@ void handlePost(Client *cl)
 	}
 	std::string target_path = cl->location->shared_config->root + "/" +
 							  cl->location->shared_config->upload_store + "/" + uri_suffix;
+	Logger::debug("handlePost -> target_path = '%s'", target_path.c_str());
 	std::string parent_path = target_path.substr(0, target_path.find_last_of('/'));
 
 	HttpStatus::Code err_status;
