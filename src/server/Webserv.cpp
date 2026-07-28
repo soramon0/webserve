@@ -141,7 +141,7 @@ void Webserv::eventLoop()
 			ev = events[i].events;
 			fd = static_cast<SOCKET>(events[i].data.fd);
 
-			if (ev & (EPOLLERR | EPOLLHUP))
+			if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
 			{
 				if (cgiManager->owns(fd))
 					cgiManager->onReadable(events[i]);
@@ -223,7 +223,7 @@ void Webserv::handleNewConnection(SOCKET srv)
 		if (c->socket == -1)
 		{
 			delete c;
-			Logger::error("accept failed");
+			Logger::error("accept: %s", strerror(errno));
 			break;
 		}
 
@@ -238,7 +238,7 @@ void Webserv::handleNewConnection(SOCKET srv)
 			delete c;
 			continue;
 		}
-		if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1)
+		if (add_to_epoll(epoll_fd, c->socket, EPOLLIN | EPOLLRDHUP) == -1)
 		{
 			delete c;
 			continue;
@@ -258,13 +258,13 @@ void Webserv::handleClientData(SOCKET c)
 
 	char buf[KIB(1) / 2];
 	ssize_t bytes = recv(cl->socket, buf, sizeof(buf), 0);
-	if (bytes == 0)
+	if (bytes <= 0)
 	{
 		removeClient(c);
 		return;
 	}
-	else if (bytes < 0)
-		return ;
+	// else if (bytes < 0)
+	// 	return ;
 	// Timeout updates
 	cl->last_activity = time(NULL);
 
@@ -280,7 +280,7 @@ void Webserv::handleClientData(SOCKET c)
 	if (!cl->machine.status.isPending())
 	{
 		req->printRequest();
-		modify_epoll(epoll_fd, c, EPOLLOUT);
+		modify_epoll(epoll_fd, c, EPOLLOUT | EPOLLRDHUP);
 	}
 }
 
@@ -426,6 +426,11 @@ void Webserv::handleHttpResponse(SOCKET c)
 		cl->response.buffer.size() - cl->response.offset, 0);
 	
 	cl->last_activity = time(NULL);
+
+	if (sent <= 0) {
+		removeClient(c);
+		return;
+	}
 
 	if (sent > 0)
 		cl->response.offset += sent;
