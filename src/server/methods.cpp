@@ -9,11 +9,40 @@
 #include <fcntl.h>
 #include <cerrno>
 
+std::string resolvePath(const std::string& root, const std::string& uri)
+{
+    std::vector<std::string> parts;
+    std::istringstream stream(uri);
+    std::string part;
+
+    while (std::getline(stream, part, '/'))
+    {
+        if (part.empty() || part == ".")
+            continue;
+        else if (part == "..")
+        {
+            if (parts.empty())
+                return "";
+            parts.pop_back();
+        }
+        else
+            parts.push_back(part);
+    }
+
+    std::string result = root;
+    for (size_t i = 0; i < parts.size(); i++)
+        result += "/" + parts[i];
+
+    return result;
+}
+
 std::string getFilePath(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 	std::string uri(req->uri.data(), req->uri.length());
+	
 	std::string uri_suffix = uri.substr(cl->location->path.size());
-	std::string file_path = cl->location->shared_config->root + "/" + uri_suffix;
+	// std::string file_path = cl->location->shared_config->root + "/" + uri_suffix;
+	std::string file_path = resolvePath(cl->location->shared_config->root, uri_suffix);
 
 	return file_path;
 }
@@ -21,10 +50,11 @@ std::string getFilePath(Client* cl) {
 HttpStatus::Code getHttpStatusError() {
 	if (errno == ENOENT) return HttpStatus::NOT_FOUND;
 	if (errno == EACCES) return HttpStatus::FORBIDDEN;
+	if (errno == EISDIR) return HttpStatus::FORBIDDEN;
+	if (errno == ENOTEMPTY) return HttpStatus::FORBIDDEN; // if you ever attempt rmdir()
 	return HttpStatus::INTERNAL_SERVER_ERROR;
 }
 
-// TODO : .. : reject in get & delete: qlbi ktr
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 
@@ -133,6 +163,15 @@ are rejected before filesystem operations occur.
 
 decode...
  */
+
+void replaceAll(std::string& str, const std::string& from, const std::string& to) {
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // Move past the new replacement
+    }
+}
+
 void handleDelete(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 
@@ -146,21 +185,21 @@ void handleDelete(Client* cl) {
 	}
 
 	std::string file_path = getFilePath(cl);
-
+	replaceAll(file_path, "\%2F", "/");
 	Logger::info("uri is : %s", file_path.c_str());
 
 	// check the file existance
 	struct stat file_stat;
 	if (stat(file_path.c_str(), &file_stat) == -1)
 	{
-		Logger::info("DELETE: the path is not  found");
+		Logger::debug("DELETE: the path is not  found");
 		req->status = getHttpStatusError();
 		return;
 	}
 
 	if (std::remove(file_path.c_str()))
 	{
-		Logger::info("DELETE : can't delete this file/dir '%s'", file_path.c_str());
+		Logger::debug("DELETE : can't delete this file/dir '%s'", file_path.c_str());
 		req->status = getHttpStatusError();
 		return ;
 	}

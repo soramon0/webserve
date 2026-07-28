@@ -56,10 +56,7 @@ void Webserv::start()
 	}
 
 	if (servers.size() == 0)
-	{
-		Logger::error("could not register servers.");
-		return;
-	}
+    	throw std::runtime_error("could not register any servers");
 
 	eventLoop();
 }
@@ -141,7 +138,7 @@ void Webserv::eventLoop()
 			ev = events[i].events;
 			fd = static_cast<SOCKET>(events[i].data.fd);
 
-			if (ev & (EPOLLERR | EPOLLHUP))
+			if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
 			{
 				if (cgiManager->owns(fd))
 					cgiManager->onReadable(events[i]);
@@ -168,7 +165,7 @@ void Webserv::eventLoop()
 		processFinishedCgi();
 	}
 }
-// TODO: send chuncked response
+
 // TODO handle internal server errors
 SOCKET Webserv::createSocket(int id)
 {
@@ -185,28 +182,34 @@ SOCKET Webserv::createSocket(int id)
 	std::string host = config.servers[id]->interface;
 
 	struct addrinfo *addr;
-	if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr))
-	{
-		Logger::fatal("getaddrinfo failed");
+	if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr)) {
+        throw std::runtime_error("getaddrinfo failed for " + host + ":" + port);
 	}
 
 	int socket_listen =
 		socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-	if (!ISVALIDSOCKET(socket_listen))
-		Logger::fatal("socket failed");
-	// TODO: check why bind fails
+	if (!ISVALIDSOCKET(socket_listen)) {
+        freeaddrinfo(addr);
+        throw std::runtime_error("socket() failed: " + std::string(strerror(errno)));
+    }
+
 	int opt = 1;
 	if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR, &opt,
 				   sizeof(opt)))
 		Logger::error("setsockopt failed");
 
-	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen))
-		Logger::fatal("bind failed");
+	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen)) {
+        freeaddrinfo(addr);
+        close(socket_listen);
+        throw std::runtime_error("bind() failed on " + host + ":" + port + ": " + strerror(errno));
+    }
 	freeaddrinfo(addr);
 
 	Logger::info("Listening on http://%s:%s ...", host.c_str(), port.c_str());
-	if (listen(socket_listen, SOMAXCONN))
-		Logger::fatal("listen failed");
+	if (listen(socket_listen, SOMAXCONN)) {
+        close(socket_listen);
+        throw std::runtime_error("listen() failed: " + std::string(strerror(errno)));
+    }
 
 	return socket_listen;
 }
@@ -217,16 +220,13 @@ void Webserv::handleNewConnection(SOCKET srv)
 
 	while (max_accepts-- > 0)
 	{
-		Client *c = new Client(); // TODO: there is a conditional jump here
+		Client *c = new Client();
 		c->socket = accept(srv, &c->addr, &c->addrlen);
 
 		if (c->socket == -1)
 		{
 			delete c;
-			if (errno == EAGAIN || errno == EWOULDBLOCK) // TODO check if this is allowed
-				break;
-
-			Logger::error("accept failed");
+			Logger::error("accept: %s", strerror(errno));
 			break;
 		}
 
@@ -236,12 +236,12 @@ void Webserv::handleNewConnection(SOCKET srv)
 
 		if (set_nonblocking(c->socket) == -1)
 		{
-			Logger::error("fcntl failed"); // ash waq3 hna
-			delete c;
+			Logger::error("fcntl failed");
 			close(c->socket);
+			delete c;
 			continue;
 		}
-		if (add_to_epoll(epoll_fd, c->socket, EPOLLIN) == -1)
+		if (add_to_epoll(epoll_fd, c->socket, EPOLLIN | EPOLLRDHUP) == -1)
 		{
 			delete c;
 			continue;
@@ -249,7 +249,7 @@ void Webserv::handleNewConnection(SOCKET srv)
 
 		c->machine.setServer(c->srv);
 		clients[c->socket] = c;
-		Logger::info("client Connected...");
+		Logger::info("client Connected... fd=%d", c->socket);
 	}
 }
 
@@ -266,6 +266,8 @@ void Webserv::handleClientData(SOCKET c)
 		removeClient(c);
 		return;
 	}
+	// else if (bytes < 0)
+	// 	return ;
 	// Timeout updates
 	cl->last_activity = time(NULL);
 
@@ -281,7 +283,7 @@ void Webserv::handleClientData(SOCKET c)
 	if (!cl->machine.status.isPending())
 	{
 		req->printRequest();
-		modify_epoll(epoll_fd, c, EPOLLOUT);
+		modify_epoll(epoll_fd, c, EPOLLOUT | EPOLLRDHUP);
 	}
 }
 
@@ -326,19 +328,19 @@ void Webserv::checkTimeouts()
 
 void Webserv::timeoutClient(SOCKET c)
 {
+	// HttpStatus status = clients[c]->machine.getRequest()->status;
 	std::string resp =
 		"HTTP/1.1 408 Request Timeout\r\n"
 		"Content-Length: 0\r\n"
 		"Connection: close\r\n"
 		"\r\n";
+		// "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";
 	send(c, resp.c_str(), resp.size(), 0);
 	removeClient(c);
 }
 
 void Webserv::removeClient(SOCKET c)
 {
-	Logger::debug("dropping client(%d)", c);
-
 	std::map<SOCKET, Client *>::iterator it = clients.find(c);
 	if (it == clients.end())
 	{
@@ -350,6 +352,7 @@ void Webserv::removeClient(SOCKET c)
 	clients.erase(c);
 	close(c);
 	delete cl;
+	Logger::debug("dropping client(%d)", c);
 }
 
 void Webserv::handleHttpResponse(SOCKET c)
@@ -360,13 +363,18 @@ void Webserv::handleHttpResponse(SOCKET c)
 	Client *cl = clients[c];
 	HttpRequest *req = cl->machine.getRequest();
 
-	//Logger::debug("handleHttpResponse: chunked=%d headers_sent=%d buffer_size=%zu",
-		//		  cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
+	if (cl->machine.status.isPending())
+		return;
+
+	// Logger::debug("handleHttpResponse: chunked=%d headers_sent=%d buffer_size=%zu",
+	// 			  cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
+
 	if (cl->cgi_pending == false &&
 		(cl->machine.status.isMalformed()
 		|| 
 		(cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)))
 	{
+		Logger::debug("Is Malformed ? -> %d", cl->machine.status.isMalformed());
 		processRequest(cl);
 	}
 
@@ -380,9 +388,10 @@ void Webserv::handleHttpResponse(SOCKET c)
 		{
 			mimetype_map empty_types;
 			mimetype_map &types = (cl->location && cl->location->shared_config)
-									  ? cl->location->shared_config->types
-									  : empty_types;
+								? cl->location->shared_config->types
+								: empty_types;
 			std::string content_type = getContentType(cl->file_path, types);
+			Logger::debug("status code is : %d", req->status.asInt());
 			cl->response.build(req->status, cl, content_type, cl->redirect_url);
 		}
 	}
@@ -394,6 +403,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 			send(c, cl->response.headers.c_str(),
 				 cl->response.headers.size(), 0);
 			cl->response.headers_sent = true;
+			cl->last_activity = time(NULL);
 			return;
 		}
 		// send next chunk of file
@@ -403,6 +413,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 		{
 			send(c, chunk, bytes, 0);
 			cl->response.offset += bytes;
+			cl->last_activity = time(NULL);
 		}
 
 		if (bytes <= 0 || cl->response.offset >= cl->response.file_size)
@@ -417,6 +428,13 @@ void Webserv::handleHttpResponse(SOCKET c)
 	ssize_t sent = send(
 		c, cl->response.buffer.c_str() + cl->response.offset,
 		cl->response.buffer.size() - cl->response.offset, 0);
+	
+	cl->last_activity = time(NULL);
+
+	if (sent <= 0) {
+		removeClient(c);
+		return;
+	}
 
 	if (sent > 0)
 		cl->response.offset += sent;

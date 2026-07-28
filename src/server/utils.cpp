@@ -9,11 +9,14 @@
 #include <map>
 
 int set_nonblocking(int fd) {
-    int flags = fcntl(fd, F_GETFL, 0);// TODO: remove get
+    int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) return -1;
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK | FD_CLOEXEC);// read about tjis
-}
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) return -1;
 
+    int fdflags = fcntl(fd, F_GETFD, 0);
+    if (fdflags == -1) return -1;
+    return fcntl(fd, F_SETFD, fdflags | FD_CLOEXEC);
+}
 int epoll_instance()
 {
     int fd = epoll_create(1);
@@ -118,7 +121,7 @@ std::string getContentType(const std::string& path, const mimetype_map& types)
 
     return "text/plain";
 }
-// TODO: fix the error by appending the file name to the root
+
 std::string getErrorBody(Client* cl, HttpStatus status)
 {
     if (cl->location && cl->location->shared_config)
@@ -133,11 +136,14 @@ std::string getErrorBody(Client* cl, HttpStatus status)
             if (!file.is_open()) {
                 Logger::debug("Can't open the file %s", error_page_file.c_str());
             }
-            Logger::debug("reading the custom 404...");
+            Logger::debug("reading the custom error page...");
             std::string body((std::istreambuf_iterator<char>(file)),
                                 std::istreambuf_iterator<char>());
             return body;
         }
+        else
+            Logger::debug("not found custom error page of status: %d", status.asInt());
+
     }
     // fallback to default
     return "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";

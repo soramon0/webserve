@@ -88,7 +88,6 @@ bool resolveScriptPath(const std::string &root, const std::string &uri_path,
 			Logger::debug("resolveScriptPath(): candidate_path = %s, errno_str = %s", candidate_path.c_str(), strerror(errno));
 			return (false);
 		}
-
 		if (S_ISREG(st.st_mode))
 		{
 			script_path = candidate_path;
