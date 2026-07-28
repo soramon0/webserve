@@ -61,3 +61,40 @@ bool checkTargetPath(const std::string& target_path, HttpStatus::Code& out_statu
 	}
 	return (true);
 }
+
+std::string normalisePath(const std::string &path)
+{
+	bool absolute = !path.empty() && path[0] == '/';
+	std::vector<std::string> parts;
+	size_t pos = 0;
+
+	while (pos < path.length())
+	{
+		size_t next = path.find('/', pos);
+		std::string segment = (next == std::string::npos) ? path.substr(pos) : path.substr(pos, next - pos);
+		pos = (next == std::string::npos) ? path.length() : next + 1;
+
+		if (segment.empty() || segment == ".")
+			continue;
+		if (segment == "..")
+		{
+			if (!parts.empty() && parts.back() != "..")
+				parts.pop_back();
+			else if (!absolute)
+				parts.push_back(segment);
+			continue;
+		}
+		parts.push_back(segment);
+	}
+
+	std::string result = absolute ? "/" : "";
+	for (size_t i = 0; i < parts.size(); i++)
+	{
+		result += parts[i];
+		if (i + 1 < parts.size())
+			result += "/";
+	}
+	if (result.empty())
+		result = absolute ? "/" : ".";
+	return (result);
+}
