@@ -64,7 +64,7 @@ TEST_CASE("FSM correctly handles uri with query params") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->uri == "/search");
-    CHECK(req->uriQuery == "?age=15&name=sora");
+    CHECK(req->uriQuery == "age=15&name=sora");
     CHECK(req->uriFragment.empty());
   }
 
@@ -92,7 +92,7 @@ TEST_CASE("FSM correctly handles uri with query params") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->uri == "/search");
-    CHECK(req->uriQuery == "?age=15&name=sora");
+    CHECK(req->uriQuery == "age=15&name=sora");
     CHECK(req->uriFragment == "#aboutus");
   }
 
@@ -120,7 +120,7 @@ TEST_CASE("FSM correctly handles uri with query params") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->uri == "/dashboard");
-    CHECK(req->uriQuery == "?page=1&pageSize=10");
+    CHECK(req->uriQuery == "page=1&pageSize=10");
     CHECK(req->uriFragment.empty());
   }
 
@@ -134,7 +134,7 @@ TEST_CASE("FSM correctly handles uri with query params") {
     HttpRequest *req = fsm.getRequest();
     REQUIRE(req != nullptr);
     CHECK(req->uri == "/");
-    CHECK(req->uriQuery == "?page=1&pageSize=10");
+    CHECK(req->uriQuery == "page=1&pageSize=10");
     CHECK(req->uriFragment.empty());
   }
 

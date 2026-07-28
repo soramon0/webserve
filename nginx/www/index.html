@@ -1,11 +1,78 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>nginx test</title>
-  </head>
-  <body>
-    <h1>Hello World</h1>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <title>webserv // showcase</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>webserv <span>showcase &amp; test harness</span></h1>
+    <p class="subtitle">HTTP/1.1 server — C++98 — epoll multiplexing</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. Static file serving</h2>
+      <p>You're looking at it — this page, its CSS, and an image are all served from disk with correct
+        <code>Content-Type</code> detection.</p>
+      <img src="assets/logo.png" alt="server icon" width="80" onerror="this.outerHTML='<em>(add assets/logo.png to test image Content-Type)</em>'">
+    </section>
+
+    <section class="card">
+      <h2>2. Directory listing (autoindex)</h2>
+      <p><a href="/uploads/">/uploads/</a> — autoindex <strong>on</strong>, no index file → generated listing.</p>
+      <p><a href="/protected/">/protected/</a> — autoindex <strong>off</strong> → expect 403.</p>
+    </section>
+
+    <section class="card">
+      <h2>3. Redirection</h2>
+      <p><a href="/old-page">/old-page</a> → should 301/302 redirect to a new location.</p>
+    </section>
+
+    <section class="card">
+      <h2>4. Custom error pages</h2>
+      <ul class="linklist">
+        <li><a href="/this-does-not-exist">/this-does-not-exist</a> → 404</li>
+        <li><a href="/protected/">/protected/</a> → 403</li>
+        <li><a href="/get-only/" onclick="return testWrongMethod(event)">POST to a GET-only location</a> → 405</li>
+        <li><a href="#" onclick="return testHugeBody(event)">Send an oversized body</a> → 413</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>5. Upload (POST)</h2>
+      <form action="/uploads/" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <button type="submit">Upload</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>6. Delete (JS / fetch)</h2>
+      <p>Lists files in <code>/uploads/</code> and deletes them via <code>DELETE</code> requests.</p>
+      <ul id="file-list"><li>loading…</li></ul>
+      <button onclick="loadFiles()">Refresh list</button>
+    </section>
+
+    <section class="card">
+      <h2>7. CGI</h2>
+      <p><a href="/cgi-bin/hello.py">/cgi-bin/hello.py</a> — dynamic output from a script.</p>
+      <p><a href="/cgi-bin/script.py">/cgi-bin/script.py</a> — dynamic output from a script.</p>
+      <p><a href="/cgi-bin/test.py">/cgi-bin/test.py</a> — dynamic output from a script.</p>
+      <p><a href="/cgi-bin/timeout.py">/cgi-bin/timeout.py</a> — dynamic output from a script.</p>
+    </section>
+
+    <section class="card">
+      <h2>8. Raw request lab</h2>
+      <p>For the tricky stuff (double slashes, <code>../</code>, percent-encoding, missing Host header),
+        use curl / netcat instead of the browser — the browser normalizes URLs before sending them.</p>
+      <pre>curl -v http://localhost:8080/uploads/../uploads/
+curl -v http://localhost:8080/a%2e%2e/
+printf 'GET / HTTP/1.1\r\n\r\n' | nc localhost 8080</pre>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
 </html>

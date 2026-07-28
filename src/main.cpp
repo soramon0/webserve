@@ -20,7 +20,9 @@ int main(int ac, char *av[]) {
     if (DEBUG) {
       std::cout << config->toString() << std::endl;
     }
-    Webserv(*config).start();
+    
+    Webserv server(*config);
+    server.start();
 
     delete config;
   } catch (const std::exception &e) {

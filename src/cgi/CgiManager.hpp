@@ -2,6 +2,7 @@
 #define CGIMANAGER_HPP
 
 #include "CgiHandler.hpp"
+#include "CgiDispatchInfo.hpp"
 #include <sys/epoll.h>
 #include "../config/shared_config.hpp"
 #include <vector>
@@ -25,12 +26,9 @@ public:
 	~CgiManager();
 
 	bool owns(int fd) const;
-	bool registerHandler(const HttpRequest* request, Client* client,
-						const std::string& interpreter_path, const std::string& script_path,
-						const std::string& server_name, const std::string& server_port, const std::string& path_info, const std::string& root);
+	bool registerHandler(const HttpRequest* request, Client* client, const CgiDispatchInfo& info);
 	void removeHandler(CgiHandler* handler);
 	void onReadable(struct epoll_event& ev);
-	//CgiHandler* claim(const HttpRequest* request);
 	void reapPending();
 	void checkTimeouts();
 	std::vector<CgiHandler*> claimAllFinished();

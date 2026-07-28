@@ -12,15 +12,6 @@
 #include <vector>
 #include "logger/log.hpp"
 
-static std::string getCurrentDirectory() {
-    char buffer[4096];
-
-    if (getcwd(buffer, sizeof(buffer)) != NULL) {
-        return std::string(buffer);
-    }
-    return "";
-}
-
 CgiHandler::CgiHandler(const HttpRequest *request, Client *client)
 	: pid(-1), exit_status(0), cgi_output(""), state(READING_OUTPUT), request(request), client(client), start_time(0)
 {
@@ -91,12 +82,15 @@ void CgiHandler::addBodyVars(std::vector<std::string> &vect_envp) const
 		vect_envp.push_back("CONTENT_TYPE=" + std::string(ct->data(), ct->length()));
 }
 
-void CgiHandler::addUriVars(std::vector<std::string> &vect_envp, const std::string& path_info) const
+void CgiHandler::addUriVars(std::vector<std::string> &vect_envp, const std::string &path_info) const
 {
 	vect_envp.push_back("SCRIPT_NAME=" + std::string(request->uri.data(), request->uri.length()));
+	std::string query = std::string(request->uriQuery.data(), request->uriQuery.length());
+	Logger::debug("CgiHandler::addUriVars(): query = '%s'", query.c_str());
 	vect_envp.push_back("QUERY_STRING=" + std::string(request->uriQuery.data(), request->uriQuery.length()));
 	if (!path_info.empty())
 		vect_envp.push_back("PATH_INFO=" + path_info);
+	//add SCRIPT_FILENAME
 }
 
 void CgiHandler::addHeaderVars(std::vector<std::string> &vect_envp) const
@@ -128,7 +122,7 @@ void CgiHandler::freeEnvp(char **envp)
 	delete[] envp;
 }
 
-char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &server_port, const std::string& path_info) const
+char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &server_port, const std::string &path_info) const
 {
 	std::vector<std::string> vect_envp;
 
@@ -140,9 +134,7 @@ char **CgiHandler::buildEnvp(const std::string &server_name, const std::string &
 	return (vectorToEnvp(vect_envp));
 }
 
-bool CgiHandler::start(const std::string &interpreter_path, const std::string &script_path,
-					   const std::string &server_name, const std::string &server_port,
-						const std::string& path_info, const std::string &root)
+bool CgiHandler::start(const CgiDispatchInfo &info)
 {
 	if (pipe(pipe_out) == -1)
 	{
@@ -170,28 +162,33 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 	}
 	Fd body_guard(body_fd);
 
-	if (interpreter_path.empty() || interpreter_path[0] != '/')
+	if (info.interpreter_path.empty() || info.interpreter_path[0] != '/')
 	{
 		state = CGI_ERROR;
 		return (false);
 	}
-	std::string s = script_path.substr(root.size() + 1);
-	(void)s;
-	char *argv[3];
-	argv[0] = const_cast<char *>(interpreter_path.c_str());
-	argv[1] = const_cast<char *>(s.c_str());
-	argv[2] = NULL;
-	char **envp = buildEnvp(server_name, server_port, path_info);
 
-	size_t pos = script_path.find_last_of('/');
+	if (info.script_path.size() <= info.resolved_root.size() + 1 ||
+		info.script_path.compare(0, info.resolved_root.size(), info.resolved_root) != 0)
+	{
+		state = CGI_ERROR;
+		return (false);
+	}
+	size_t pos = info.script_path.find_last_of('/');
 	if (pos == std::string::npos)
 	{
-		freeEnvp(envp);
 		state = CGI_ERROR;
 		return (false);
 	}
-	std::string dir = script_path.substr(0, pos + 1);
-	
+	std::string dir = info.script_path.substr(0, pos + 1);
+	std::string script_arg = info.script_path.substr(pos + 1);
+
+	char *argv[3];
+	argv[0] = const_cast<char *>(info.interpreter_path.c_str());
+	argv[1] = const_cast<char *>(script_arg.c_str());
+	argv[2] = NULL;
+	char **envp = buildEnvp(info.server_name, info.server_port, info.path_info);
+
 	pid = fork();
 	if (pid == -1)
 	{
@@ -209,19 +206,15 @@ bool CgiHandler::start(const std::string &interpreter_path, const std::string &s
 		close_wrapper(pipe_out[1]);
 		close_wrapper(body_fd);
 
-	std::string curdir = getCurrentDirectory();
-	Logger::debug("pwd = '%s'\n", curdir.c_str());
-
 		if (chdir(dir.c_str()) == -1)
 			_exit(1);
-	curdir = getCurrentDirectory();
-
-	Logger::debug("pwd = '%s'\n", curdir.c_str());
 
 		if (execve(argv[0], argv, envp) == -1)
 			_exit(127);
 	}
-	Logger::debug("in start() pid = %d", pid);
+
+	Logger::debug("CgiHandler::start() pid= %d script='%s' dir='%s'",
+			pid, script_arg.c_str(), dir.c_str());
 	start_time = time(NULL);
 	freeEnvp(envp);
 	read_guard.release();
@@ -308,6 +301,6 @@ int CgiHandler::getExitStatus() const { return (exit_status); }
 
 const HttpRequest *CgiHandler::getRequest() const { return (request); }
 
-Client* CgiHandler::getClient() const { return (client); }
+Client *CgiHandler::getClient() const { return (client); }
 
 time_t CgiHandler::getStartTime() const { return (start_time); }

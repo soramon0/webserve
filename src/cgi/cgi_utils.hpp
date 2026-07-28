@@ -3,20 +3,12 @@
 
 #include "CgiHandler.hpp"
 #include "CgiManager.hpp"
+#include "CgiDispatchInfo.hpp"
 #include <vector>
 
-enum CgiDispatchResult { NOT_CGI, CGI_DISPATCHED, CGI_DISPATCH_FAILED};
+enum CgiDispatchResult { NOT_CGI, CGI_DISPATCHED, CGI_DISPATCH_FAILED };
 
 class Client;
-
-struct CgiDispatchInfo
-{
-	std::string script_path;
-	std::string path_info;
-	std::string interpreter_path;
-	std::string server_name;
-	std::string server_port;
-};
 
 void close_wrapper(int &fd);
 
@@ -32,4 +24,5 @@ bool dispatchCgi(const std::string &root, const std::string &uri_path,
 
 CgiDispatchResult tryDispatchCgi(Client *cl, CgiManager &manager);
 
+CgiDispatchResult tryDispatchResolvedCgi(Client *cl, CgiManager &manager, const std::string &resolved_file_path);
 #endif
