@@ -17,19 +17,15 @@ async function loadFiles() {
       .map(a => a.getAttribute("href"))
       .filter(href => href && !href.endsWith("/") && href !== "../");
 
-    if (links.length === 0) {
-      listEl.innerHTML = "<li>(no files)</li>";
-      return;
-    }
-
-    listEl.innerHTML = "";
-    links.forEach(name => {
+    listEl.innerHTML = links.length === 0 ? "<li>(no files)</li>" : "";
+    links.forEach(href => {
       const li = document.createElement("li");
-      li.innerHTML = `<span>${name}</span>`;
+      const displayName = href.split("/").filter(Boolean).pop(); // just for display
+      li.innerHTML = `<span>${displayName}</span>`;
       const btn = document.createElement("button");
       btn.className = "delete-btn";
       btn.textContent = "Delete";
-      btn.onclick = () => deleteFile(name);
+      btn.onclick = () => deleteFile(href); // use href AS-IS, don't rebuild it
       li.appendChild(btn);
       listEl.appendChild(li);
     });
@@ -38,21 +34,18 @@ async function loadFiles() {
   }
 }
 
-async function deleteFile(name) {
-  const path = UPLOAD_DIR + encodeURIComponent(name);
+async function deleteFile(href) {
+  // href is already a valid path (absolute or relative) from the server — use it directly
+  const path = href.startsWith("/") ? href : UPLOAD_DIR + href;
   try {
     const res = await fetch(path, { method: "DELETE" });
     console.log(`DELETE ${path} -> ${res.status}`);
-    if (res.ok || res.status === 204) {
-      loadFiles();
-    } else {
-      alert(`Delete failed: ${res.status} ${res.statusText}`);
-    }
+    if (res.ok || res.status === 204) loadFiles();
+    else alert(`Delete failed: ${res.status} ${res.statusText}`);
   } catch (err) {
     alert(`Delete request failed: ${err.message}`);
   }
 }
-
 // --- 4. Wrong method on a GET-only location -> expect 405 --------------
 async function testWrongMethod(event) {
   event.preventDefault();

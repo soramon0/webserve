@@ -223,9 +223,6 @@ void Webserv::handleNewConnection(SOCKET srv)
 		if (c->socket == -1)
 		{
 			delete c;
-			if (errno == EAGAIN || errno == EWOULDBLOCK) // TODO check if this is allowed
-				break;
-
 			Logger::error("accept failed");
 			break;
 		}
