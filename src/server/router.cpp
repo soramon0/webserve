@@ -32,23 +32,17 @@ void      processRequest(Client* c)
 		req->status = HttpStatus::NOT_FOUND;
 		return ;
 	}
+	c->location = loc;
+	
+	if (c->machine.status.isMalformed())
+		return;
+
 	if (loc->return_rule != NULL)
 	{
 		req->status = HttpStatus(loc->return_rule->code);
 		c->redirect_url = loc->return_rule->url;
 		return ;
 	}
-	c->location = loc;
-	
-	if (c->machine.status.isMalformed())
-		return;
-
-	if (c->machine.status.isMalformed())
-		return;
-	if (req->status == HttpStatus::METHOD_NOT_ALLOWED)
-    	return;
-
-	// route to the right method
 	if (req->method == HttpMethod::GET)
 		handleGet(c);
 	else if (req->method == HttpMethod::POST)
