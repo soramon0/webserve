@@ -59,7 +59,7 @@ void handleGet(Client* cl) {
 			struct stat index_stat;
 			if (stat(index_path.c_str(), &index_stat) == 0)
 			{
-				CgiDispatchInfo cgi_result = tryDispatchResolvedCgi(cl, *cl->cgiManager, index_path);
+				CgiDispatchResult cgi_result = tryDispatchResolvedCgi(cl, *cl->cgiManager, index_path);
 				if (cgi_result == CGI_DISPATCHED)
 					return;
 				if (cgi_result == CGI_DISPATCH_FAILED)
