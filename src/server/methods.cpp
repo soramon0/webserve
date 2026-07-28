@@ -50,10 +50,11 @@ std::string getFilePath(Client* cl) {
 HttpStatus::Code getHttpStatusError() {
 	if (errno == ENOENT) return HttpStatus::NOT_FOUND;
 	if (errno == EACCES) return HttpStatus::FORBIDDEN;
+	if (errno == EISDIR) return HttpStatus::FORBIDDEN;
+	if (errno == ENOTEMPTY) return HttpStatus::FORBIDDEN; // if you ever attempt rmdir()
 	return HttpStatus::INTERNAL_SERVER_ERROR;
 }
 
-// TODO : .. : reject in get & delete: qlbi ktr
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
 
