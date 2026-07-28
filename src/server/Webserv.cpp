@@ -56,10 +56,7 @@ void Webserv::start()
 	}
 
 	if (servers.size() == 0)
-	{
-		Logger::error("could not register servers.");
-		return;
-	}
+    	throw std::runtime_error("could not register any servers");
 
 	eventLoop();
 }
@@ -185,28 +182,34 @@ SOCKET Webserv::createSocket(int id)
 	std::string host = config.servers[id]->interface;
 
 	struct addrinfo *addr;
-	if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr))
-	{
-		Logger::fatal("getaddrinfo failed");
+	if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr)) {
+        throw std::runtime_error("getaddrinfo failed for " + host + ":" + port);
 	}
 
 	int socket_listen =
 		socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-	if (!ISVALIDSOCKET(socket_listen))
-		Logger::fatal("socket failed");
-	// TODO: check why bind fails
+	if (!ISVALIDSOCKET(socket_listen)) {
+        freeaddrinfo(addr);
+        throw std::runtime_error("socket() failed: " + std::string(strerror(errno)));
+    }
+
 	int opt = 1;
 	if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR, &opt,
 				   sizeof(opt)))
 		Logger::error("setsockopt failed");
 
-	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen))
-		Logger::fatal("bind failed");
+	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen)) {
+        freeaddrinfo(addr);
+        close(socket_listen);
+        throw std::runtime_error("bind() failed on " + host + ":" + port + ": " + strerror(errno));
+    }
 	freeaddrinfo(addr);
 
 	Logger::info("Listening on http://%s:%s ...", host.c_str(), port.c_str());
-	if (listen(socket_listen, SOMAXCONN))
-		Logger::fatal("listen failed");
+	if (listen(socket_listen, SOMAXCONN)) {
+        close(socket_listen);
+        throw std::runtime_error("listen() failed: " + std::string(strerror(errno)));
+    }
 
 	return socket_listen;
 }
