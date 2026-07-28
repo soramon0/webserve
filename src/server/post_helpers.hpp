@@ -3,9 +3,11 @@
 
 #include <string>
 #include "http/status_code.hpp"
+#include <vector>
 
 bool hasParentDirTraversal(const std::string &path);
 bool validateParentDir(const std::string& parent_path, HttpStatus::Code& out_status);
 bool checkTargetPath(const std::string& target_path, HttpStatus::Code& out_status, bool& existed);
+std::string normalisePath(const std::string &path);
 
 #endif

@@ -43,7 +43,6 @@ void      processRequest(Client* c)
 		c->redirect_url = loc->return_rule->url;
 		return ;
 	}
-
 	if (req->method == HttpMethod::GET)
 		handleGet(c);
 	else if (req->method == HttpMethod::POST)

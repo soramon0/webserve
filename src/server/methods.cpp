@@ -226,7 +226,7 @@ void handlePost(Client *cl)
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	if (cl->location->shared_config->upload_store.empty()) // if upload is not supported
 	{
-		req->status = HttpStatus::FORBIDDEN;
+		req->status = HttpStatus::METHOD_NOT_ALLOWED;
 		return;
 	}
 	if (hasParentDirTraversal(uri_suffix))
@@ -234,8 +234,9 @@ void handlePost(Client *cl)
 		req->status = HttpStatus::FORBIDDEN;
 		return;
 	}
+	std::string upload_dir = normalisePath(cl->location->shared_config->upload_store);
 	std::string target_path = cl->location->shared_config->root + "/" +
-							  cl->location->shared_config->upload_store + "/" + uri_suffix;
+							  upload_dir + "/" + uri_suffix;
 	Logger::debug("handlePost -> target_path = '%s'", target_path.c_str());
 	std::string parent_path = target_path.substr(0, target_path.find_last_of('/'));
 
