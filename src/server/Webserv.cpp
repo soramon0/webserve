@@ -291,39 +291,29 @@ void Webserv::checkTimeouts()
 			continue;
 		}
 
-		bool drop = false;
-
-		// Idle connection (e.g. client sent nothing for a long time)
 		if (now - cl->last_activity > TIMEOUT)
 		{
-			Logger::debug("timeout for client(%d)", c);
-			drop = true;
-		}
-
-		if (drop)
-		{
-			// removeClient erases from map; advance iterator carefully
 			std::map<SOCKET, Client *>::iterator to_erase = it++;
-			timeoutClient(to_erase->first);
+			cl->machine.getRequest()->status = HttpStatus::REQUEST_TIMEOUT;
 		}
 		else
-		{
 			++it;
-		}
 	}
 }
 
-void Webserv::timeoutClient(SOCKET c)
+void Webserv::timeoutClient(Client* cl)
 { // TODO : change the behavioiur to fill the cl->response thrn rspond in httpResponse
 	// HttpStatus status = clients[c]->machine.getRequest()->status;
-	std::string resp =
-		"HTTP/1.1 408 Request Timeout\r\n"
-		"Content-Length: 54\r\n"
-		"Connection: close\r\n"
-		"\r\n";
-		// "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";
-	send(c, resp.c_str(), resp.size(), 0);
-	removeClient(c);
+	// std::string resp =
+	// 	"HTTP/1.1 408 Request Timeout\r\n"
+	// 	"Content-Length: 0\r\n"
+	// 	"Connection: close\r\n"
+	// 	"\r\n";
+	// 	// "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";
+	// send(c, resp.c_str(), resp.size(), 0);
+	// removeClient(c);
+
+	
 }
 
 void Webserv::removeClient(SOCKET c)
@@ -348,16 +338,8 @@ void Webserv::handleHttpResponse(SOCKET c)
 	Client *cl = clients[c];
 	HttpRequest *req = cl->machine.getRequest();
 
-	if (cl->machine.status.isPending())
-		return;
-
-	// Logger::debug("handleHttpResponse: chunked=%d headers_sent=%d buffer_size=%zu",
-	// 			  cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
-
 	if (cl->cgi_pending == false &&
-		(cl->machine.status.isMalformed()
-		|| 
-		(cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)))
+		(cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent))
 	{
 		Logger::debug("Is Malformed ? -> %d", cl->machine.status.isMalformed());
 		processRequest(cl);
@@ -410,8 +392,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 		return;
 	}
 
-	ssize_t sent = send(
-		c, cl->response.buffer.c_str() + cl->response.offset,
+	ssize_t sent = send(c, cl->response.buffer.c_str() + cl->response.offset,
 		cl->response.buffer.size() - cl->response.offset, 0);
 	
 	cl->last_activity = time(NULL);

@@ -17,7 +17,6 @@ struct Client
 	SOCKET			socket;
 	Server*			srv;
 
-	//new fields
 	Location*		location;
 	std::string		redirect_url;
 	std::string		file_path;
