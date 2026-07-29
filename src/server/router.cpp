@@ -27,6 +27,13 @@ void      processRequest(Client* c)
 	std::string uri(req->uri.data(), req->uri.length());
 	Location* loc = matchLocation(c->srv->locations, uri);
 
+	if (c->machine.status.isMalformed())
+	{
+		if (loc)
+			c->location = loc;
+		return;
+	}
+	
 	if (loc == NULL)
 	{
 		req->status = HttpStatus::NOT_FOUND;
@@ -34,8 +41,6 @@ void      processRequest(Client* c)
 	}
 	c->location = loc;
 	
-	if (c->machine.status.isMalformed())
-		return;
 
 	if (loc->return_rule != NULL)
 	{

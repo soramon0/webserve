@@ -77,7 +77,7 @@ void Webserv::processFinishedCgi()
 		CgiHandler *h = finished[i];
 		Client *client = h->getClient();
 		CgiState s = h->getCgiState();
-		Logger::debug("cgi handler finished exit_status= %d", h->getExitStatus());
+		// Logger::debug("cgi handler finished exit_status= %d", h->getExitStatus());
 
 		CgiResponse cgiResp;
 		if (s == CGI_ERROR)
@@ -226,7 +226,7 @@ void Webserv::handleNewConnection(SOCKET srv)
 		if (c->socket == -1)
 		{
 			delete c;
-			Logger::error("accept: %s", strerror(errno));
+			// Logger::error("accept: %s", strerror(errno));
 			break;
 		}
 
@@ -374,7 +374,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 		|| 
 		(cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)))
 	{
-		Logger::debug("Is Malformed ? -> %d", cl->machine.status.isMalformed());
+		// Logger::debug("Is Malformed ? -> %d", cl->machine.status.isMalformed());
 		processRequest(cl);
 	}
 
@@ -391,13 +391,13 @@ void Webserv::handleHttpResponse(SOCKET c)
 								? cl->location->shared_config->types
 								: empty_types;
 			std::string content_type = getContentType(cl->file_path, types);
-			Logger::debug("status code is : %d", req->status.asInt());
+			// Logger::debug("status code is : %d", req->status.asInt());
 			cl->response.build(req->status, cl, content_type, cl->redirect_url);
 		}
 	}
 	else
 	{
-		Logger::debug("Sending chunck...: offset=%zu", cl->response.offset);
+		// Logger::debug("Sending chunck...: offset=%zu", cl->response.offset);
 		if (!cl->response.headers_sent)
 		{
 			send(c, cl->response.headers.c_str(),

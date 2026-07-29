@@ -57,7 +57,7 @@ HttpStatus::Code getHttpStatusError() {
 
 void handleGet(Client* cl) {
 	HttpRequest* req = cl->machine.getRequest();
-	Logger::debug("GET methos-------------");
+	// Logger::debug("GET methos-------------");
 
 	CgiDispatchResult cgi_result = tryDispatchCgi(cl, *cl->cgiManager);
 	if (cgi_result == CGI_DISPATCHED)
@@ -69,12 +69,12 @@ void handleGet(Client* cl) {
 	}
 
 	std::string file_path = getFilePath(cl);
-	Logger::debug("uri is : %s", file_path.c_str());
+	// Logger::debug("uri is : %s", file_path.c_str());
 
 	struct stat file_stat;
 	if (stat(file_path.c_str(), &file_stat) == -1)
 	{
-		Logger::debug("This uri doesn't exist");
+		// Logger::debug("This uri doesn't exist");
 		req->status = getHttpStatusError();
 		return;
 	}
@@ -90,7 +90,7 @@ void handleGet(Client* cl) {
 			struct stat index_stat;
 			if (stat(index_path.c_str(), &index_stat) == 0)
 			{
-				Logger::debug("handleGet() : index_path = '%s'", index_path.c_str());
+				// Logger::debug("handleGet() : index_path = '%s'", index_path.c_str());
 				CgiDispatchResult cgi_result = tryDispatchResolvedCgi(cl, *cl->cgiManager, index_path);
 				if (cgi_result == CGI_DISPATCHED)
 					return;
@@ -141,7 +141,7 @@ void handleGet(Client* cl) {
 	}
 
 	cl->response.chunked = 1;
-	Logger::debug("the size stat give is : %zu", cl->response.file_size);
+	// Logger::debug("the size stat give is : %zu", cl->response.file_size);
 	cl->response.file_fd = open(file_path.c_str(), O_RDONLY);
 	if (cl->response.file_fd == -1) {
 		req->status = getHttpStatusError();
@@ -188,20 +188,20 @@ void handleDelete(Client* cl) {
 
 	std::string file_path = getFilePath(cl);
 	replaceAll(file_path, "\%2F", "/");
-	Logger::info("uri is : %s", file_path.c_str());
+	// Logger::info("uri is : %s", file_path.c_str());
 
 	// check the file existance
 	struct stat file_stat;
 	if (stat(file_path.c_str(), &file_stat) == -1)
 	{
-		Logger::debug("DELETE: the path is not  found");
+		// Logger::debug("DELETE: the path is not  found");
 		req->status = getHttpStatusError();
 		return;
 	}
 
 	if (std::remove(file_path.c_str()))
 	{
-		Logger::debug("DELETE : can't delete this file/dir '%s'", file_path.c_str());
+		// Logger::debug("DELETE : can't delete this file/dir '%s'", file_path.c_str());
 		req->status = getHttpStatusError();
 		return ;
 	}
@@ -221,7 +221,7 @@ void handlePost(Client *cl)
 		return;
 	}
 
-	Logger::debug("POST method------------");
+	// Logger::debug("POST method------------");
 	std::string uri(req->uri.data(), req->uri.length());
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	if (cl->location->shared_config->upload_store.empty()) // if upload is not supported
@@ -237,7 +237,7 @@ void handlePost(Client *cl)
 	std::string upload_dir = normalisePath(cl->location->shared_config->upload_store);
 	std::string target_path = cl->location->shared_config->root + "/" +
 							  upload_dir + "/" + uri_suffix;
-	Logger::debug("handlePost -> target_path = '%s'", target_path.c_str());
+	// Logger::debug("handlePost -> target_path = '%s'", target_path.c_str());
 	std::string parent_path = target_path.substr(0, target_path.find_last_of('/'));
 
 	HttpStatus::Code err_status;
