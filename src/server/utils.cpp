@@ -22,7 +22,7 @@ int epoll_instance()
     int fd = epoll_create(1);
 
     if (fd == -1)
-        Logger::fatal("Error: epoll_create failed");
+        throw std::runtime_error("Error: epoll_create failed");
     return fd;
 }
 
@@ -131,12 +131,12 @@ std::string getErrorBody(Client* cl, HttpStatus status)
         if (it != pages.end())
         {
             std::string error_page_file = cl->location->shared_config->root + "/" + it->second;
-            Logger::debug("found custom error page: %s", it->second.c_str());
+            // Logger::debug("found custom error page: %s", it->second.c_str());
             std::ifstream file(error_page_file.c_str());
             if (!file.is_open()) {
-                Logger::debug("Can't open the file %s", error_page_file.c_str());
+                // Logger::debug("Can't open the file %s", error_page_file.c_str());
             }
-            Logger::debug("reading the custom error page...");
+            // Logger::debug("reading the custom error page...");
             std::string body((std::istreambuf_iterator<char>(file)),
                                 std::istreambuf_iterator<char>());
             return body;

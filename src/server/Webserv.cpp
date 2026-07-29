@@ -71,7 +71,7 @@ void Webserv::processFinishedCgi()
 		CgiHandler *h = finished[i];
 		Client *client = h->getClient();
 		CgiState s = h->getCgiState();
-		Logger::debug("cgi handler finished exit_status= %d", h->getExitStatus());
+		// Logger::debug("cgi handler finished exit_status= %d", h->getExitStatus());
 
 		CgiResponse cgiResp;
 		if (s == CGI_ERROR)

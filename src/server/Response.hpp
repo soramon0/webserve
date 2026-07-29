@@ -29,7 +29,7 @@ public:
         const std::string& content_type,
         const std::string& location = "")
     {
-        Logger::debug("Builiding the response...");
+        // Logger::debug("Builiding the response...");
         std::ostringstream resp;
         resp << "HTTP/1.1 " << status.toString() << "\r\n";
 
