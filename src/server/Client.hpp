@@ -17,7 +17,6 @@ struct Client
 	SOCKET			socket;
 	Server*			srv;
 
-	//new fields
 	Location*		location;
 	std::string		redirect_url;
 	std::string		file_path;
@@ -30,6 +29,7 @@ struct Client
 
 	//timeouts
 	std::time_t		last_activity;
+	bool			timed_out;
 
 	Response		response;
 

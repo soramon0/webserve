@@ -30,7 +30,7 @@ public:
 	void	removeClient(SOCKET c);
 	void	eventLoop();
 	void	checkTimeouts();
-	void	timeoutClient(SOCKET c);
+	// void	timeoutClient(Client* cl);
 
 private:
 	//to process finished cgi requests 

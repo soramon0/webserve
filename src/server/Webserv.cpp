@@ -2,6 +2,8 @@
 #include "logger/log.hpp"
 #include "utils.hpp"
 #include "router.hpp"
+#include "cgi/CgiManager.hpp"
+#include "../http/status_code.hpp"
 #include <cstring>
 #include <iostream>
 #include <signal.h>
@@ -9,7 +11,6 @@
 #include <string>
 #include <sys/epoll.h>
 #include <sys/types.h>
-#include "cgi/CgiManager.hpp"
 #include <map>
 
 static int running = true;
@@ -19,21 +20,18 @@ Webserv::Webserv(Config &_conf) : config(_conf), cgiManager(NULL) {}
 Webserv::~Webserv()
 {
 	delete cgiManager;
-	close(epoll_fd);
-	// close all sockets before
 
 	while (!clients.empty())
-	{
 		removeClient(clients.begin()->first);
-	}
 
 	std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
-	while (it_srv != servers.end())
+	while (it_srv != servers.end()) 
 	{
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it_srv->first, NULL);
 		close(it_srv->first);
 		++it_srv;
 	}
+	close(epoll_fd);
 }
 
 void Webserv::start()
@@ -46,15 +44,11 @@ void Webserv::start()
 	{
 		SOCKET listen_sock = createSocket(i);
 		if (set_nonblocking(listen_sock) == -1)
-		{
-			Logger::error("Can't set non-blocking");
-			continue;
-		}
+			throw std::runtime_error("fcntl(F_GETFL) failed");
 		if (add_to_epoll(epoll_fd, listen_sock, EPOLLIN) == -1)
 			continue;
 		servers[listen_sock] = config.servers[i];
 	}
-
 	if (servers.size() == 0)
     	throw std::runtime_error("could not register any servers");
 
@@ -122,13 +116,11 @@ void Webserv::eventLoop()
 
 	signal(SIGINT, sigHandler);
 	signal(SIGTERM, sigHandler);
-	// TODO: handle timeout
 	while (running)
 	{
 		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, 5000);
 		checkTimeouts();
-		// TODO: drop clients if timeout (now - last_activity > timout)
-		if (n_ev <= 0) // possible error : EINTR
+		if (n_ev <= 0)
 			continue;
 
 		int ev;
@@ -158,15 +150,12 @@ void Webserv::eventLoop()
 			}
 
 			if (ev & EPOLLOUT)
-			{
 				handleHttpResponse(fd);
-			}
 		}
 		processFinishedCgi();
 	}
 }
 
-// TODO handle internal server errors
 SOCKET Webserv::createSocket(int id)
 {
 	struct addrinfo hints;
@@ -226,7 +215,6 @@ void Webserv::handleNewConnection(SOCKET srv)
 		if (c->socket == -1)
 		{
 			delete c;
-			// Logger::error("accept: %s", strerror(errno));
 			break;
 		}
 
@@ -268,7 +256,6 @@ void Webserv::handleClientData(SOCKET c)
 	}
 	// else if (bytes < 0)
 	// 	return ;
-	// Timeout updates
 	cl->last_activity = time(NULL);
 
 	HttpRequest *req = cl->machine.getRequest();
@@ -289,63 +276,36 @@ void Webserv::handleClientData(SOCKET c)
 
 void Webserv::checkTimeouts()
 {
-	time_t now = time(NULL);
+    time_t now = time(NULL);
 
-	std::map<SOCKET, Client *>::iterator it = clients.begin();
-	while (it != clients.end())
-	{
-		SOCKET c = it->first;
-		Client *cl = it->second;
+    std::map<SOCKET, Client *>::iterator it = clients.begin();
+    while (it != clients.end())
+    {
+        Client *cl = it->second;
 
-		// skip timeout for clients with cgi still running (CgiManager handles it)
-		if (cl->cgi_pending)
-		{
-			++it;
-			continue;
-		}
+        if (cl->cgi_pending)
+        {
+            ++it;
+            continue;
+        }
 
-		bool drop = false;
-
-		// Idle connection (e.g. client sent nothing for a long time)
-		if (now - cl->last_activity > TIMEOUT)
-		{
-			Logger::debug("timeout for client(%d)", c);
-			drop = true;
-		}
-
-		if (drop)
-		{
-			// removeClient erases from map; advance iterator carefully
-			std::map<SOCKET, Client *>::iterator to_erase = it++;
-			timeoutClient(to_erase->first);
-		}
-		else
-		{
-			++it;
-		}
-	}
-}
-
-void Webserv::timeoutClient(SOCKET c)
-{
-	// HttpStatus status = clients[c]->machine.getRequest()->status;
-	std::string resp =
-		"HTTP/1.1 408 Request Timeout\r\n"
-		"Content-Length: 54\r\n"
-		"Connection: close\r\n"
-		"\r\n";
-		// "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";
-	send(c, resp.c_str(), resp.size(), 0);
-	removeClient(c);
+        if (now - cl->last_activity > TIMEOUT)
+        {
+			if (!cl->timed_out)
+			{
+				cl->timed_out = true;
+				modify_epoll(epoll_fd, cl->socket, EPOLLOUT);
+			}	
+        }
+        ++it;
+    }
 }
 
 void Webserv::removeClient(SOCKET c)
 {
 	std::map<SOCKET, Client *>::iterator it = clients.find(c);
 	if (it == clients.end())
-	{
 		return;
-	}
 
 	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
 	Client *cl = it->second;
@@ -361,74 +321,73 @@ void Webserv::handleHttpResponse(SOCKET c)
 		return;
 
 	Client *cl = clients[c];
-	HttpRequest *req = cl->machine.getRequest();
 
-	if (cl->machine.status.isPending())
-		return;
-
-	// Logger::debug("handleHttpResponse: chunked=%d headers_sent=%d buffer_size=%zu",
-	// 			  cl->response.chunked, cl->response.headers_sent, cl->response.buffer.size());
-
-	if (cl->cgi_pending == false &&
-		(cl->machine.status.isMalformed()
-		|| 
-		(cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)))
+	if (cl->timed_out)
 	{
-		// Logger::debug("Is Malformed ? -> %d", cl->machine.status.isMalformed());
-		processRequest(cl);
-	}
-
-	// processRequest() may have dispatched a CGI script; wait for it to finish
-	if (cl->cgi_pending)
-		return;
-
-	if (!cl->response.chunked)
-	{
-		if (cl->response.buffer.empty())
+		if (cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)
 		{
-			mimetype_map empty_types;
-			mimetype_map &types = (cl->location && cl->location->shared_config)
-								? cl->location->shared_config->types
-								: empty_types;
-			std::string content_type = getContentType(cl->file_path, types);
-			// Logger::debug("status code is : %d", req->status.asInt());
-			cl->response.build(req->status, cl, content_type, cl->redirect_url);
+			cl->response.build(HttpStatus(HttpStatus::REQUEST_TIMEOUT), cl, "", "");
 		}
+		// falls through to the generic send-buffer logic below
 	}
 	else
 	{
-		// Logger::debug("Sending chunck...: offset=%zu", cl->response.offset);
-		if (!cl->response.headers_sent)
+		HttpRequest *req = cl->machine.getRequest();
+
+		if (cl->cgi_pending == false && cl->response.buffer.empty()
+			&& !cl->response.chunked && !cl->response.headers_sent)
 		{
-			send(c, cl->response.headers.c_str(),
-				 cl->response.headers.size(), 0);
-			cl->response.headers_sent = true;
-			cl->last_activity = time(NULL);
+			processRequest(cl);
+		}
+
+		if (cl->cgi_pending)
+			return;
+
+		if (!cl->response.chunked)
+		{
+			if (cl->response.buffer.empty())
+			{
+				mimetype_map empty_types;
+				mimetype_map &types = (cl->location && cl->location->shared_config)
+									? cl->location->shared_config->types
+									: empty_types;
+				std::string content_type = getContentType(cl->file_path, types);
+				cl->response.build(req->status, cl, content_type, cl->redirect_url);
+			}
+		}
+		else
+		{
+			if (!cl->response.headers_sent)
+			{
+				send(c, cl->response.headers.c_str(),
+					cl->response.headers.size(), 0);
+				cl->response.headers_sent = true;
+				cl->last_activity = time(NULL);
+				return;
+			}
+			// send next chunk of file
+			char chunk[KIB(16)];
+			ssize_t bytes = read(cl->response.file_fd, chunk, sizeof(chunk));
+			if (bytes > 0)
+			{
+				send(c, chunk, bytes, 0);
+				cl->response.offset += bytes;
+				cl->last_activity = time(NULL);
+			}
+
+			if (bytes <= 0 || cl->response.offset >= cl->response.file_size)
+			{
+				close(cl->response.file_fd);
+				cl->response.file_fd = -1;
+				removeClient(c);
+			}
 			return;
 		}
-		// send next chunk of file
-		char chunk[KIB(8)];
-		ssize_t bytes = read(cl->response.file_fd, chunk, sizeof(chunk));
-		if (bytes > 0)
-		{
-			send(c, chunk, bytes, 0);
-			cl->response.offset += bytes;
-			cl->last_activity = time(NULL);
-		}
-
-		if (bytes <= 0 || cl->response.offset >= cl->response.file_size)
-		{
-			close(cl->response.file_fd);
-			cl->response.file_fd = -1;
-			removeClient(c);
-		}
-		return;
 	}
 
-	ssize_t sent = send(
-		c, cl->response.buffer.c_str() + cl->response.offset,
+	ssize_t sent = send(c, cl->response.buffer.c_str() + cl->response.offset,
 		cl->response.buffer.size() - cl->response.offset, 0);
-	
+
 	cl->last_activity = time(NULL);
 
 	if (sent <= 0) {
@@ -436,8 +395,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 		return;
 	}
 
-	if (sent > 0)
-		cl->response.offset += sent;
+	cl->response.offset += sent;
 
 	if (cl->response.offset >= cl->response.buffer.size())
 		removeClient(c);

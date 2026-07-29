@@ -39,11 +39,13 @@ public:
         if (status >= HttpStatus::BAD_REQUEST)
             body = getErrorBody(cl, status);
 
-        resp << "Content-Type: " << content_type << "\r\n"
-                << "Content-Length: " << body.size() << "\r\n"
-                << "Connection: close\r\n"
-                << "\r\n"
-                << body;
+        if (body.size() > 0)
+            resp << "Content-Type: " << content_type << "\r\n";
+                
+        resp << "Content-Length: " << body.size() << "\r\n"
+            << "Connection: close\r\n"
+            << "\r\n"
+            << body;
 
         buffer = resp.str();
         offset = 0;
