@@ -43,10 +43,7 @@ void Webserv::start()
 	{
 		SOCKET listen_sock = createSocket(i);
 		if (set_nonblocking(listen_sock) == -1)
-		{
-			Logger::error("Can't set non-blocking");
-			continue;
-		}
+			throw std::runtime_error("fcntl(F_GETFL) failed");
 		if (add_to_epoll(epoll_fd, listen_sock, EPOLLIN) == -1)
 			continue;
 		servers[listen_sock] = config.servers[i];
@@ -152,15 +149,12 @@ void Webserv::eventLoop()
 			}
 
 			if (ev & EPOLLOUT)
-			{
 				handleHttpResponse(fd);
-			}
 		}
 		processFinishedCgi();
 	}
 }
 
-// TODO handle internal server errors
 SOCKET Webserv::createSocket(int id)
 {
 	struct addrinfo hints;
@@ -262,7 +256,6 @@ void Webserv::handleClientData(SOCKET c)
 	}
 	// else if (bytes < 0)
 	// 	return ;
-	// Timeout updates
 	cl->last_activity = time(NULL);
 
 	HttpRequest *req = cl->machine.getRequest();
@@ -321,7 +314,7 @@ void Webserv::checkTimeouts()
 }
 
 void Webserv::timeoutClient(SOCKET c)
-{
+{ // TODO : change the behavioiur to fill the cl->response thrn rspond in httpResponse
 	// HttpStatus status = clients[c]->machine.getRequest()->status;
 	std::string resp =
 		"HTTP/1.1 408 Request Timeout\r\n"
@@ -337,9 +330,7 @@ void Webserv::removeClient(SOCKET c)
 {
 	std::map<SOCKET, Client *>::iterator it = clients.find(c);
 	if (it == clients.end())
-	{
 		return;
-	}
 
 	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
 	Client *cl = it->second;
