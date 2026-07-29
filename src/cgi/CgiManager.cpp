@@ -46,11 +46,12 @@ bool CgiManager::registerHandler(const HttpRequest *request, Client* client, con
 
 void CgiManager::deregisterEpoll(CgiHandler *handler)
 {
-	if (handler->getReadFd() != -1)
-	{
-		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, handler->getReadFd(), NULL);
-		fd_to_handler.erase(handler->getReadFd());
-	}
+	int fd = handler->getReadFd();
+	if (fd == -1)
+		return;
+	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+	fd_to_handler.erase(fd);
+	handler->closeReadFd();
 }
 
 void CgiManager::removeHandler(CgiHandler *handler)
@@ -64,7 +65,6 @@ void CgiManager::removeHandler(CgiHandler *handler)
 
 void CgiManager::moveToPendingReap(CgiHandler *handler)
 {
-	fd_to_handler.erase(handler->getReadFd());
 	std::vector<CgiHandler *>::iterator it = std::find(handlers.begin(), handlers.end(), handler);
 	if (it != handlers.end())
 		handlers.erase(it);
@@ -80,7 +80,7 @@ void CgiManager::onReadable(struct epoll_event &ev)
 	if (handler->getCgiState() != READING_OUTPUT)
 		return;
 
-	handler->readOutput();
+	bool eof = handler->readOutput();
 
 	if (handler->getCgiState() == CGI_ERROR)
 	{
@@ -88,10 +88,13 @@ void CgiManager::onReadable(struct epoll_event &ev)
 		return;
 	}
 
-	bool eof_but_not_reaped = (handler->getCgiState() == READING_OUTPUT && handler->getReadFd() == -1);
-	if (eof_but_not_reaped)
-		moveToPendingReap(handler);
-	return;
+	if (eof)
+	{
+		bool need_reap = (handler->getCgiState() == READING_OUTPUT);
+		deregisterEpoll(handler);
+		if (need_reap)
+			moveToPendingReap(handler);
+	}
 }
 
 void CgiManager::reapPending()
@@ -155,6 +158,7 @@ std::vector<CgiHandler*> CgiManager::claimAllFinished()
 		CgiState s = (*it)->getCgiState();
 		if (s == CGI_ERROR || s == CGI_DONE)
 		{
+			deregisterEpoll(*it);
 			finished.push_back(*it);
 			it = handlers.erase(it);
 		}

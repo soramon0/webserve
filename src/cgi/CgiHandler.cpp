@@ -221,23 +221,29 @@ bool CgiHandler::start(const CgiDispatchInfo &info)
 	return (true);
 }
 
-void CgiHandler::readOutput()
+bool CgiHandler::readOutput()
 {
 	char buf[4096];
 	ssize_t n = read(pipe_out[0], buf, sizeof(buf));
 	if (n > 0)
-		cgi_output.append(buf, n);
-	else if (n == 0)
 	{
-		close_wrapper(pipe_out[0]);
+		cgi_output.append(buf, n);
+		return (false);
+	}
+	if (n == 0)
+	{
+		// Leave pipe open so CgiManager can deregister the real fd first.
 		if (waitChild())
 			state = CGI_DONE;
+		return (true);
 	}
-	else if (n == -1)
-	{
-		state = CGI_ERROR;
-		return;
-	}
+	state = CGI_ERROR;
+	return (false);
+}
+
+void CgiHandler::closeReadFd()
+{
+	close_wrapper(pipe_out[0]);
 }
 
 bool CgiHandler::waitChild()

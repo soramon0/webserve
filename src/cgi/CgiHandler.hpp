@@ -32,11 +32,12 @@ public:
 	~CgiHandler();
 
 	bool start(const CgiDispatchInfo& info);
-	void readOutput();
+	// returns true on EOF (pipe still open; caller must deregister then close)
+	bool readOutput();
 	bool waitChild();
 	bool reap();
 	void timeoutKill();
-
+	void closeReadFd();
 
 	//getters
 	CgiState getCgiState() const;
