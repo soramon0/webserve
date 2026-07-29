@@ -12,7 +12,8 @@ Client::Client()
 	  machine(),
 	  cgiManager(NULL),
 	  cgi_pending(false),
-	  last_activity(0)
+	  last_activity(0),
+	  timed_out(0)
 {
 	std::memset(&addr, 0, sizeof(addr));
 	machine.setServer(this->srv);

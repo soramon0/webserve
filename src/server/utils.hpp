@@ -2,9 +2,9 @@
 
 #include "common.h"
 #include "../http/status_code.hpp"
+#include "../config/shared_config.hpp"
 #include <cstring>
 #include <string>
-#include "../config/shared_config.hpp"
 
 struct Client;
 

@@ -29,6 +29,7 @@ struct Client
 
 	//timeouts
 	std::time_t		last_activity;
+	bool			timed_out;
 
 	Response		response;
 
