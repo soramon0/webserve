@@ -3,13 +3,13 @@
 #include "utils.hpp"
 #include "router.hpp"
 #include <cstring>
+#include "cgi/CgiManager.hpp"
 #include <iostream>
 #include <signal.h>
 #include <sstream>
 #include <string>
 #include <sys/epoll.h>
 #include <sys/types.h>
-#include "cgi/CgiManager.hpp"
 #include <map>
 
 static int running = true;
@@ -19,21 +19,18 @@ Webserv::Webserv(Config &_conf) : config(_conf), cgiManager(NULL) {}
 Webserv::~Webserv()
 {
 	delete cgiManager;
-	close(epoll_fd);
-	// close all sockets before
 
 	while (!clients.empty())
-	{
 		removeClient(clients.begin()->first);
-	}
 
 	std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
-	while (it_srv != servers.end())
+	while (it_srv != servers.end()) 
 	{
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it_srv->first, NULL);
 		close(it_srv->first);
 		++it_srv;
 	}
+	close(epoll_fd);
 }
 
 void Webserv::start()
@@ -54,7 +51,6 @@ void Webserv::start()
 			continue;
 		servers[listen_sock] = config.servers[i];
 	}
-
 	if (servers.size() == 0)
     	throw std::runtime_error("could not register any servers");
 
@@ -122,13 +118,11 @@ void Webserv::eventLoop()
 
 	signal(SIGINT, sigHandler);
 	signal(SIGTERM, sigHandler);
-	// TODO: handle timeout
 	while (running)
 	{
 		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, 5000);
 		checkTimeouts();
-		// TODO: drop clients if timeout (now - last_activity > timout)
-		if (n_ev <= 0) // possible error : EINTR
+		if (n_ev <= 0)
 			continue;
 
 		int ev;
@@ -407,7 +401,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 			return;
 		}
 		// send next chunk of file
-		char chunk[KIB(8)];
+		char chunk[KIB(16)];
 		ssize_t bytes = read(cl->response.file_fd, chunk, sizeof(chunk));
 		if (bytes > 0)
 		{
