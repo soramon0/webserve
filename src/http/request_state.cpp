@@ -312,10 +312,6 @@ State stateHeaderValue(Context &ctx) {
 State stateBody(Context &ctx) {
   Logger::trace("state: body");
 
-  if (ctx.req->method != HttpMethod::POST) {
-    return stateDone(ctx);
-  }
-
   bool hasCL = ctx.req->headers.has("content-length");
   bool hasTE = ctx.req->headers.has("transfer-encoding");
   size_t target_length = ctx.req->getContentLength();
@@ -338,6 +334,10 @@ State stateBody(Context &ctx) {
       ctx.fsm.setMalformed(HttpStatus::METHOD_NOT_ALLOWED,
                            "method not allowed");
       return stateError(ctx);
+    }
+
+    if (ctx.req->method != HttpMethod::POST) {
+      return stateDone(ctx);
     }
 
     if (!hasCL && !hasTE) {
