@@ -289,13 +289,10 @@ void Webserv::checkTimeouts()
             continue;
         }
 
-        if (now - cl->last_activity > TIMEOUT)
+        if (now - cl->last_activity > TIMEOUT && !cl->timed_out)
         {
-			if (!cl->timed_out)
-			{
-				cl->timed_out = true;
-				modify_epoll(epoll_fd, cl->socket, EPOLLOUT);
-			}	
+			cl->timed_out = true;
+			modify_epoll(epoll_fd, cl->socket, EPOLLOUT);
         }
         ++it;
     }
@@ -312,7 +309,7 @@ void Webserv::removeClient(SOCKET c)
 	clients.erase(c);
 	close(c);
 	delete cl;
-	Logger::debug("dropping client(%d)", c);
+	Logger::debug("Client(%d) dropped...", c);
 }
 
 void Webserv::handleHttpResponse(SOCKET c)
@@ -325,17 +322,17 @@ void Webserv::handleHttpResponse(SOCKET c)
 	if (cl->timed_out)
 	{
 		if (cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)
-		{
-			cl->response.build(HttpStatus(HttpStatus::REQUEST_TIMEOUT), cl, "", "");
-		}
-		// falls through to the generic send-buffer logic below
+			cl->response.build(HttpStatus(HttpStatus::REQUEST_TIMEOUT), cl, "");
 	}
 	else
 	{
 		HttpRequest *req = cl->machine.getRequest();
 
-		if (cl->cgi_pending == false && cl->response.buffer.empty()
-			&& !cl->response.chunked && !cl->response.headers_sent)
+		if (cl->cgi_pending == false
+			&& cl->machine.status.isMalformed() == false
+			&& cl->response.buffer.empty()
+			&& !cl->response.chunked
+			&& !cl->response.headers_sent)
 		{
 			processRequest(cl);
 		}
@@ -346,26 +343,17 @@ void Webserv::handleHttpResponse(SOCKET c)
 		if (!cl->response.chunked)
 		{
 			if (cl->response.buffer.empty())
-			{
-				mimetype_map empty_types;
-				mimetype_map &types = (cl->location && cl->location->shared_config)
-									? cl->location->shared_config->types
-									: empty_types;
-				std::string content_type = getContentType(cl->file_path, types);
-				cl->response.build(req->status, cl, content_type, cl->redirect_url);
-			}
+				cl->response.build(req->status, cl, cl->redirect_url);
 		}
 		else
 		{
 			if (!cl->response.headers_sent)
 			{
-				send(c, cl->response.headers.c_str(),
-					cl->response.headers.size(), 0);
+				send(c, cl->response.headers.c_str(), cl->response.headers.size(), 0);
 				cl->response.headers_sent = true;
 				cl->last_activity = time(NULL);
 				return;
 			}
-			// send next chunk of file
 			char chunk[KIB(16)];
 			ssize_t bytes = read(cl->response.file_fd, chunk, sizeof(chunk));
 			if (bytes > 0)
@@ -374,7 +362,6 @@ void Webserv::handleHttpResponse(SOCKET c)
 				cl->response.offset += bytes;
 				cl->last_activity = time(NULL);
 			}
-
 			if (bytes <= 0 || cl->response.offset >= cl->response.file_size)
 			{
 				close(cl->response.file_fd);

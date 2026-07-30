@@ -25,8 +25,7 @@ public:
 
     void buildHeaders(const HttpRequest& req, const std::string& content_type);
     void build(HttpStatus status,
-        Client* cl,  
-        const std::string& content_type,
+        Client* cl,
         const std::string& location = "")
     {
         if (headers.empty())
@@ -41,7 +40,10 @@ public:
                 body = getErrorBody(cl, status);
     
             if (body.size() > 0)
+            {
+				std::string content_type = getContentType(cl);
                 heads << "Content-Type: " << content_type << "\r\n";
+            }
                     
             heads << "Content-Length: " << body.size() << "\r\n"
                 << "Connection: close\r\n"

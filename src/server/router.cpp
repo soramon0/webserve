@@ -22,17 +22,9 @@ Location* matchLocation(std::map<std::string, Location>& locations, const std::s
 }
 void      processRequest(Client* c)
 {
-	Logger::debug("processRequest is called!");
 	HttpRequest* req = c->machine.getRequest();
 	std::string uri(req->uri.data(), req->uri.length());
 	Location* loc = matchLocation(c->srv->locations, uri);
-
-	if (c->machine.status.isMalformed())
-	{
-		if (loc)
-			c->location = loc;
-		return;
-	}
 	
 	if (loc == NULL)
 	{
@@ -40,8 +32,6 @@ void      processRequest(Client* c)
 		return ;
 	}
 	c->location = loc;
-	
-
 	if (loc->return_rule != NULL)
 	{
 		req->status = HttpStatus(loc->return_rule->code);
