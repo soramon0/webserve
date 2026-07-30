@@ -9,7 +9,7 @@
 #include <cstddef>
 
 State stateStart(Context &ctx) {
-  Logger::debug("state: start");
+  Logger::trace("state: start");
 
   if (!std::isalpha(static_cast<unsigned char>(ctx.buf[ctx.offset]))) {
     ctx.fsm.setMalformed400("malformed request-line");
@@ -19,7 +19,7 @@ State stateStart(Context &ctx) {
 }
 
 State stateMethod(Context &ctx) {
-  Logger::debug("state: method");
+  Logger::trace("state: method");
   size_t start = ctx.offset;
 
   int sp = 0;
@@ -72,7 +72,7 @@ State stateMethod(Context &ctx) {
 }
 
 State stateURI(Context &ctx) {
-  Logger::debug("state: URI");
+  Logger::trace("state: URI");
 
   size_t start = ctx.offset;
   int sp = 0;
@@ -152,7 +152,7 @@ State stateURI(Context &ctx) {
 }
 
 State stateVersion(Context &ctx) {
-  Logger::debug("state: version");
+  Logger::trace("state: version");
 
   size_t start = ctx.offset;
   while (ctx.offset < ctx.len && !ctx.fsm.isCRLF(ctx.buf[ctx.offset])) {
@@ -191,7 +191,7 @@ State stateVersion(Context &ctx) {
 }
 
 State stateHeaderKey(Context &ctx) {
-  Logger::debug("state: headerKey");
+  Logger::trace("state: headerKey");
 
   // parse request header and save it in fsm.current_key
   size_t start = ctx.offset;
@@ -255,7 +255,7 @@ State stateHeaderKey(Context &ctx) {
 // field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
 // field-vchar    = VCHAR / obs-text
 State stateHeaderValue(Context &ctx) {
-  Logger::debug("state: headerValue");
+  Logger::trace("state: headerValue");
   StringView &key = ctx.fsm.curr_header_key;
   StringView &value = ctx.fsm.curr_header_value;
 
@@ -310,7 +310,7 @@ State stateHeaderValue(Context &ctx) {
 }
 
 State stateBody(Context &ctx) {
-  Logger::debug("state: body");
+  Logger::trace("state: body");
 
   if (ctx.req->method != HttpMethod::POST) {
     return stateDone(ctx);
@@ -531,7 +531,7 @@ State stateBodyChunked(Context &ctx) {
 }
 
 State stateDone(Context &ctx) {
-  Logger::debug("state: done");
+  Logger::trace("state: done");
   // skip to end of buffer
   ctx.offset = ctx.len;
   ctx.fsm.setDone();
@@ -539,7 +539,7 @@ State stateDone(Context &ctx) {
 }
 
 State stateError(Context &ctx) {
-  Logger::debug("state: error");
+  Logger::trace("state: error");
   // skip to end of buffer
   ctx.offset = ctx.len;
   if (ctx.fsm.status.isPending()) {

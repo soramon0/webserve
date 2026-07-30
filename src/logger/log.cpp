@@ -17,6 +17,13 @@ void Logger::log(FILE *writer, Level lvl, const char *fmt, va_list args) {
   fflush(writer);
 }
 
+void Logger::trace(const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  log(stdout, LOG_TRACE, format, args);
+  va_end(args);
+}
+
 void Logger::debug(const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -63,6 +70,8 @@ void Logger::fatalWith(int exitCode, const char *format, ...) {
 
 static const char *get_lvl_str(Logger::Level level) {
   switch (level) {
+  case Logger::LOG_TRACE:
+    return "TRACE";
   case Logger::LOG_DEBUG:
     return "DEBUG";
   case Logger::LOG_INFO:
