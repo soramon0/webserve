@@ -70,9 +70,14 @@ void Webserv::processFinishedCgi()
 	{
 		CgiHandler *h = finished[i];
 		Client *client = h->getClient();
-		CgiState s = h->getCgiState();
-		// Logger::debug("cgi handler finished exit_status= %d", h->getExitStatus());
 
+		if (client == NULL)
+		{
+			delete h;
+			continue;
+		}
+
+		CgiState s = h->getCgiState();
 		CgiResponse cgiResp;
 		if (s == CGI_ERROR)
 		{
@@ -320,6 +325,11 @@ void Webserv::removeClient(SOCKET c)
 	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
 	Client *cl = it->second;
 	clients.erase(c);
+
+	//notify CgiManager to drops this client or set it to NULL
+	if (cgiManager)
+		cgiManager->detachClient(cl);
+
 	close(c);
 	delete cl;
 	Logger::debug("dropping client(%d)", c);

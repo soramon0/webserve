@@ -38,6 +38,7 @@ public:
 	bool reap();
 	void timeoutKill();
 	void closeReadFd();
+	void clearClient();
 
 	//getters
 	CgiState getCgiState() const;
