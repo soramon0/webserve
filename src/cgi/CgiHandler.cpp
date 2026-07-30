@@ -297,6 +297,8 @@ void CgiHandler::timeoutKill()
 	state = CGI_ERROR;
 }
 
+void CgiHandler::clearClient() { client = NULL; }
+
 CgiState CgiHandler::getCgiState() const { return (state); }
 
 const std::string &CgiHandler::getCgiOutput() const { return (cgi_output); }

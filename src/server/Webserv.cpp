@@ -26,7 +26,7 @@ Webserv::~Webserv()
 		removeClient(clients.begin()->first);
 
 	std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
-	while (it_srv != servers.end()) 
+	while (it_srv != servers.end())
 	{
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it_srv->first, NULL);
 		close(it_srv->first);
@@ -51,7 +51,7 @@ void Webserv::start()
 		servers[listen_sock] = config.servers[i];
 	}
 	if (servers.size() == 0)
-    	throw std::runtime_error("could not register any servers");
+		throw std::runtime_error("could not register any servers");
 
 	eventLoop();
 }
@@ -71,39 +71,50 @@ void Webserv::processFinishedCgi()
 	{
 		CgiHandler *h = finished[i];
 		Client *client = h->getClient();
-		CgiState s = h->getCgiState();
-		// Logger::debug("cgi handler finished exit_status= %d", h->getExitStatus());
 
+		if (client == NULL)
+		{
+			delete h;
+			continue;
+		}
+
+		CgiState s = h->getCgiState();
 		CgiResponse cgiResp;
 		if (s == CGI_ERROR)
 		{
 			// 502 for all CGI_ERROR (timeout, read()/pipe/fork/dup2/exec failure)
 			cgiResp.status_code = 502;
-			cgiResp.body = "<html><body><h1>502 Bad Gateway</h1></body></html>";
 		}
 		else // CGI_DONE
 			cgiResp = parseCgiOutput(h->getCgiOutput());
 
-		// populate the new Response object instead of the old cgiResponse fields
-		client->response.status = HttpStatus(cgiResp.status_code);
-		client->response.body = cgiResp.body;
-		std::ostringstream resp;
-		resp << "HTTP/1.1 " << client->response.status.toString() << "\r\n";
-		for (std::multimap<std::string, std::string>::const_iterator it = cgiResp.headers.begin();
-			 it != cgiResp.headers.end(); ++it)
+		if (HttpStatus(cgiResp.status_code) >= HttpStatus::BAD_REQUEST)
 		{
-			if (it->first == "content-length")
-				continue;
-			resp << it->first << ": " << it->second << "\r\n";
+			client->response.build(HttpStatus(cgiResp.status_code), client, "text/html");
 		}
-		resp << "Content-Length: " << cgiResp.body.size() << "\r\n"
-			 << "Connection: close\r\n"
-			 << "\r\n"
-			 << cgiResp.body;
-		client->response.buffer = resp.str();
+		else
+		{
+			// populate the new Response object instead of the old cgiResponse fields
+			client->response.status = HttpStatus(cgiResp.status_code);
+			client->response.body = cgiResp.body;
+			std::ostringstream resp;
+			resp << "HTTP/1.1 " << client->response.status.toString() << "\r\n";
+			for (std::multimap<std::string, std::string>::const_iterator it = cgiResp.headers.begin();
+				 it != cgiResp.headers.end(); ++it)
+			{
+				if (it->first == "content-length")
+					continue;
+				resp << it->first << ": " << it->second << "\r\n";
+			}
+			resp << "Content-Length: " << cgiResp.body.size() << "\r\n"
+				 << "Connection: close\r\n"
+				 << "\r\n"
+				 << cgiResp.body;
+			client->response.buffer = resp.str();
+		}
+
 		client->response.offset = 0;
 		client->response.chunked = false;
-
 		client->last_activity = time(NULL);
 		client->cgi_pending = false;
 		modify_epoll(epoll_fd, client->socket, EPOLLOUT);
@@ -216,12 +227,12 @@ void Webserv::handleClientData(SOCKET c)
 
 void Webserv::checkTimeouts()
 {
-    time_t now = time(NULL);
+	time_t now = time(NULL);
 
-    std::map<SOCKET, Client *>::iterator it = clients.begin();
-    while (it != clients.end())
-    {
-        Client *cl = it->second;
+	std::map<SOCKET, Client *>::iterator it = clients.begin();
+	while (it != clients.end())
+	{
+		Client *cl = it->second;
 
         if (cl->cgi_pending)
         {
@@ -246,6 +257,11 @@ void Webserv::removeClient(SOCKET c)
 	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, c, NULL);
 	Client *cl = it->second;
 	clients.erase(c);
+
+	//notify CgiManager to drops this client or set it to NULL
+	if (cgiManager)
+		cgiManager->detachClient(cl);
+
 	close(c);
 	delete cl;
 	Logger::debug("Client(%d) dropped...", c);
@@ -303,11 +319,12 @@ void Webserv::handleHttpResponse(SOCKET c)
 	}
 
 	ssize_t sent = send(c, cl->response.buffer.c_str() + cl->response.offset,
-		cl->response.buffer.size() - cl->response.offset, 0);
+						cl->response.buffer.size() - cl->response.offset, 0);
 
 	cl->last_activity = time(NULL);
 
-	if (sent <= 0) {
+	if (sent <= 0)
+	{
 		removeClient(c);
 		return;
 	}

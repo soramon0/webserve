@@ -46,11 +46,17 @@ bool CgiManager::registerHandler(const HttpRequest *request, Client* client, con
 
 void CgiManager::deregisterEpoll(CgiHandler *handler)
 {
-	int fd = handler->getReadFd();
-	if (fd == -1)
+	if (!handler)
 		return;
-	epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-	fd_to_handler.erase(fd);
+	int fd = handler->getReadFd();
+	if (fd < 0)
+		return;
+
+	if (fd_to_handler.count(fd) > 0)
+	{
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+		fd_to_handler.erase(fd);
+	}
 	handler->closeReadFd();
 }
 
@@ -166,4 +172,18 @@ std::vector<CgiHandler*> CgiManager::claimAllFinished()
 			++it;
 	}
 	return (finished);
+}
+
+void CgiManager::detachClient(const Client* client)
+{
+	for (size_t i = 0; i < handlers.size(); ++i)
+	{
+		if (handlers[i]->getClient() == client)
+			handlers[i]->clearClient();
+	}
+	for (size_t i = 0; i < pending_reap.size(); ++i)
+	{
+		if (pending_reap[i]->getClient() == client)
+			pending_reap[i]->clearClient();
+	}
 }

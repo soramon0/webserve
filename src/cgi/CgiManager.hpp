@@ -32,6 +32,7 @@ public:
 	void reapPending();
 	void checkTimeouts();
 	std::vector<CgiHandler*> claimAllFinished();
+	void detachClient(const Client* client);
 
 private:
 	void deregisterEpoll(CgiHandler* handler);
