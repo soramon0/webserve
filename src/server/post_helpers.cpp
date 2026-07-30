@@ -1,6 +1,7 @@
 #include "post_helpers.hpp"
 #include <sys/stat.h>
 #include <cerrno>
+#include <unistd.h>
 
 bool hasParentDirTraversal(const std::string &path)
 {
@@ -21,6 +22,29 @@ bool hasParentDirTraversal(const std::string &path)
 	}
 	return (false);
 }
+
+bool validateUploadStore(const std::string &upload_dir, HttpStatus::Code &out_status)
+{
+	struct stat st;
+
+	if (stat(upload_dir.c_str(), &st) == -1)
+	{
+		out_status = HttpStatus::INTERNAL_SERVER_ERROR;
+		return false;
+	}
+	if (!S_ISDIR(st.st_mode))
+	{
+		out_status = HttpStatus::INTERNAL_SERVER_ERROR;
+		return false;
+	}
+	if (access(upload_dir.c_str(), W_OK) == -1)
+	{
+		out_status = HttpStatus::INTERNAL_SERVER_ERROR;
+		return false;
+	}
+	return true;
+}
+
 bool validateParentDir(const std::string &parent_path, HttpStatus::Code &out_status)
 {
 	struct stat st;

@@ -221,7 +221,6 @@ void handlePost(Client *cl)
 		return;
 	}
 
-	// Logger::debug("POST method------------");
 	std::string uri(req->uri.data(), req->uri.length());
 	std::string uri_suffix = uri.substr(cl->location->path.size());
 	if (cl->location->shared_config->upload_store.empty()) // if upload is not supported
@@ -235,12 +234,18 @@ void handlePost(Client *cl)
 		return;
 	}
 	std::string upload_dir = normalisePath(cl->location->shared_config->upload_store);
-	std::string target_path = cl->location->shared_config->root + "/" +
-							  upload_dir + "/" + uri_suffix;
-	// Logger::debug("handlePost -> target_path = '%s'", target_path.c_str());
-	std::string parent_path = target_path.substr(0, target_path.find_last_of('/'));
+	std::string upload_store_path = cl->location->shared_config->root + "/" + upload_dir;
 
 	HttpStatus::Code err_status;
+	if (!validateUploadStore(upload_store_path, err_status))
+	{
+		req->status = err_status;
+		return;
+	}
+
+	std::string target_path = upload_store_path + uri_suffix;
+	std::string parent_path = target_path.substr(0, target_path.find_last_of('/'));
+
 	if (!validateParentDir(parent_path, err_status))
 	{
 		req->status = err_status;
