@@ -10,21 +10,16 @@ int main(int ac, char *av[]) {
       Logger::setLevel(Logger::LOG_DEBUG);
     }
 
-    if (ac < 2)
+    if (ac > 2)
       Logger::fatal("Usage: %s <configuration_file>", av[0]);
-
-    Config *config = Parser(av[1]).parse();
+    
+    std::string file_path = ac == 2 ? av[1] : "nginx/webserv.conf";
+    Config *config = Parser(file_path.c_str()).parse();
     if (config == NULL)
       return (1);
-
-    if (DEBUG) {
-      std::cout << config->toString() << std::endl;
-    }
     
     Webserv server(*config);
     server.start();
-
-    delete config;
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
   }

@@ -33,6 +33,7 @@ Webserv::~Webserv()
 		++it_srv;
 	}
 	close(epoll_fd);
+	delete &config;
 }
 
 void Webserv::start()
