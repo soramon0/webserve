@@ -8,7 +8,8 @@
 #include <fstream>
 #include <map>
 
-int set_nonblocking(int fd) {
+int set_nonblocking(int fd)
+{
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) return -1;
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) return -1;
@@ -17,6 +18,7 @@ int set_nonblocking(int fd) {
     if (fdflags == -1) return -1;
     return fcntl(fd, F_SETFD, fdflags | FD_CLOEXEC);
 }
+
 int epoll_instance()
 {
     int fd = epoll_create(1);
@@ -98,10 +100,7 @@ std::string getContentType(Client* cl)
     mimetype_map empty_types;
     mimetype_map &types = (shared_config) ? shared_config->types : empty_types;
     if (path.empty())
-    {
-        Logger::debug("cl->file_path = '%s'", path.c_str());
         return "text/html";
-    }
 
     std::string ext = getExt(path);
 
@@ -139,20 +138,13 @@ std::string getErrorBody(Client* cl, HttpStatus status)
         if (it != pages.end())
         {
             std::string error_page_file = shared_config->root + "/" + it->second;
-            // Logger::debug("found custom error page: %s", it->second.c_str());
             std::ifstream file(error_page_file.c_str());
             if (file.is_open()) {
-                // Logger::debug("Can't open the file %s", error_page_file.c_str());
                 std::string body((std::istreambuf_iterator<char>(file)),
                                     std::istreambuf_iterator<char>());
                 return body;
             }
-            // Logger::debug("reading the custom error page...");
         }
-        else
-            Logger::debug("not found custom error page of status: %d", status.asInt());
-
     }
-    // fallback to default
     return "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";
 }

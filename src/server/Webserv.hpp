@@ -22,18 +22,15 @@ public:
 	Webserv(Config& _conf);
 	~Webserv();
 
-	void	start();
-	SOCKET	createSocket(int id);
-	void	handleNewConnection(SOCKET srv);
-	void	handleHttpResponse(SOCKET c);
-	void	handleClientData(SOCKET c);
-	void	removeClient(SOCKET c);
-	void	eventLoop();
-	void	checkTimeouts();
-	// void	timeoutClient(Client* cl);
+	void						start();
+	// SOCKET						createSocket(int id, Config& config);
+	void						handleNewConnection(SOCKET srv);
+	void						handleHttpResponse(SOCKET c);
+	void						handleClientData(SOCKET c);
+	void						removeClient(SOCKET c);
+	void						eventLoop();
+	void						checkTimeouts();
 
 private:
-	//to process finished cgi requests 
-	void processFinishedCgi();
+	void						processFinishedCgi();
 };
-
