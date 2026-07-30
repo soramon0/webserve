@@ -29,25 +29,26 @@ public:
         const std::string& content_type,
         const std::string& location = "")
     {
-        // Logger::debug("Builiding the response...");
-        std::ostringstream resp;
-        resp << "HTTP/1.1 " << status.toString() << "\r\n";
-
-        if (!location.empty())
-            resp << "Location: " << location << "\r\n";
-
-        if (status >= HttpStatus::BAD_REQUEST)
-            body = getErrorBody(cl, status);
-
-        if (body.size() > 0)
-            resp << "Content-Type: " << content_type << "\r\n";
-                
-        resp << "Content-Length: " << body.size() << "\r\n"
-            << "Connection: close\r\n"
-            << "\r\n"
-            << body;
-
-        buffer = resp.str();
+        if (headers.empty())
+        {
+            std::ostringstream heads;
+            heads << "HTTP/1.1 " << status.toString() << "\r\n";
+    
+            if (!location.empty())
+                heads << "Location: " << location << "\r\n";
+    
+            if (status >= HttpStatus::BAD_REQUEST)
+                body = getErrorBody(cl, status);
+    
+            if (body.size() > 0)
+                heads << "Content-Type: " << content_type << "\r\n";
+                    
+            heads << "Content-Length: " << body.size() << "\r\n"
+                << "Connection: close\r\n"
+                << "\r\n";
+            headers = heads.str();
+        }
+        buffer = headers + body;
         offset = 0;
     }
 };

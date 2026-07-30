@@ -8,6 +8,8 @@ Response::~Response() {}
 
 void Response::buildHeaders(const HttpRequest& req, const std::string& content_type)
 {
+    if (!headers.empty())
+        return ;
     std::ostringstream stream;
     stream << "HTTP/1.1 " << req.status.toString() << "\r\n"
            << "Content-Type: " << content_type << "\r\n"
