@@ -10,8 +10,6 @@ void Response::buildHeaders(const HttpRequest& req, const std::string& content_t
 {
     Logger::debug("------Content-type is : %s------", content_type.c_str());
 
-    if (!headers.empty())
-        return ;
     std::ostringstream stream;
     stream << "HTTP/1.1 " << req.status.toString() << "\r\n"
            << "Content-Type: " << content_type << "\r\n"

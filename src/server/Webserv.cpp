@@ -113,7 +113,8 @@ void Webserv::processFinishedCgi()
 				 << cgiResp.body;
 			client->response.buffer = resp.str();
 		}
-
+		// Logger::debug("Cgi is finished : exit status = %d", h->getExitStatus());
+		// Logger::debug("response buffer %s", client->response.buffer.c_str());
 		client->response.offset = 0;
 		client->response.chunked = false;
 		client->last_activity = time(NULL);
@@ -275,8 +276,11 @@ void Webserv::handleHttpResponse(SOCKET c)
 
 	Client *cl = clients[c];
 
-	if (cl->timed_out && cl->response.buffer.empty() && !cl->response.chunked)
-		cl->response.build(HttpStatus(HttpStatus::REQUEST_TIMEOUT), cl, "");
+	if (cl->timed_out)
+	{
+		if (cl->response.buffer.empty() && !cl->response.chunked)
+			cl->response.build(HttpStatus(HttpStatus::REQUEST_TIMEOUT), cl, "");
+	}
 	else
 	{
 		HttpRequest *req = cl->machine.getRequest();
@@ -285,13 +289,16 @@ void Webserv::handleHttpResponse(SOCKET c)
 			&& cl->machine.status.isMalformed() == false
 			&& cl->response.buffer.empty()
 			&& !cl->response.chunked)
-			processRequest(cl);
+				processRequest(cl);
 
 		if (cl->cgi_pending)
 			return;
 
-		if (!cl->response.chunked && cl->response.buffer.empty())
-			cl->response.build(req->status, cl, cl->redirect_url);
+		if (!cl->response.chunked)
+		{
+			if (cl->response.buffer.empty())
+				cl->response.build(req->status, cl, cl->redirect_url);
+		}
 		else
 		{
 			if (!cl->response.headers_sent)
