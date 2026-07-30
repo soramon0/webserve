@@ -8,7 +8,8 @@
 #include <fstream>
 #include <map>
 
-int set_nonblocking(int fd) {
+int set_nonblocking(int fd)
+{
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) return -1;
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) return -1;
@@ -17,6 +18,7 @@ int set_nonblocking(int fd) {
     if (fdflags == -1) return -1;
     return fcntl(fd, F_SETFD, fdflags | FD_CLOEXEC);
 }
+
 int epoll_instance()
 {
     int fd = epoll_create(1);
@@ -91,8 +93,12 @@ std::string getMimeTypeFromConfig(const std::string& ext, const mimetype_map& ty
     return ""; // TODO: make sure to deal with the case when there no types in conf
 }
 
-std::string getContentType(const std::string& path, const mimetype_map& types)
+std::string getContentType(Client* cl)
 {
+    const std::string& path = cl->file_path;
+    SharedConfig* shared_config = (cl->location) ? cl->location->shared_config : cl->srv->shared_config;
+    mimetype_map empty_types;
+    mimetype_map &types = (shared_config) ? shared_config->types : empty_types;
     if (path.empty())
         return "text/html";
 
@@ -124,27 +130,21 @@ std::string getContentType(const std::string& path, const mimetype_map& types)
 
 std::string getErrorBody(Client* cl, HttpStatus status)
 {
-    if (cl->location && cl->location->shared_config)
+    SharedConfig* shared_config = (cl->location) ? cl->location->shared_config : cl->srv->shared_config;
+    if (shared_config)
     {
-        std::map<int, std::string>& pages = cl->location->shared_config->error_page;
+        std::map<int, std::string>& pages = shared_config->error_page;
         std::map<int, std::string>::iterator it = pages.find(status.asInt());
         if (it != pages.end())
         {
-            std::string error_page_file = cl->location->shared_config->root + "/" + it->second;
-            // Logger::debug("found custom error page: %s", it->second.c_str());
+            std::string error_page_file = shared_config->root + "/" + it->second;
             std::ifstream file(error_page_file.c_str());
-            if (!file.is_open()) {
-                // Logger::debug("Can't open the file %s", error_page_file.c_str());
+            if (file.is_open()) {
+                std::string body((std::istreambuf_iterator<char>(file)),
+                                    std::istreambuf_iterator<char>());
+                return body;
             }
-            // Logger::debug("reading the custom error page...");
-            std::string body((std::istreambuf_iterator<char>(file)),
-                                std::istreambuf_iterator<char>());
-            return body;
         }
-        else
-            Logger::debug("not found custom error page of status: %d", status.asInt());
-
     }
-    // fallback to default
     return "<html><body><h1>" + std::string(status.toString()) + "</h1></body></html>";
 }

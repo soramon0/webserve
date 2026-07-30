@@ -147,11 +147,8 @@ void handleGet(Client* cl) {
 		req->status = getHttpStatusError();
 		return;
 	}
-	mimetype_map empty_types;
-	mimetype_map& types = (cl->location && cl->location->shared_config) 
-		? cl->location->shared_config->types
-		: empty_types;
-	cl->response.buildHeaders(*req, getContentType(file_path, types));
+	cl->file_path = file_path;
+	cl->response.buildHeaders(*req, getContentType(cl));
 	req->status = HttpStatus::OK;
 }
 // TODO : add Date header to DELETE response
