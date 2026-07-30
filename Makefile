@@ -33,15 +33,18 @@ endif
 
 # Directories
 SRC_DIR    := src
-OBJ_DIR    := obj/$(BUILD_TYPE)
-BUILD_DIR  := build/$(BUILD_TYPE)
+OBJ_ROOT   := obj
+BUILD_ROOT := build
+OBJ_DIR    := $(OBJ_ROOT)/$(BUILD_TYPE)
+BUILD_DIR  := $(BUILD_ROOT)/$(BUILD_TYPE)
 INC_DIR    := include
 
 # Pre-processor
 CPPFLAGS := -I$(SRC_DIR) -I$(INC_DIR) -MMD -MP
 
 # Auto-generate full paths
-SRCS := $(shell find $(SRC_DIR) -name '*.cpp')
+SRCS := $(wildcard $(SRC_DIR)/*.cpp) \
+        $(wildcard $(SRC_DIR)/*/*.cpp)
 OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
@@ -76,11 +79,11 @@ run: $(NAME)
 
 clean:
 	@printf "$(YELLOW)Cleaning objects...$(RESET)\n"
-	$(Q)rm -rf $(firstword $(subst /, ,$(OBJ_DIR)))
+	$(Q)rm -rf $(OBJ_ROOT)
 
 fclean: clean
 	@printf "$(YELLOW)Removing executables...$(RESET)\n"
-	$(Q)rm -rf $(firstword $(subst /, ,$(BUILD_DIR)))
+	$(Q)rm -rf $(BUILD_ROOT)
 
 re: fclean all
 
