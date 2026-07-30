@@ -25,7 +25,7 @@ Webserv::~Webserv()
 		removeClient(clients.begin()->first);
 
 	std::map<SOCKET, Server *>::iterator it_srv = servers.begin();
-	while (it_srv != servers.end()) 
+	while (it_srv != servers.end())
 	{
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it_srv->first, NULL);
 		close(it_srv->first);
@@ -50,7 +50,7 @@ void Webserv::start()
 		servers[listen_sock] = config.servers[i];
 	}
 	if (servers.size() == 0)
-    	throw std::runtime_error("could not register any servers");
+		throw std::runtime_error("could not register any servers");
 
 	eventLoop();
 }
@@ -78,31 +78,37 @@ void Webserv::processFinishedCgi()
 		{
 			// 502 for all CGI_ERROR (timeout, read()/pipe/fork/dup2/exec failure)
 			cgiResp.status_code = 502;
-			cgiResp.body = "<html><body><h1>502 Bad Gateway</h1></body></html>";
 		}
 		else // CGI_DONE
 			cgiResp = parseCgiOutput(h->getCgiOutput());
 
-		// populate the new Response object instead of the old cgiResponse fields
-		client->response.status = HttpStatus(cgiResp.status_code);
-		client->response.body = cgiResp.body;
-		std::ostringstream resp;
-		resp << "HTTP/1.1 " << client->response.status.toString() << "\r\n";
-		for (std::multimap<std::string, std::string>::const_iterator it = cgiResp.headers.begin();
-			 it != cgiResp.headers.end(); ++it)
+		if (HttpStatus(cgiResp.status_code) >= HttpStatus::BAD_REQUEST)
 		{
-			if (it->first == "content-length")
-				continue;
-			resp << it->first << ": " << it->second << "\r\n";
+			client->response.build(HttpStatus(cgiResp.status_code), client, "text/html");
 		}
-		resp << "Content-Length: " << cgiResp.body.size() << "\r\n"
-			 << "Connection: close\r\n"
-			 << "\r\n"
-			 << cgiResp.body;
-		client->response.buffer = resp.str();
+		else
+		{
+			// populate the new Response object instead of the old cgiResponse fields
+			client->response.status = HttpStatus(cgiResp.status_code);
+			client->response.body = cgiResp.body;
+			std::ostringstream resp;
+			resp << "HTTP/1.1 " << client->response.status.toString() << "\r\n";
+			for (std::multimap<std::string, std::string>::const_iterator it = cgiResp.headers.begin();
+				 it != cgiResp.headers.end(); ++it)
+			{
+				if (it->first == "content-length")
+					continue;
+				resp << it->first << ": " << it->second << "\r\n";
+			}
+			resp << "Content-Length: " << cgiResp.body.size() << "\r\n"
+				 << "Connection: close\r\n"
+				 << "\r\n"
+				 << cgiResp.body;
+			client->response.buffer = resp.str();
+		}
+
 		client->response.offset = 0;
 		client->response.chunked = false;
-
 		client->last_activity = time(NULL);
 		client->cgi_pending = false;
 		modify_epoll(epoll_fd, client->socket, EPOLLOUT);
@@ -171,34 +177,38 @@ SOCKET Webserv::createSocket(int id)
 	std::string host = config.servers[id]->interface;
 
 	struct addrinfo *addr;
-	if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr)) {
-        throw std::runtime_error("getaddrinfo failed for " + host + ":" + port);
+	if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr))
+	{
+		throw std::runtime_error("getaddrinfo failed for " + host + ":" + port);
 	}
 
 	int socket_listen =
 		socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-	if (!ISVALIDSOCKET(socket_listen)) {
-        freeaddrinfo(addr);
-        throw std::runtime_error("socket() failed: " + std::string(strerror(errno)));
-    }
+	if (!ISVALIDSOCKET(socket_listen))
+	{
+		freeaddrinfo(addr);
+		throw std::runtime_error("socket() failed: " + std::string(strerror(errno)));
+	}
 
 	int opt = 1;
 	if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR, &opt,
 				   sizeof(opt)))
 		Logger::error("setsockopt failed");
 
-	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen)) {
-        freeaddrinfo(addr);
-        close(socket_listen);
-        throw std::runtime_error("bind() failed on " + host + ":" + port + ": " + strerror(errno));
-    }
+	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen))
+	{
+		freeaddrinfo(addr);
+		close(socket_listen);
+		throw std::runtime_error("bind() failed on " + host + ":" + port + ": " + strerror(errno));
+	}
 	freeaddrinfo(addr);
 
 	Logger::info("Listening on http://%s:%s ...", host.c_str(), port.c_str());
-	if (listen(socket_listen, SOMAXCONN)) {
-        close(socket_listen);
-        throw std::runtime_error("listen() failed: " + std::string(strerror(errno)));
-    }
+	if (listen(socket_listen, SOMAXCONN))
+	{
+		close(socket_listen);
+		throw std::runtime_error("listen() failed: " + std::string(strerror(errno)));
+	}
 
 	return socket_listen;
 }
@@ -276,29 +286,29 @@ void Webserv::handleClientData(SOCKET c)
 
 void Webserv::checkTimeouts()
 {
-    time_t now = time(NULL);
+	time_t now = time(NULL);
 
-    std::map<SOCKET, Client *>::iterator it = clients.begin();
-    while (it != clients.end())
-    {
-        Client *cl = it->second;
+	std::map<SOCKET, Client *>::iterator it = clients.begin();
+	while (it != clients.end())
+	{
+		Client *cl = it->second;
 
-        if (cl->cgi_pending)
-        {
-            ++it;
-            continue;
-        }
+		if (cl->cgi_pending)
+		{
+			++it;
+			continue;
+		}
 
-        if (now - cl->last_activity > TIMEOUT)
-        {
+		if (now - cl->last_activity > TIMEOUT)
+		{
 			if (!cl->timed_out)
 			{
 				cl->timed_out = true;
 				modify_epoll(epoll_fd, cl->socket, EPOLLOUT);
-			}	
-        }
-        ++it;
-    }
+			}
+		}
+		++it;
+	}
 }
 
 void Webserv::removeClient(SOCKET c)
@@ -334,8 +344,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 	{
 		HttpRequest *req = cl->machine.getRequest();
 
-		if (cl->cgi_pending == false && cl->response.buffer.empty()
-			&& !cl->response.chunked && !cl->response.headers_sent)
+		if (cl->cgi_pending == false && cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)
 		{
 			processRequest(cl);
 		}
@@ -349,8 +358,8 @@ void Webserv::handleHttpResponse(SOCKET c)
 			{
 				mimetype_map empty_types;
 				mimetype_map &types = (cl->location && cl->location->shared_config)
-									? cl->location->shared_config->types
-									: empty_types;
+										  ? cl->location->shared_config->types
+										  : empty_types;
 				std::string content_type = getContentType(cl->file_path, types);
 				cl->response.build(req->status, cl, content_type, cl->redirect_url);
 			}
@@ -360,7 +369,7 @@ void Webserv::handleHttpResponse(SOCKET c)
 			if (!cl->response.headers_sent)
 			{
 				send(c, cl->response.headers.c_str(),
-					cl->response.headers.size(), 0);
+					 cl->response.headers.size(), 0);
 				cl->response.headers_sent = true;
 				cl->last_activity = time(NULL);
 				return;
@@ -386,11 +395,12 @@ void Webserv::handleHttpResponse(SOCKET c)
 	}
 
 	ssize_t sent = send(c, cl->response.buffer.c_str() + cl->response.offset,
-		cl->response.buffer.size() - cl->response.offset, 0);
+						cl->response.buffer.size() - cl->response.offset, 0);
 
 	cl->last_activity = time(NULL);
 
-	if (sent <= 0) {
+	if (sent <= 0)
+	{
 		removeClient(c);
 		return;
 	}
