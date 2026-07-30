@@ -48,7 +48,7 @@ DEPS := $(OBJS:.o=.d)
 # Safety Net
 .DELETE_ON_ERROR:
 
-.PHONY: all clean fclean re run release help nginx_t test
+.PHONY: all clean fclean re run release help
 
 all: $(NAME)
 
@@ -73,9 +73,6 @@ release:
 run: $(NAME)
 	@printf "$(MAGENTA)Running $(NAME)...$(RESET)\n"
 	./$(BUILD_DIR)/$(NAME) $(ARGS)
-valgrind: $(NAME)
-	@printf "$(MAGENTA)Valgrinding $(NAME)...$(RESET)\n"
-	valgrind --track-origins=yes ./$(BUILD_DIR)/$(NAME) $(ARGS)
 
 clean:
 	@printf "$(YELLOW)Cleaning objects...$(RESET)\n"
@@ -86,13 +83,6 @@ fclean: clean
 	$(Q)rm -rf $(firstword $(subst /, ,$(BUILD_DIR)))
 
 re: fclean all
-
-nginx_t:
-	$(Q)docker compose run --rm web nginx -t
-
-test:
-	@printf "$(BLUE)Building and running tests...$(RESET)\n"
-	@$(MAKE) -C tests run
 
 help:
 	@printf "$(MAGENTA)Available targets:$(RESET)\n"
