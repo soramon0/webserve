@@ -4,6 +4,7 @@
 #include "router.hpp"
 #include "cgi/CgiManager.hpp"
 #include "../http/status_code.hpp"
+#include "webserv_helper.hpp"
 #include <cstring>
 #include <iostream>
 #include <signal.h>
@@ -42,7 +43,7 @@ void Webserv::start()
 	cgiManager = new CgiManager(epoll_fd);
 	for (int i = 0; i < srvlen; i++)
 	{
-		SOCKET listen_sock = createSocket(i);
+		SOCKET listen_sock = createSocket(i, config);
 		if (set_nonblocking(listen_sock) == -1)
 			throw std::runtime_error("fcntl(F_GETFL) failed");
 		if (add_to_epoll(epoll_fd, listen_sock, EPOLLIN) == -1)
@@ -130,16 +131,15 @@ void Webserv::eventLoop()
 	while (running)
 	{
 		int n_ev = epoll_wait(epoll_fd, events, MAX_EVENTS, 5000);
-		checkTimeouts();
 		if (n_ev <= 0)
 			continue;
 
-		int ev;
-		SOCKET fd;
+		checkTimeouts();
+
 		for (int i = 0; i < n_ev; i++)
 		{
-			ev = events[i].events;
-			fd = static_cast<SOCKET>(events[i].data.fd);
+			int		ev = events[i].events;
+			SOCKET	fd = static_cast<SOCKET>(events[i].data.fd);
 
 			if (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
 			{
@@ -167,57 +167,6 @@ void Webserv::eventLoop()
 	}
 }
 
-SOCKET Webserv::createSocket(int id)
-{
-	struct addrinfo hints;
-	std::memset(&hints, 0, sizeof(hints));
-
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
-
-	std::ostringstream os;
-	os << config.servers[id]->port;
-	std::string port = os.str();
-	std::string host = config.servers[id]->interface;
-
-	struct addrinfo *addr;
-	if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addr))
-	{
-		throw std::runtime_error("getaddrinfo failed for " + host + ":" + port);
-	}
-
-	int socket_listen =
-		socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-	if (!ISVALIDSOCKET(socket_listen))
-	{
-		freeaddrinfo(addr);
-		throw std::runtime_error("socket() failed: " + std::string(strerror(errno)));
-	}
-
-	int opt = 1;
-	if (setsockopt(socket_listen, SOL_SOCKET, SO_REUSEADDR, &opt,
-				   sizeof(opt)))
-		Logger::error("setsockopt failed");
-
-	if (bind(socket_listen, addr->ai_addr, addr->ai_addrlen))
-	{
-		freeaddrinfo(addr);
-		close(socket_listen);
-		throw std::runtime_error("bind() failed on " + host + ":" + port + ": " + strerror(errno));
-	}
-	freeaddrinfo(addr);
-
-	Logger::info("Listening on http://%s:%s ...", host.c_str(), port.c_str());
-	if (listen(socket_listen, SOMAXCONN))
-	{
-		close(socket_listen);
-		throw std::runtime_error("listen() failed: " + std::string(strerror(errno)));
-	}
-
-	return socket_listen;
-}
-
 void Webserv::handleNewConnection(SOCKET srv)
 {
 	int max_accepts = 32;
@@ -226,33 +175,24 @@ void Webserv::handleNewConnection(SOCKET srv)
 	{
 		Client *c = new Client();
 		c->socket = accept(srv, &c->addr, &c->addrlen);
-
 		if (c->socket == -1)
 		{
 			delete c;
 			break;
 		}
-
-		c->srv = servers[srv];
-		c->cgiManager = cgiManager;
-		c->last_activity = time(NULL);
-
-		if (set_nonblocking(c->socket) == -1)
+		if (set_nonblocking(c->socket) == -1
+			|| add_to_epoll(epoll_fd, c->socket, EPOLLIN | EPOLLRDHUP) == -1)
 		{
-			Logger::error("fcntl failed");
 			close(c->socket);
 			delete c;
 			continue;
-		}
-		if (add_to_epoll(epoll_fd, c->socket, EPOLLIN | EPOLLRDHUP) == -1)
-		{
-			delete c;
-			continue;
-		}
-
+		}		
+		c->srv = servers[srv];
+		c->cgiManager = cgiManager;
+		c->last_activity = time(NULL);
 		c->machine.setServer(c->srv);
 		clients[c->socket] = c;
-		Logger::info("client Connected... fd=%d", c->socket);
+		Logger::info("client(%d) Connected...", c->socket);
 	}
 }
 
@@ -260,8 +200,8 @@ void Webserv::handleClientData(SOCKET c)
 {
 	if (!clients.count(c))
 		return;
-	Client *cl = clients[c];
 
+	Client *cl = clients[c];
 	char buf[KIB(1) / 2];
 	ssize_t bytes = recv(cl->socket, buf, sizeof(buf), 0);
 	if (bytes <= 0)
@@ -269,8 +209,6 @@ void Webserv::handleClientData(SOCKET c)
 		removeClient(c);
 		return;
 	}
-	// else if (bytes < 0)
-	// 	return ;
 	cl->last_activity = time(NULL);
 
 	HttpRequest *req = cl->machine.getRequest();
@@ -280,8 +218,6 @@ void Webserv::handleClientData(SOCKET c)
 		Logger::debug("request error: %.*s", (int)req->error.length(),
 					  req->error.data());
 	}
-
-	// notify client to send a response
 	if (!cl->machine.status.isPending())
 	{
 		req->printRequest();
@@ -298,22 +234,18 @@ void Webserv::checkTimeouts()
 	{
 		Client *cl = it->second;
 
-		if (cl->cgi_pending)
-		{
-			++it;
-			continue;
-		}
-
-		if (now - cl->last_activity > TIMEOUT)
-		{
-			if (!cl->timed_out)
-			{
-				cl->timed_out = true;
-				modify_epoll(epoll_fd, cl->socket, EPOLLOUT);
-			}
-		}
-		++it;
-	}
+        if (cl->cgi_pending)
+        {
+            ++it;
+            continue;
+        }
+        if (now - cl->last_activity > TIMEOUT && !cl->timed_out)
+        {
+			cl->timed_out = true;
+			modify_epoll(epoll_fd, cl->socket, EPOLLOUT);
+        }
+        ++it;
+    }
 }
 
 void Webserv::removeClient(SOCKET c)
@@ -332,7 +264,7 @@ void Webserv::removeClient(SOCKET c)
 
 	close(c);
 	delete cl;
-	Logger::debug("dropping client(%d)", c);
+	Logger::debug("Client(%d) dropped...", c);
 }
 
 void Webserv::handleHttpResponse(SOCKET c)
@@ -342,49 +274,32 @@ void Webserv::handleHttpResponse(SOCKET c)
 
 	Client *cl = clients[c];
 
-	if (cl->timed_out)
-	{
-		if (cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)
-		{
-			cl->response.build(HttpStatus(HttpStatus::REQUEST_TIMEOUT), cl, "", "");
-		}
-		// falls through to the generic send-buffer logic below
-	}
+	if (cl->timed_out && cl->response.buffer.empty() && !cl->response.chunked)
+		cl->response.build(HttpStatus(HttpStatus::REQUEST_TIMEOUT), cl, "");
 	else
 	{
 		HttpRequest *req = cl->machine.getRequest();
 
-		if (cl->cgi_pending == false && cl->response.buffer.empty() && !cl->response.chunked && !cl->response.headers_sent)
-		{
+		if (cl->cgi_pending == false
+			&& cl->machine.status.isMalformed() == false
+			&& cl->response.buffer.empty()
+			&& !cl->response.chunked)
 			processRequest(cl);
-		}
 
 		if (cl->cgi_pending)
 			return;
 
-		if (!cl->response.chunked)
-		{
-			if (cl->response.buffer.empty())
-			{
-				mimetype_map empty_types;
-				mimetype_map &types = (cl->location && cl->location->shared_config)
-										  ? cl->location->shared_config->types
-										  : empty_types;
-				std::string content_type = getContentType(cl->file_path, types);
-				cl->response.build(req->status, cl, content_type, cl->redirect_url);
-			}
-		}
+		if (!cl->response.chunked && cl->response.buffer.empty())
+			cl->response.build(req->status, cl, cl->redirect_url);
 		else
 		{
 			if (!cl->response.headers_sent)
 			{
-				send(c, cl->response.headers.c_str(),
-					 cl->response.headers.size(), 0);
+				send(c, cl->response.headers.c_str(), cl->response.headers.size(), 0);
 				cl->response.headers_sent = true;
 				cl->last_activity = time(NULL);
 				return;
 			}
-			// send next chunk of file
 			char chunk[KIB(16)];
 			ssize_t bytes = read(cl->response.file_fd, chunk, sizeof(chunk));
 			if (bytes > 0)
@@ -393,7 +308,6 @@ void Webserv::handleHttpResponse(SOCKET c)
 				cl->response.offset += bytes;
 				cl->last_activity = time(NULL);
 			}
-
 			if (bytes <= 0 || cl->response.offset >= cl->response.file_size)
 			{
 				close(cl->response.file_fd);
