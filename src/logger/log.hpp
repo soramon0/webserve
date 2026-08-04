@@ -14,10 +14,18 @@
 
 class Logger {
 public:
-  enum Level { LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR, LOG_FATAL };
+  enum Level {
+    LOG_TRACE,
+    LOG_DEBUG,
+    LOG_INFO,
+    LOG_WARN,
+    LOG_ERROR,
+    LOG_FATAL
+  };
 
   static void setLevel(Level lvl);
 
+  static void trace(const char *fmt, ...) ATTRIBUTE_FORMAT(1, 2);
   static void debug(const char *fmt, ...) ATTRIBUTE_FORMAT(1, 2);
   static void info(const char *fmt, ...) ATTRIBUTE_FORMAT(1, 2);
   static void warn(const char *fmt, ...) ATTRIBUTE_FORMAT(1, 2);

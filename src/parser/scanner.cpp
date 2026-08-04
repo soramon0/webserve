@@ -26,7 +26,7 @@ ssize_t Scanner::scan(const char *filepath) {
       break;
 
     lineOffsets.push_back(currentPos);
-    Logger::debug("line %zu: %s", row, src.c_str());
+    Logger::trace("line %zu: %s", row, src.c_str());
     size_t len = src.length();
     size_t column = 0;
     while (column < len) {

@@ -28,28 +28,25 @@ public:
         Client* cl,
         const std::string& location = "")
     {
-        if (headers.empty())
+        std::ostringstream heads;
+        heads << "HTTP/1.1 " << status.toString() << "\r\n";
+
+        if (!location.empty())
+            heads << "Location: " << location << "\r\n";
+
+        if (status >= HttpStatus::BAD_REQUEST)
+            body = getErrorBody(cl, status);
+
+        if (body.size() > 0)
         {
-            std::ostringstream heads;
-            heads << "HTTP/1.1 " << status.toString() << "\r\n";
-    
-            if (!location.empty())
-                heads << "Location: " << location << "\r\n";
-    
-            if (status >= HttpStatus::BAD_REQUEST)
-                body = getErrorBody(cl, status);
-    
-            if (body.size() > 0)
-            {
-				std::string content_type = getContentType(cl);
-                heads << "Content-Type: " << content_type << "\r\n";
-            }
-                    
-            heads << "Content-Length: " << body.size() << "\r\n"
-                << "Connection: close\r\n"
-                << "\r\n";
-            headers = heads.str();
+            std::string content_type = getContentType(cl);
+            heads << "Content-Type: " << content_type << "\r\n";
         }
+                
+        heads << "Content-Length: " << body.size() << "\r\n"
+            << "Connection: close\r\n"
+            << "\r\n";
+        headers = heads.str();
         buffer = headers + body;
         offset = 0;
     }
