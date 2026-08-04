@@ -240,7 +240,7 @@ void handlePost(Client *cl)
 		return;
 	}
 
-	std::string target_path = upload_store_path + uri_suffix;
+	std::string target_path = upload_store_path + "/" + uri_suffix;
 	std::string parent_path = target_path.substr(0, target_path.find_last_of('/'));
 
 	if (!validateParentDir(parent_path, err_status))

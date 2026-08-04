@@ -21,6 +21,7 @@ Webserv::Webserv(Config &_conf) : config(_conf), cgiManager(NULL) {}
 Webserv::~Webserv()
 {
 	delete cgiManager;
+	cgiManager = NULL;
 
 	while (!clients.empty())
 		removeClient(clients.begin()->first);
@@ -113,8 +114,6 @@ void Webserv::processFinishedCgi()
 				 << cgiResp.body;
 			client->response.buffer = resp.str();
 		}
-		// Logger::debug("Cgi is finished : exit status = %d", h->getExitStatus());
-		// Logger::debug("response buffer %s", client->response.buffer.c_str());
 		client->response.offset = 0;
 		client->response.chunked = false;
 		client->last_activity = time(NULL);
