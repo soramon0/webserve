@@ -21,6 +21,7 @@ Webserv::Webserv(Config &_conf) : config(_conf), cgiManager(NULL) {}
 Webserv::~Webserv()
 {
 	delete cgiManager;
+	cgiManager = NULL;
 
 	while (!clients.empty())
 		removeClient(clients.begin()->first);
